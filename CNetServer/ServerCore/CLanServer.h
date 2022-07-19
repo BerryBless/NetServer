@@ -10,8 +10,8 @@
 #include "CLogger.h"
 #include "CObjectPool.hpp"
 #include "CCrashDump.h"
-#include "LFStack.hpp"
-#include "LFQueue.hpp"
+#include "Stack.hpp"
+#include "Queue.hpp"
 
 
 #define CRASH() do{\
@@ -56,7 +56,7 @@ struct SESSION {
 	WSAOVERLAPPED _recvOverlapped;
 	WSAOVERLAPPED _sendOverlapped;
 	CRingBuffer _recvQueue;
-	CRingBuffer _sendQueue;
+	Queue<CPacket*> _sendQueue;
 
 	// session state
 	DWORD _IOcount;
@@ -519,7 +519,7 @@ private:
 	// Session Container 
 	// ----------------------------------------------
 	SESSION *_sessionContainer;
-	LFStack<USHORT> _emptyIndex;
+	Stack<USHORT> _emptyIndex;
 	SESSION_ID _IDGenerater = 1;	// 세션 ID생성기, 0 : 삭제된 세션의 ID
 	SRWLOCK	_sessionContainerLock;
 

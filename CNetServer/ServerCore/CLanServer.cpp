@@ -191,7 +191,7 @@ bool CLanServer::SendPacket(SESSION_ID SessionID, CPacket* pPacket) {
 	pPacket->SetHeader();
 	pPacket->AddRef();
 
-	pSession->_sendQueue.Enqueue((char*)&pPacket, sizeof(CPacket**));
+	pSession->_sendQueue.Enqueue(pPacket);
 	//---------------------------
 	// monitor
 	//---------------------------
@@ -429,20 +429,17 @@ bool CLanServer::SendProc(SESSION* pSession, DWORD transferredSize) {
 	//---------------------------
 	// 완료통지 온 패킷 지우기
 	//---------------------------
-	CPacket* pPacketBufs[100];
+	CPacket* pPacket;
 	int sendedPacketCnt = pSession->_sendedPacketCnt;
-	int deqsize = pSession->_sendedPacketCnt * sizeof(CPacket*);
-	int pekret = pSession->_sendQueue.Dequeue((char*)pPacketBufs, deqsize);
-	if (pekret != deqsize) {
-		CRASH();
+
+	for (int i = 0; i < sendedPacketCnt; ++i)
+	{
+		pSession->_sendQueue.Dequeue(&pPacket);
+
+		pPacket->SubRef();
+		pPacket = nullptr;
 	}
-	for (int i = 0; i < pSession->_sendedPacketCnt; ++i) {
-		char* ptr = pPacketBufs[i]->GetSendPtr();
-		USHORT header = *((USHORT*)pPacketBufs[i]->GetSendPtr());
-		if (header != (USHORT)8)
-			CRASH();
-		pPacketBufs[i]->SubRef(1000);
-	}
+
 	pSession->_sendedPacketCnt = 0;
 
 	//---------------------------
@@ -689,7 +686,7 @@ bool CLanServer::SendPost(SESSION* pSession, int logic) {
 	//---------------------------
 	// 	   Send가능한데 보낼게 없는지 확인
 	//---------------------------
-	if (pSession->_sendQueue.GetUseSize() == 0) {
+	if (pSession->_sendQueue.GetSize() == 0) {
 		if (InterlockedExchange8((CHAR*)&pSession->_isSend, FALSE) == FALSE) {
 			CLogger::_Log(dfLOG_LEVEL_ERROR, L"SendPost(%d) _isSend Exchange false to false", logic);
 			CRASH();
@@ -824,42 +821,22 @@ bool CLanServer::SetWSABuffer(WSABUF* BufSets, SESSION* pSession, bool isRecv, i
 		//---------------------------
 		// 패킷을 얼마나 보낼지
 		//---------------------------
-		DWORD snapSize = pSession->_sendQueue.GetUseSize();
-		int packetCnt = snapSize / sizeof(CPacket*);
-		if (packetCnt > 100) {
-			snapSize = sizeof(CPacket*) * 100;
-			packetCnt = 100;
-		}
-
-		//---------------------------
-		// 패킷 Peek
-		//---------------------------
-		int pekret = pSession->_sendQueue.Peek((char*)pPacketBufs, snapSize);
-		if (pekret != snapSize)
-			CRASH();
+		DWORD snapSize = pSession->_sendQueue.Peek(pPacketBufs, 100);
+		
 
 		//---------------------------
 		// wsabuffer에 등록
 		//---------------------------
-		for (int i = 0; i < packetCnt; ++i) {
-			//pPacketBufs[i]->SetHeader();
-			char* pPacketTemp = pPacketBufs[i]->GetSendPtr();
-			USHORT setHeader = *((USHORT*)pPacketTemp);
-			int id1 = i;
-			if (setHeader != (USHORT)8)
-				CRASH();
+		for (int i = 0; i < snapSize; ++i) {
+			
 			BufSets[i].buf = pPacketBufs[i]->GetSendPtr();
 			BufSets[i].len = pPacketBufs[i]->GetSendSize();
-			USHORT setBuffer = *((USHORT*)BufSets[i].buf);
-			int id2 = i;
-			if (setBuffer != (USHORT)8)
-				CRASH();
 		}
 
 		//---------------------------
 		// 처리한만큼 개수 저장
 		//---------------------------
-		pSession->_sendedPacketCnt = packetCnt;
+		pSession->_sendedPacketCnt = snapSize;
 	}
 
 	return true;
@@ -899,7 +876,7 @@ bool CLanServer::DecrementIOCount(SESSION* pSession, int logic) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR,
 			L"DecrementIOCount(%d) pSession->_IOcount [%d]\n\
 SOCK[%d] :: recv [%d]byte, send [%d]byte, IOCount[%d], isSend [%d]",
-logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetUseSize(), pSession->_IOcount, pSession->_isSend);
+logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_isSend);
 		CRASH();
 	}
 	return true;
@@ -937,26 +914,15 @@ bool CLanServer::ReleaseSession(SESSION* pSession, int logic) {
 	//---------------------------
 	// Sendq에 있던거 풀에 다시넣기
 	//---------------------------
-	while (pSession->_sendQueue.GetUseSize() > 0) {
-		CPacket* pPacketBufs[100];
-		int deqsize = pSession->_sendQueue.GetUseSize();
-		int packetCount = deqsize / sizeof(CPacket*);
-		if (packetCount > 100) {
-			packetCount = 100;
-			deqsize = packetCount * sizeof(CPacket*);
-		}
 
-		int pekret = pSession->_sendQueue.Dequeue((char*)pPacketBufs, deqsize);
-		if (pekret != deqsize) {
-			CRASH();
+	for (;;) {
+		CPacket *pPacket;
+		if (pSession->_sendQueue.Dequeue(&pPacket) == false) {
+			break;
 		}
-
-		for (int i = 0; i < pSession->_sendedPacketCnt; ++i) {
-			if (*((unsigned short*)pPacketBufs[i]->GetSendPtr()) != (unsigned short)8)
-				CRASH();
-			pPacketBufs[i]->SubRef(9999);
-		}
+		pPacket->SubRef();
 	}
+	pSession->_recvQueue.ClearBuffer();
 	SESSION_UNLOCK(pSession);
 
 
@@ -995,7 +961,7 @@ SESSION* CLanServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
 	ZeroMemory(&pSession->_recvOverlapped, sizeof(WSAOVERLAPPED));
 	ZeroMemory(&pSession->_sendOverlapped, sizeof(WSAOVERLAPPED));
 	pSession->_recvQueue.ClearBuffer();
-	pSession->_sendQueue.ClearBuffer();
+	pSession->_sendQueue.Clear();
 
 	//---------------------------
 	// 정보 셋팅

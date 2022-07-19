@@ -51,6 +51,12 @@
     <ClInclude Include="LFStack.hpp">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="Stack.hpp">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Queue.hpp">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">

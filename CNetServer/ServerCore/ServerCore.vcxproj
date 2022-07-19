@@ -165,7 +165,9 @@
     <ClInclude Include="CObjectPool_TLS.hpp" />
     <ClInclude Include="CorePch.h" />
     <ClInclude Include="CPacket.h" />
+    <ClInclude Include="Queue.hpp" />
     <ClInclude Include="CRingBuffer.h" />
+    <ClInclude Include="Stack.hpp" />
     <ClInclude Include="LFQueue.hpp" />
     <ClInclude Include="LFStack.hpp" />
     <ClInclude Include="pch.h" />
