@@ -7,15 +7,48 @@
     <Filter Include="Utils">
       <UniqueIdentifier>{db28efa4-1bbe-4d69-b8e6-7aafe79fcfd5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{e17a7975-5d18-4c21-9dc1-a3a3bb4e0c61}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
       <Filter>Utils</Filter>
     </ClInclude>
-    <ClInclude Include="CorePch.h">
+    <ClInclude Include="Types.h">
       <Filter>Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Types.h">
+    <ClInclude Include="CLanServer.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="CCrashDump.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CLogger.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CRingBuffer.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CPacket.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CorePch.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanClient.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="CObjectPool.hpp">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CObjectPool_TLS.hpp">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="LFQueue.hpp">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="LFStack.hpp">
       <Filter>Utils</Filter>
     </ClInclude>
   </ItemGroup>
@@ -23,8 +56,26 @@
     <ClCompile Include="pch.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
-    <ClCompile Include="CorePch.cpp">
+    <ClCompile Include="CLanServer.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="CCrashDump.cpp">
       <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CLogger.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CRingBuffer.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CPacket.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CorePch.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanClient.cpp">
+      <Filter>Main</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
