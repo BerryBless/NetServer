@@ -1,10 +1,5 @@
 #pragma once
-#pragma comment(lib, "ws2_32")
-#pragma comment (lib, "winmm")
-#include <locale.h>
-#include <WS2tcpip.h>
-#include <WinSock2.h>
-#include <unordered_map>
+
 #include "CRingBuffer.h"
 #include "CPacket.h"
 #include "CLogger.h"
@@ -13,18 +8,18 @@
 #include "Stack.hpp"
 #include "Queue.hpp"
 
-
+#ifndef CRASH
 #define CRASH() do{\
 	CLogger::_Log(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
 	int *nptr = nullptr; *nptr = 1;\
 }while(0)
+#endif // !CRASH
 
 // ----------------------------------------------
 // SESSION_ID
 // ID가 하나씩 증가하며 항상 고유키
 // 0은 사용이 되지않는 ID
 // ----------------------------------------------
-typedef u_int64 SESSION_ID;
 
 // ----------------------------------------------
 // SESSION_ID _ID;						// 이 세션의 ID
@@ -49,51 +44,46 @@ typedef u_int64 SESSION_ID;
 // session lock
 // SRWLOCK _lock;						// 세션의 락
 // ----------------------------------------------
-struct SESSION {
-	SESSION_ID _ID;
 
-	// IOCP Buffer
-	WSAOVERLAPPED _recvOverlapped;
-	WSAOVERLAPPED _sendOverlapped;
-	CRingBuffer _recvQueue;
-	Queue<CPacket*> _sendQueue;
-
-	// session state
-	DWORD _IOcount;
-	DWORD _enqPacketCnt;
-	DWORD _sendedPacketCnt;
-	BOOL _isSend;
-
-	// session information
-	SOCKET _sock;
-	ULONG _IP;
-	USHORT _port;
-
-	// session lock
-	SRWLOCK _lock;
-
-	SESSION() {
-		_ID = 0;
-		_IOcount = 0;
-		_isSend = false;
-		_sendedPacketCnt = 0;
-		ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
-		ZeroMemory(&_sendOverlapped, sizeof(WSAOVERLAPPED));
-	}
-};
 
 
 class CLanServer {
+public:
+	typedef u_int64 SESSION_ID;
+	struct SESSION {
+		SESSION_ID _ID;
+
+		// IOCP Buffer
+		WSAOVERLAPPED _recvOverlapped;
+		WSAOVERLAPPED _sendOverlapped;
+		CRingBuffer _recvQueue;
+		Queue<CPacket *> _sendQueue;
+
+		// session state
+		DWORD _IOcount;
+		DWORD _enqPacketCnt;
+		DWORD _sendedPacketCnt;
+		BOOL _isSend;
+
+		// session information
+		SOCKET _sock;
+		ULONG _IP;
+		USHORT _port;
+
+		// session lock
+		SRWLOCK _lock;
+
+		SESSION() {
+			_ID = 0;
+			_IOcount = 0;
+			_isSend = false;
+			_sendedPacketCnt = 0;
+			ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
+			ZeroMemory(&_sendOverlapped, sizeof(WSAOVERLAPPED));
+		}
+	};
 protected:
-	// ----------------------------------------------
-	// 생성자
-	// 	   서버 기초 설정
-	// 	   세션 컨테이너 락 초기화
-	// ----------------------------------------------
 	CLanServer();
-	// ----------------------------------------------
-	// 소멸자
-	// ----------------------------------------------
 	~CLanServer();
 
 	// ==============================================
@@ -112,17 +102,6 @@ protected:
 
 
 	// ----------------------------------------------
-	// TODO :
-	// Stop()
-	// 
-	// 서버 정지 (일시정지)
-	// 
-	// return
-	// TRUE  : 서버 실행 성공
-	// FALSE : 서버 실행 실패
-	// ----------------------------------------------
-	bool Stop();	
-	// ----------------------------------------------
 	// 서버 종료
 	// Quit();				: 종료 신호를 보냄
 	// WaitForThreadsFin()	: 모든 스레드 종료 기다리기
@@ -133,12 +112,11 @@ protected:
 	// ----------------------------------------------
 	// GetSessionCount();
 	// 
-	// 현재 연결된 세션 얻어오기
+	// 현재 연결된 세션개수 얻어오기
 	// ----------------------------------------------
 	int GetSessionCount();	
 	
 	// ----------------------------------------------
-	// TODO :
 	// Disconnect(ID) 
 	// 
 	// 해당 ID에 대응하는 세션 종료

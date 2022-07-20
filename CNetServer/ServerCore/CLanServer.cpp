@@ -70,12 +70,7 @@ bool CLanServer::Start(u_long IP, u_short prot, BYTE workerThreadCount, BYTE max
 	_isNagle = nagle;
 	_maxConnection = maxConnection;
 
-	//---------------------------
-	// 세션 컨테이너 생성
-	//---------------------------
-	_sessionContainer = new SESSION[_maxConnection+1];
-
-	InitializeIndex();
+	
 
 	//---------------------------
 	// 세팅된 정보로 리슨 만들기
@@ -87,6 +82,12 @@ bool CLanServer::Start(u_long IP, u_short prot, BYTE workerThreadCount, BYTE max
 		return false;
 	}
 
+	//---------------------------
+	// 세션 컨테이너 생성
+	//---------------------------
+	_sessionContainer = new SESSION[_maxConnection + 1];
+
+	InitializeIndex();
 	//---------------------------
 	// 스레드 핸들 배열 생성
 	// _workerThreadCount + acceptThread + monitorThread
@@ -110,10 +111,6 @@ bool CLanServer::Start(wchar_t* wsConfigPath) {
 	return Start(INADDR_ANY, 10101, 24, 12, true, 3000);
 }
 
-bool CLanServer::Stop() {
-	// TODO 일시정지
-	return false;
-}
 
 void CLanServer::Quit() {
 	//---------------------------
@@ -130,7 +127,6 @@ void CLanServer::Quit() {
 void CLanServer::WaitForThreadsFin() {
 	//---------------------------
 	// 서버 종료 기다리기
-	// TODO 에러체크
 	//---------------------------
 	DWORD retval = WaitForMultipleObjects(_NumThreads, _hThreads, TRUE, INFINITE);
 	switch (retval) {
@@ -266,11 +262,6 @@ bool CLanServer::CreateListenSocket() {
 
 
 	//---------------------------
-	// TODO 코어 갯수 확인?
-	// 사용자 문제인가? 라이브러리 문제인가?
-	//---------------------------
-
-	//---------------------------
 	// CreateIoCompletionPort()
 	//---------------------------
 	_hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, _maxRunThreadCount);
@@ -294,11 +285,9 @@ void CLanServer::BeginThreads() {
 
 	//---------------------------
 	// 워커스레드 만들기
-	// 스레드 함수는 static이라 this로 오브젝트 알려줌..
 	//---------------------------
 	for (; i < _workerThreadCount; i++) {
 		_hThreads[i] = (HANDLE)_beginthreadex(nullptr, 0, WorkerThread, this, 0, nullptr);
-
 	}
 	//---------------------------
 	//  accept 스레드 생성
@@ -902,7 +891,6 @@ bool CLanServer::ReleaseSession(SESSION* pSession, int logic) {
 	//---------------------------
 	// Session관리 컨테이너에서 삭제
 	//---------------------------
-	SESSION_LOCK(pSession);
 	int idRet = InterlockedExchange((long*)&pSession->_ID, 0);
 	if (idRet == 0) {
 		CRASH();
@@ -914,7 +902,7 @@ bool CLanServer::ReleaseSession(SESSION* pSession, int logic) {
 	//---------------------------
 	// Sendq에 있던거 풀에 다시넣기
 	//---------------------------
-
+	SESSION_LOCK(pSession);
 	for (;;) {
 		CPacket *pPacket;
 		if (pSession->_sendQueue.Dequeue(&pPacket) == false) {
@@ -936,7 +924,7 @@ bool CLanServer::ReleaseSession(SESSION* pSession, int logic) {
 }
 
 
-SESSION* CLanServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
+CLanServer::SESSION* CLanServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
 	//---------------------------
 	// ID생성
 	//---------------------------
@@ -974,7 +962,7 @@ SESSION* CLanServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
 	return pSession;
 }
 
-SESSION_ID CLanServer::GenerateSessionID() {
+CLanServer::SESSION_ID CLanServer::GenerateSessionID() {
 	//---------------------------
 	// 	   Session ID 생성
 	//---------------------------
@@ -1004,7 +992,7 @@ void CLanServer::InitializeIndex() {
 	}
 }
 
-SESSION* CLanServer::FindSession(SESSION_ID sessionID) {
+CLanServer::SESSION* CLanServer::FindSession(SESSION_ID sessionID) {
 	int idx = SessionIDtoIndex(sessionID);
 	return &_sessionContainer[idx];
 }

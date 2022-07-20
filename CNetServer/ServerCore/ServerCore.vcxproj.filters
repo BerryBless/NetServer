@@ -36,9 +36,6 @@
     <ClInclude Include="CorePch.h">
       <Filter>Main</Filter>
     </ClInclude>
-    <ClInclude Include="CLanClient.h">
-      <Filter>Main</Filter>
-    </ClInclude>
     <ClInclude Include="CObjectPool.hpp">
       <Filter>Utils</Filter>
     </ClInclude>
@@ -56,6 +53,9 @@
     </ClInclude>
     <ClInclude Include="Queue.hpp">
       <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanClient.h">
+      <Filter>Main</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
