@@ -57,6 +57,9 @@
     <ClInclude Include="CLanClient.h">
       <Filter>Main</Filter>
     </ClInclude>
+    <ClInclude Include="Profiler.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -82,6 +85,9 @@
     </ClCompile>
     <ClCompile Include="CLanClient.cpp">
       <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="Profiler.cpp">
+      <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

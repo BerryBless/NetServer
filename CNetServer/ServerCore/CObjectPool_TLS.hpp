@@ -31,6 +31,7 @@ private:
 private:
 	alignas(64) DWORD			_Size;
 	bool						_bSizeCheck;
+	bool						_bPlacementNew;
 	DWORD						_tlsIdx;
 public:
 	ObjectPool_TLS(bool bPlacementNew = false, bool sizeCheck = false);
@@ -51,6 +52,7 @@ inline ObjectPool_TLS<DATA>::ObjectPool_TLS(bool bPlacementNew, bool sizeCheck)
 {
 	_Size = 0;
 	_bSizeCheck = sizeCheck;
+	_bPlacementNew = bPlacementNew;
 	//_pObjectPool = new CObjectPool<CChunk>(0, bPlacementNew);
 	_pObjectPool = (CObjectPool<CChunk>*)_aligned_malloc(sizeof(CObjectPool<CChunk>), 64);
 	new (_pObjectPool) CObjectPool<CChunk>;
@@ -88,12 +90,19 @@ inline DATA *ObjectPool_TLS<DATA>::Alloc(void)
 	{
 		InterlockedIncrement((LONG *) &_Size);
 	}
-
-	return chunk->Alloc();
+	DATA *ret = chunk->Alloc();
+	if (_bPlacementNew) {
+		new (ret) DATA();
+	}
+	return ret;
 }
 template<typename DATA>
 inline void ObjectPool_TLS<DATA>::Free(DATA *pData)
 {
+	if (_bPlacementNew) {
+		pData->~DATA();
+	}
+
 	st_Element *block = (st_Element *) pData;
 
 	block->pOrigin->Free(pData);
@@ -102,6 +111,7 @@ inline void ObjectPool_TLS<DATA>::Free(DATA *pData)
 	{
 		InterlockedDecrement((LONG *) &_Size);
 	}
+	
 
 }
 template<typename DATA>

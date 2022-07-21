@@ -542,8 +542,3 @@ protected:
 #define dfLOGIC_RELEASE_SESSION 1
 #define dfLOGIC_SET_BUFFER		2
 
-
-// TEMP
-#ifdef dfPOOLALLOC
-extern CObjectPool<CPacket> g_packetPool;
-#endif //dfPOOLALLOC

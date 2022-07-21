@@ -72,6 +72,7 @@
 ----------------------------------------------------------------*/
 #ifndef  __PACKET__
 #define  __PACKET__
+#include "CObjectPool_TLS.hpp"
 class CPacket {
 public:
 
@@ -239,6 +240,9 @@ public:
 
 	int _logSubLogic[100]; // 디버깅용 SubRef의 0dl 언재되었나
 	unsigned long _logidx=0;
+
+
+	static ObjectPool_TLS<CPacket> _packetPool;
 protected:
 	//------------------------------------------------------------
 	// 현재 버퍼의 사이즈.

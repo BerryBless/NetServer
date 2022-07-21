@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "Profiler.h"
 #include <time.h>
 
@@ -120,14 +121,14 @@ void CProfiler::ProfilePrintFile(const wchar_t *filename) {
 		__int64 total = _samples[i].TotalTime;
 		total -= _samples[i].Max[0];
 		total -= _samples[i].Min[0];
-		DOUBLE avg = (DOUBLE) total / (DOUBLE) (_samples[i].Call - 2) / (DOUBLE) freq.QuadPart * TICK_TO_MICSEC;
+		double avg = (double) total / (double) (_samples[i].Call - 2) / (double) freq.QuadPart * TICK_TO_MICSEC;
 
 		// 출력
 		fprintf_s(fp, "%17ls |%17.4llf\xC2\xB5s |%17.4llf\xC2\xB5s |%17.4llf\xC2\xB5s |%17lld\n",
 			_samples[i].Tag,												// 이름
 			avg,																// 평균
-			_samples[i].Min[0] / (DOUBLE) freq.QuadPart * TICK_TO_MICSEC,		// 최소
-			_samples[i].Max[0] / (DOUBLE) freq.QuadPart * TICK_TO_MICSEC,		// 최대
+			_samples[i].Min[0] / (double) freq.QuadPart * TICK_TO_MICSEC,		// 최소
+			_samples[i].Max[0] / (double) freq.QuadPart * TICK_TO_MICSEC,		// 최대
 			_samples[i].Call);											// 호출 횟수
 	}
 	fprintf_s(fp, "----------------------------------------------------------------------------------------------------\n");

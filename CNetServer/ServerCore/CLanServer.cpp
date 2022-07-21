@@ -11,10 +11,6 @@
 #define dfMAX(a,b) a<b?b:a
 
 
-#ifdef dfPOOLALLOC
-CObjectPool<CPacket> g_packetPool;
-#endif // dfPOOLALLOC
-
 CLanServer::CLanServer() {
 	//---------------------------
 	// 문자열 로컬 세팅

@@ -165,6 +165,7 @@
     <ClInclude Include="CObjectPool_TLS.hpp" />
     <ClInclude Include="CorePch.h" />
     <ClInclude Include="CPacket.h" />
+    <ClInclude Include="Profiler.h" />
     <ClInclude Include="Queue.hpp" />
     <ClInclude Include="CRingBuffer.h" />
     <ClInclude Include="Stack.hpp" />
@@ -187,6 +188,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Profiler.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

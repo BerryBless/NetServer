@@ -3,16 +3,16 @@
 #include <malloc.h>
 #include <string.h>
 #include <Windows.h>
-#include "CObjectPool.hpp"
+#include "CObjectPool_TLS.hpp"
 #ifndef CRASH
 #define CRASH() do{\
 	CLogger::_Log(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
 	int *nptr = nullptr; *nptr = 1;\
 }while(0)
 #endif // !CRASH
-#ifdef dfPOOLALLOC
-extern CObjectPool<CPacket> g_packetPool;
-#endif // dfPOOLALLOC
+
+ObjectPool_TLS<CPacket> CPacket::_packetPool(true);
+
 CPacket::CPacket() {
 	// 기본 사이즈만큼 할당
 	_iBufferSize = eBUFFER_DEFAULT;
@@ -214,8 +214,8 @@ CPacket* CPacket::AllocAddRef() {
 	CPacket* pPacket;
 
 
-#ifdef dfPOOLALLOC
-	pPacket = g_packetPool.Alloc();
+#ifndef dfALLOCATOR
+	pPacket = _packetPool.Alloc();
 #else
 	pPacket = new CPacket;
 #endif // dfPOOLALLOC
@@ -243,8 +243,8 @@ void CPacket::SubRef(int logic) {
 
 	if (InterlockedCompareExchange(&_refCount.counter, tempRef.counter, 0) == 0){
 		Clear();
-#ifdef dfPOOLALLOC
-		g_packetPool.Free(this);
+#ifndef dfALLOCATOR
+		_packetPool.Free(this);
 #else
 		delete this;
 #endif // dfPOOLALLOC
