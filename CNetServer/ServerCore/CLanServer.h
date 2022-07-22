@@ -15,6 +15,8 @@
 }while(0)
 #endif // !CRASH
 
+#define df_SENDTHREAD
+
 // ----------------------------------------------
 // SESSION_ID
 // ID가 하나씩 증가하며 항상 고유키
@@ -205,8 +207,12 @@ private:
 	// ----------------------------------------------
 	static unsigned int __stdcall MonitorThread(LPVOID arg);
 
-
+#ifdef df_SENDTHREAD
 	static unsigned int __stdcall SendThread(LPVOID arg);
+#endif // df_SENDTHREAD
+
+
+
 
 	// ----------------------------------------------
 	// OnGQCS()
@@ -269,7 +275,9 @@ private:
 	// ----------------------------------------------
 	bool NetMonitorProc();
 
+#ifdef df_SENDTHREAD
 	bool SendThreadProc();
+#endif
 	// ----------------------------------------------
 	// SendPost(pSession, logic)
 	// logic : 어느 곳에서 호출을 했다를 알 수 있는 디버깅용 숫자

@@ -2,6 +2,7 @@
 #include "CEchoServer.h"
 #include <conio.h>
 #include <time.h>
+#include "Profiler.h"
 
 bool CEchoServer::OnConnectionRequest(u_long IP, u_short Port) {
 	return true;
@@ -50,10 +51,17 @@ bool CEchoServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, B
 }
 
 void CEchoServer::KeyCheck() {
+	WCHAR FILENAME[50] = L"";
+	// timestemp
+	tm t;
+	time_t now;
+	int printTick = 0;
+
 	for (;;) {
 		if (_kbhit()) {
 			char cmd = _getch();
 			if (cmd == 'Q' || cmd == 'q') {
+				PRO_PRINT(L"CLanserver_PROFILE.log");
 				Quit();
 				break;
 			}
@@ -75,7 +83,20 @@ void CEchoServer::KeyCheck() {
 		}
 		// 땜빵
 		Sleep(1000);
+		if (printTick >= 60) {
+			// timestemp
+			time(&now);
+			localtime_s(&t, &now);
+
+			swprintf_s(FILENAME, 50, L"Profile/%02d%02d%02d_%02d%02d%02d_PROFILE.log",
+				t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
+				t.tm_hour, t.tm_min, t.tm_sec);
+			PRO_PRINT(FILENAME);
+			printTick = 0;
+		}
+		printTick++;
 		PrintMonitor();
+
 	}
 }
 
@@ -95,7 +116,9 @@ _monitor._sendPacketTPS, _monitor._recvPacketTPS, _monitor._acceptCount, _monito
 }
 
 void CEchoServer::EchoProc(SESSION_ID sessionID, CPacket *pPacket) {
+	PRO_BEGIN(L"Content_Send");
 	SendPacket(sessionID, pPacket);
+	PRO_END(L"Content_Send");
 }
 
 void CEchoServer::LockMap() {

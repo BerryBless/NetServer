@@ -60,6 +60,12 @@
     <ClInclude Include="Profiler.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="ProcessMoniter.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="HardWareMoniter.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -87,6 +93,12 @@
       <Filter>Main</Filter>
     </ClCompile>
     <ClCompile Include="Profiler.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="ProcessMoniter.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="HardWareMoniter.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>

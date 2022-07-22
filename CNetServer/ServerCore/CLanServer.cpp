@@ -1,5 +1,9 @@
 #include "pch.h"
 #include "CLanServer.h"
+
+#include "Profiler.h"
+
+
 // cmd code
 #define dfEXIT_CODE 0xFFFFFFFF // GQCS()에서 이게 오면 종료
 
@@ -32,6 +36,8 @@ CLanServer::CLanServer() {
 	// 세션 컨테이너 락 초기화
 	//---------------------------
 	InitializeSRWLock(&_sessionContainerLock);
+
+
 }
 
 CLanServer::~CLanServer() {
@@ -88,7 +94,7 @@ bool CLanServer::Start(u_long IP, u_short prot, BYTE workerThreadCount, BYTE max
 	// 스레드 핸들 배열 생성
 	// _workerThreadCount + acceptThread + monitorThread
 	//---------------------------
-	_NumThreads = _workerThreadCount + 2;
+	_NumThreads = _workerThreadCount + 3;
 	_hThreads = new HANDLE[(long long)_NumThreads];
 
 	//---------------------------
@@ -176,7 +182,7 @@ bool CLanServer::SendPacket(SESSION_ID SessionID, CPacket* pPacket) {
 		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: Session is colsed..");
 		return false;
 	}
-
+	PRO_BEGIN(L"SendPacket");
 	//---------------------------
 	// 페킷 포인터를 센드큐에
 	//---------------------------
@@ -188,7 +194,12 @@ bool CLanServer::SendPacket(SESSION_ID SessionID, CPacket* pPacket) {
 	// monitor
 	//---------------------------
 	InterlockedIncrement(&_monitor._sendPacketCalc);
-	return SendPost(pSession, dfLOGIC_SEND_PACKET);
+#ifndef df_SENDTHREAD
+	SendPost(pSession, dfLOGIC_SEND_PACKET)
+#endif // !df_SENDTHREAD
+
+	PRO_END(L"SendPacket");
+	return true;
 }
 
 BOOL CLanServer::DomainToIP(const WCHAR* szDomain, IN_ADDR* pAddr)
@@ -288,12 +299,16 @@ void CLanServer::BeginThreads() {
 	//---------------------------
 	//  accept 스레드 생성
 	//---------------------------
-	_hThreads[i] = (HANDLE)_beginthreadex(nullptr, 0, AcceptThread, this, 0, nullptr);
-	++i;
+	_hThreads[i++] = (HANDLE)_beginthreadex(nullptr, 0, AcceptThread, this, 0, nullptr);
 	//---------------------------
 	// 모니터링 스레드 생성
 	//---------------------------
-	_hThreads[i] = (HANDLE)_beginthreadex(nullptr, 0, MonitorThread, this, 0, nullptr);
+	_hThreads[i++] = (HANDLE)_beginthreadex(nullptr, 0, MonitorThread, this, 0, nullptr);
+
+#ifdef df_SENDTHREAD
+	_hThreads[i++] = (HANDLE) _beginthreadex(nullptr, 0, SendThread, this, 0, nullptr);
+#endif // df_SENDTHREAD
+
 }
 
 //============================================================
@@ -333,6 +348,19 @@ unsigned int __stdcall CLanServer::MonitorThread(LPVOID arg) {
 	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- Monitor Thread IS Closed..\n");
 	return 0;
 }
+#ifdef df_SENDTHREAD
+unsigned int __stdcall CLanServer::SendThread(LPVOID arg)
+{
+	CLanServer *pServer = (CLanServer *) arg;
+	while (true) {
+		if (pServer->SendThreadProc() == false) {
+			break;
+		}
+	}
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- Monitor Thread IS Closed..\n");
+	return 0;
+}
+#endif // df_SENDTHREAD
 #pragma endregion
 
 bool CLanServer::OnGQCS() {
@@ -436,7 +464,9 @@ bool CLanServer::SendProc(SESSION* pSession, DWORD transferredSize) {
 	//---------------------------
 	// SendQ에 보낼것이 남아있으면 Send
 	//---------------------------
+#ifndef df_SENDTHREAD
 	SendPost(pSession, dfLOGIC_CPMPLETE_SEND);
+#endif
 	return true;
 }
 
@@ -513,6 +543,7 @@ bool CLanServer::RecvProc(SESSION* pSession, DWORD transferredSize) {
 		//---------------------------
 		// 패킷 풀에서 하나 꺼내기
 		//---------------------------
+		PRO_BEGIN(L"RecvPost_OntPacket");
 		CPacket* pPacket = CPacket::AllocAddRef();
 		if (pPacket == NULL) {
 			CRASH();
@@ -541,6 +572,7 @@ bool CLanServer::RecvProc(SESSION* pSession, DWORD transferredSize) {
 		// 참조카운트 하나감소
 		//---------------------------
 		pPacket->SubRef(5000);
+		PRO_END(L"RecvPost_OntPacket");
 	}
 
 	//---------------------------
@@ -562,6 +594,7 @@ bool CLanServer::AcceptProc() {
 	// 동기 accept()
 	//---------------------------
 	clientsock = accept(_listensock, (SOCKADDR*)&clientaddr, &addrlen);
+	PRO_BEGIN(L"acceptProc");
 	if (clientsock == INVALID_SOCKET) {
 		int err = WSAGetLastError();
 		if (err == WSAENOTSOCK || err == WSAEINTR) {
@@ -634,6 +667,7 @@ bool CLanServer::AcceptProc() {
 	// 모니터링
 	//---------------------------
 	InterlockedIncrement(&_monitor._acceptCount);
+	PRO_END(L"acceptProc");
 
 	return _isRunning;
 }
@@ -652,14 +686,28 @@ bool CLanServer::NetMonitorProc() {
 
 	return _isRunning;
 }
-
+#ifdef df_SENDTHREAD
 bool CLanServer::SendThreadProc()
 {
-	for(;;){
-
+	while (this->_isRunning) {
+		Sleep(3);
+		for (int i = 1; i <= this->_maxConnection; ++i) {
+			if (InterlockedOr((LONG *) &this->_sessionContainer[i]._isAlive, FALSE) == FALSE)
+				continue;
+			SESSION *pSession = &this->_sessionContainer[i];
+			if (InterlockedOr((LONG *) &pSession->_ID, 0) == 0)
+				continue;
+//			SESSION_LOCK(pSession);
+			IncrementIOCount(pSession, 123123);
+			if (pSession->_sendQueue.GetSize() > 0)
+				SendPost(pSession,123321);
+			DecrementIOCount(pSession, 321321);
+//			SESSION_UNLOCK(pSession);
+		}
 	}
 	return false;
 }
+#endif // df_SENDTHREAD
 
 bool CLanServer::SendPost(SESSION* pSession, int logic) {
 	if (pSession == NULL) {
@@ -908,7 +956,7 @@ bool CLanServer::ReleaseSession(SESSION* pSession, int logic) {
 	//---------------------------
 	// Sendq에 있던거 풀에 다시넣기
 	//---------------------------
-	SESSION_LOCK(pSession);
+	//SESSION_LOCK(pSession);
 	for (;;) {
 		CPacket *pPacket;
 		if (pSession->_sendQueue.Dequeue(&pPacket) == false) {
@@ -917,7 +965,7 @@ bool CLanServer::ReleaseSession(SESSION* pSession, int logic) {
 		pPacket->SubRef();
 	}
 	pSession->_recvQueue.ClearBuffer();
-	SESSION_UNLOCK(pSession);
+	//SESSION_UNLOCK(pSession);
 
 
 	DeleteSessionData(ID);
@@ -1011,6 +1059,7 @@ void CLanServer::DeleteSessionData(SESSION_ID sessionID) {
 	//delete pSession;
 	//---------------------------
 	USHORT idx = SessionIDtoIndex(sessionID);
+	if (idx == 0)CRASH();
 	_emptyIndex.Push(idx);
 }
 
