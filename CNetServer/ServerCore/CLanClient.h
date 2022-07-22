@@ -20,7 +20,7 @@ public:
 		// session state
 		DWORD _IOcount;
 		DWORD _enqPacketCnt;
-		DWORD _sendedPacketCnt;
+		DWORD _sendPacketCnt;
 		BOOL _isSend;
 
 		// Network
@@ -31,7 +31,7 @@ public:
 		SESSION() {
 			_IOcount = 0;
 			_isSend = false;
-			_sendedPacketCnt = 0;
+			_sendPacketCnt = 0;
 			ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
 			ZeroMemory(&_sendOverlapped, sizeof(WSAOVERLAPPED));
 		}

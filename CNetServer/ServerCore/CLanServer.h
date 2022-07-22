@@ -21,37 +21,12 @@
 // 0은 사용이 되지않는 ID
 // ----------------------------------------------
 
-// ----------------------------------------------
-// SESSION_ID _ID;						// 이 세션의 ID
-// 
-// IOCP Buffer
-// WSAOVERLAPPED	_recvOverlapped;	// WSARecv Overlapped
-// CRingBuffer		_recvQueue;			// WSARecv Buffer
-// WSAOVERLAPPED	_sendOverlapped;	// WSASend Overlapped
-// CRingBuffer		_sendQueue;			// WSASend Buffer
-//
-// session state
-// DWORD _IOcount;						// WSA 함수가 걸릴때 +1 , 풀릴때 -1
-// DWORD _enqPacketCnt;					// 보낸 패킷(메시지 단위) 수
-// DWORD _sendedPacketCnt;				// 보낸 패킷(메시지 단위) 수
-// BOOL _isSend;						// 보내는 중이면 TURE
-//
-// session information
-// SOCKET _sock;						// 이 세션의 소켓
-// ULONG _IP;							// 이 세션의 IP 
-// USHORT _port;						// 이 세션의 port
-// 
-// session lock
-// SRWLOCK _lock;						// 세션의 락
-// ----------------------------------------------
-
-
-
 class CLanServer {
 public:
 	typedef u_int64 SESSION_ID;
 	struct SESSION {
 		SESSION_ID _ID;
+		DWORD _isAlive;
 
 		// IOCP Buffer
 		WSAOVERLAPPED _recvOverlapped;
@@ -61,9 +36,8 @@ public:
 
 		// session state
 		DWORD _IOcount;
-		DWORD _enqPacketCnt;
-		DWORD _sendedPacketCnt;
-		BOOL _isSend;
+		DWORD _IOFlag;
+		DWORD _sendPacketCnt;
 
 		// session information
 		SOCKET _sock;
@@ -72,12 +46,13 @@ public:
 
 		// session lock
 		SRWLOCK _lock;
+		DWORD _ThreadBlockIdx;
 
 		SESSION() {
 			_ID = 0;
 			_IOcount = 0;
-			_isSend = false;
-			_sendedPacketCnt = 0;
+			_IOFlag = 0;
+			_sendPacketCnt = 0;
 			ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
 			ZeroMemory(&_sendOverlapped, sizeof(WSAOVERLAPPED));
 		}
@@ -230,6 +205,9 @@ private:
 	// ----------------------------------------------
 	static unsigned int __stdcall MonitorThread(LPVOID arg);
 
+
+	static unsigned int __stdcall SendThread(LPVOID arg);
+
 	// ----------------------------------------------
 	// OnGQCS()
 	// 
@@ -291,7 +269,7 @@ private:
 	// ----------------------------------------------
 	bool NetMonitorProc();
 
-
+	bool SendThreadProc();
 	// ----------------------------------------------
 	// SendPost(pSession, logic)
 	// logic : 어느 곳에서 호출을 했다를 알 수 있는 디버깅용 숫자

@@ -290,7 +290,7 @@ bool CLanClient::SendProc(DWORD transferredSize)
 	// 완료통지 온 패킷 지우기
 	//---------------------------
 	CPacket *pPacket;
-	int sendedPacketCnt = _client._sendedPacketCnt;
+	int sendedPacketCnt = _client._sendPacketCnt;
 
 	for (int i = 0; i < sendedPacketCnt; ++i)
 	{
@@ -300,7 +300,7 @@ bool CLanClient::SendProc(DWORD transferredSize)
 		pPacket = nullptr;
 	}
 
-	_client._sendedPacketCnt = 0;
+	_client._sendPacketCnt = 0;
 
 	//---------------------------
 	// 	   Send가 끝났다
@@ -498,7 +498,7 @@ bool CLanClient::SendPost()
 	//---------------------------
 	// WSASend()
 	//---------------------------
-	int sendRet = WSASend(_client._sock, bufferSet, _client._sendedPacketCnt, &byteSends, 0, &_client._sendOverlapped, nullptr);
+	int sendRet = WSASend(_client._sock, bufferSet, _client._sendPacketCnt, &byteSends, 0, &_client._sendOverlapped, nullptr);
 	if (sendRet == SOCKET_ERROR) {
 		int err = WSAGetLastError();
 
@@ -614,7 +614,7 @@ bool CLanClient::SetWSABuffer(WSABUF *BufSets, bool isRecv)
 		//---------------------------
 		// 처리한만큼 개수 저장
 		//---------------------------
-		_client._sendedPacketCnt = snapSize;
+		_client._sendPacketCnt = snapSize;
 	}
 
 	return true;

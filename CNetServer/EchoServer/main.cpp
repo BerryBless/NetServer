@@ -1,8 +1,8 @@
 #include "pch.h"
 #include "CEchoServer.h"
 
-#define dfWORKERTHREAD 16
-#define dfRUNTHREAD 8
+#define dfWORKERTHREAD 4
+#define dfRUNTHREAD 2
 #define dfPORT 6000
 #define MAX_SESSION_COUNT 20000
 
