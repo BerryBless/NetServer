@@ -26,7 +26,10 @@ public:
 private:
 	void KeyCheck();
 	void PrintMonitor(FILE *outFP);
+	void PrintAverage(FILE *outFP);
 	void PrintFileMonitor();
+	void AverageMonitor(MoniteringInfo monitor);
+
 	void EchoProc(SESSION_ID sessionID, CPacket *pPacket);
 	void LockMap();
 	void UnlockMap();
@@ -40,5 +43,30 @@ private:
 
 	HardWareMoniter _hardMoniter;
 	ProcessMoniter _procMonitor;
+
+
+private:
+	struct AVGMonitor {
+
+		ULONGLONG							_acceptPerSec = 0;
+		ULONGLONG							_recvPacketPerSec = 0;
+		ULONGLONG							_sendPacketPerSec = 0;
+
+
+		ULONGLONG							_availableMemory = 0;
+		ULONGLONG							_NPPool = 0;
+		ULONGLONG							_privateMemory = 0;
+
+		double								_procCPUTotal = 0;
+		double								_procCPUKernel = 0;
+		double								_procCPUUser = 0;
+
+		double								_hardCPUTotal = 0;
+		double								_hardCPUKernel = 0;
+		double								_hardCPUUser = 0;
+	};
+
+	AVGMonitor _avgMonitor;
+	LONG64	_avgTotal = 0;
 };
 

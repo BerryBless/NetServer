@@ -9,9 +9,9 @@ public:
 
 	void UpdateProcessTime();
 
-	inline float ProcessTotal() { return _ProcessTotal; }
-	inline float ProcessUser() { return _ProcessUser; }
-	inline float ProcessKernel() { return _ProcessKernel; }
+	inline double ProcessTotal() { return _ProcessTotal; }
+	inline double ProcessUser() { return _ProcessUser; }
+	inline double ProcessKernel() { return _ProcessKernel; }
 
 	inline unsigned long long PrivateMemoryBytes() { return _PrivateMemoryBytes; }
 	inline unsigned long long PrivateMemoryKBytes() { return _PrivateMemoryBytes >> 10; }
@@ -22,9 +22,9 @@ private:
 	WCHAR _ProcessName[MAX_PATH];
 	int _NumOfProcessor;
 
-	float _ProcessTotal;
-	float _ProcessUser;
-	float _ProcessKernel;
+	double _ProcessTotal;
+	double _ProcessUser;
+	double _ProcessKernel;
 
 	ULARGE_INTEGER _ProcessLastKernel;
 	ULARGE_INTEGER _ProcessLastUser;

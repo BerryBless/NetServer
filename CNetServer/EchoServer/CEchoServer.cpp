@@ -103,39 +103,62 @@ void CEchoServer::KeyCheck() {
 }
 
 void CEchoServer::PrintMonitor(FILE *outFP) {
-	MoniteringInfo _monitor = GetMoniteringInfo();
+	MoniteringInfo monitor = GetMoniteringInfo();
 	fwprintf_s(outFP, L"\n\
-====================================\n\
-Start Time [%02d/%02d/%02d %02d:%02d:%02d]\n",
+===================Start Time [%02d/%02d/%02d %02d:%02d:%02d]=====================\n",
 _timeFormet.tm_mon + 1, _timeFormet.tm_mday, (_timeFormet.tm_year + 1900) % 100, _timeFormet.tm_hour, _timeFormet.tm_min, _timeFormet.tm_sec);
-
 	fwprintf_s(outFP, L"\n\
------------------------------------\n\
-_PACKET_\n\
+-----------------------------TPS--------------------------------------\n\
+Accept TPS\t[%lld]\n\
 send packet TPS\t[%lld]\n\
 recv packet TPS\t[%lld]\n",
-_monitor._sendPacketPerSec, _monitor._recvPacketPerSec);
+monitor._acceptPerSec, monitor._sendPacketPerSec, monitor._recvPacketPerSec);
 	fwprintf_s(outFP, L"\n\
------------------------------------\n\
-_TOTAL_\n\
+----------------------------TOTAL-------------------------------------\n\
 packet\t\t\t[%lld]\n\
-send processed Byte\t[%lld]\n\
+sended Byte\t\t[%lld]\n\
 accept Count\t\t[%lld]\n\
 disconnect Count\t[%lld]\n",
-_monitor._totalPacket, _monitor._totalProecessedBytes, _monitor._totalAcceptSession, _monitor._totalReleaseSession);
+monitor._totalPacket, monitor._totalProecessedBytes, monitor._totalAcceptSession, monitor._totalReleaseSession);
 	fwprintf_s(outFP, L"\n\
------------------------------------ \n\
-_MEMORY_\n\
+----------------------------MEMORY------------------------------------ \n\
 Available\t[%lluMb]\n\
 NPPool\t\t[%lluMb]\n\
 Private Mem\t[%lluKb]\n",
 _hardMoniter.AvailableMemoryMBytes(), _hardMoniter.NonPagedPoolMBytes(), _procMonitor.PrivateMemoryKBytes());
 	fwprintf_s(outFP, L"\n\
------------------------------------ \n\
+---------------------------CORE USAGE--------------------------------- \n\
 PROCESS\t[T %.1llf%% K %.1llf%% U %.1llf%%] \n\
 CPU\t[T %.1llf%% K %.1llf%% U %.1llf%%]\n",
-_procMonitor.ProcessTotal(), _procMonitor.ProcessKernel(), _procMonitor.ProcessUser(), _hardMoniter.ProcessorTotal(), _hardMoniter.ProcessorKernel(), _hardMoniter.ProcessorUser());
-	;
+_procMonitor.ProcessTotal(), _procMonitor.ProcessKernel(), _procMonitor.ProcessUser(),
+_hardMoniter.ProcessorTotal(), _hardMoniter.ProcessorKernel(), _hardMoniter.ProcessorUser());
+
+	AverageMonitor(monitor);
+	PrintAverage(outFP);
+}
+
+void CEchoServer::PrintAverage(FILE *outFP) {
+	fwprintf_s(outFP, L"\n----------------------------AVERAGE-----------------------------------\n");
+	fwprintf_s(outFP, L"after %lld second\n", _avgTotal);
+	fwprintf_s(outFP, L"Accept TPS[%lld] send packet TPS[%lld] recv packet TPS[%lld]\n",
+		_avgMonitor._acceptPerSec / _avgTotal,
+		_avgMonitor._recvPacketPerSec / _avgTotal,
+		_avgMonitor._sendPacketPerSec / _avgTotal);
+
+	fwprintf_s(outFP, L"Available[%lluMb] NPPool[%lluMb] Private Mem[%lluKb]\n",
+		_avgMonitor._availableMemory / _avgTotal,
+		_avgMonitor._NPPool / _avgTotal,
+		_avgMonitor._privateMemory / _avgTotal);
+
+	fwprintf_s(outFP, L"PROCESS\t[T %.1llf%% K %.1llf%% U %.1llf%%]\n",
+		_avgMonitor._procCPUTotal / (double) _avgTotal,
+		_avgMonitor._procCPUKernel / (double) _avgTotal,
+		_avgMonitor._procCPUUser / (double) _avgTotal);
+
+	fwprintf_s(outFP, L"CPU\t[T %.1llf%% K %.1llf%% U %.1llf%%]\n",
+		_avgMonitor._hardCPUTotal / (double) _avgTotal,
+		_avgMonitor._hardCPUKernel / (double) _avgTotal,
+		_avgMonitor._hardCPUUser / (double) _avgTotal);
 }
 
 void CEchoServer::PrintFileMonitor() {
@@ -162,6 +185,29 @@ void CEchoServer::PrintFileMonitor() {
 	fseek(fp, 0, SEEK_END);
 	PrintMonitor(fp);
 	fclose(fp);
+}
+
+void CEchoServer::AverageMonitor(MoniteringInfo monitor) {
+	_avgMonitor._acceptPerSec += monitor._acceptPerSec;
+	_avgMonitor._recvPacketPerSec += monitor._recvPacketPerSec;
+	_avgMonitor._sendPacketPerSec += monitor._sendPacketPerSec;
+
+	_avgMonitor._availableMemory += _hardMoniter.AvailableMemoryMBytes();
+	_avgMonitor._NPPool += _hardMoniter.NonPagedPoolMBytes();
+	_avgMonitor._privateMemory += _procMonitor.PrivateMemoryKBytes();
+
+
+	_avgMonitor._procCPUTotal += _procMonitor.ProcessTotal();
+	_avgMonitor._procCPUKernel += _procMonitor.ProcessKernel();
+	_avgMonitor._procCPUUser += _procMonitor.ProcessUser();
+
+	_avgMonitor._hardCPUTotal += _hardMoniter.ProcessorTotal();
+	_avgMonitor._hardCPUKernel += _hardMoniter.ProcessorKernel();
+	_avgMonitor._hardCPUUser += _hardMoniter.ProcessorUser();
+
+	++_avgTotal;
+
+
 }
 
 void CEchoServer::EchoProc(SESSION_ID sessionID, CPacket *pPacket) {
