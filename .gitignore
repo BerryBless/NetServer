@@ -47,4 +47,4 @@ Debug/
 Release/
 x64/
 SAMPLE/
-7. 멀티스래딩/LFStack/Dump/LFStack_4_crash delete oldtop.dmp
+Backup/
