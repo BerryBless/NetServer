@@ -42,6 +42,7 @@ public:
 		DWORD _IOcount;
 		DWORD _IOFlag;
 		DWORD _sendPacketCnt;
+		DWORD _lastRecvdTime;
 
 		// session information
 		SOCKET _sock;
@@ -157,12 +158,17 @@ protected:
 	// ----------------------------------------------
 	virtual void OnError(int errorcode, const WCHAR *log) = 0;
 
+
+	virtual void OnTimeout(SESSION_ID SessionID) = 0;
+
 	// ----------------------------------------------
 	// DomainToIP()
 	// 
 	// 도메인주소로 IP주소 얻어오기
 	// ----------------------------------------------
 	BOOL DomainToIP(const WCHAR* szDomain, IN_ADDR* pAddr);
+
+	void SetTimeoutTime(DWORD ms) { _timeoutMillisec = ms; }
 
 private:
 	// ==============================================
@@ -208,6 +214,10 @@ private:
 	// 1초마다 TPS를 계산
 	// ----------------------------------------------
 	static unsigned int __stdcall MonitorThread(LPVOID arg);
+
+	static unsigned int __stdcall TimeOutThread(LPVOID arg);
+
+
 
 #ifdef df_SENDTHREAD
 	static unsigned int __stdcall SendThread(LPVOID arg);
@@ -280,6 +290,10 @@ private:
 #ifdef df_SENDTHREAD
 	bool SendThreadProc();
 #endif
+
+
+	bool TimeOutProc();
+
 	// ----------------------------------------------
 	// SendPost(pSession, logic)
 	// logic : 어느 곳에서 호출을 했다를 알 수 있는 디버깅용 숫자
@@ -468,6 +482,7 @@ private:
 	BYTE _workerThreadCount = 0;	// 생성할 스레드 수
 	u_short _maxConnection = 0;		// 최대 동접자 수
 	bool _isNagle = false;
+	DWORD _timeoutMillisec;
 
 	// ----------------------------------------------
 	// Network State

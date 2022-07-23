@@ -19,6 +19,7 @@ public:
 
 	virtual void OnError(int errorcode, const WCHAR *log); // 에러 발생시 유저한테 알려줄곳
 
+	virtual void OnTimeout(SESSION_ID SessionID);
 public:
 	bool BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
 

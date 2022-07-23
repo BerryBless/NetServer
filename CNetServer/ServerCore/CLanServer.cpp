@@ -32,7 +32,7 @@ CLanServer::CLanServer() {
 	//---------------------------
 	InitializeSRWLock(&_sessionContainerLock);
 
-
+	_timeoutMillisec = 1000;
 }
 
 CLanServer::~CLanServer() {
@@ -89,7 +89,7 @@ bool CLanServer::Start(u_long IP, u_short prot, BYTE workerThreadCount, BYTE max
 	// 스레드 핸들 배열 생성
 	// _workerThreadCount + acceptThread + monitorThread
 	//---------------------------
-	_NumThreads = _workerThreadCount + 3;
+	_NumThreads = _workerThreadCount + 4;
 	_hThreads = new HANDLE[(long long)_NumThreads];
 
 	//---------------------------
@@ -149,14 +149,17 @@ bool CLanServer::Disconnect(SESSION_ID SessionID) {
 	//---------------------------
 	// 세션 끊기?
 	//---------------------------
+	bool ret;
 	SESSION* pSession = FindSession(SessionID);
+	IncrementIOCount(pSession, 887788);
 	if (pSession == NULL) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"//Disconnect ERROR :: can not find session..");
 		OnError(dfLOGIC_DISCONNECT, L"Disconnect ERROR :: can not find session..");
 		return false;
 	}
-	CancelIo((HANDLE)pSession->_sock);
-	return true;
+	ret = CancelIoEx((HANDLE)pSession->_sock,nullptr);
+	DecrementIOCount(pSession,778877);
+	return ret;
 }
 
 bool CLanServer::SendPacket(SESSION_ID SessionID, CPacket* pPacket) {
@@ -300,6 +303,8 @@ void CLanServer::BeginThreads() {
 	//---------------------------
 	_hThreads[i++] = (HANDLE)_beginthreadex(nullptr, 0, MonitorThread, this, 0, nullptr);
 
+	_hThreads[i++] = (HANDLE)_beginthreadex(nullptr, 0, TimeOutThread, this, 0, nullptr);
+
 #ifdef df_SENDTHREAD
 	_hThreads[i++] = (HANDLE) _beginthreadex(nullptr, 0, SendThread, this, 0, nullptr);
 #endif // df_SENDTHREAD
@@ -337,6 +342,17 @@ unsigned int __stdcall CLanServer::MonitorThread(LPVOID arg) {
 	CLanServer* pServer = (CLanServer*)arg;
 	while (true) {
 		if (pServer->NetMonitorProc() == false) {
+			break;
+		}
+	}
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- Monitor Thread IS Closed..\n");
+	return 0;
+}
+unsigned int __stdcall CLanServer::TimeOutThread(LPVOID arg)
+{
+	CLanServer *pServer = (CLanServer *) arg;
+	while (true) {
+		if (pServer->TimeOutProc() == false) {
 			break;
 		}
 	}
@@ -485,6 +501,8 @@ bool CLanServer::RecvProc(SESSION* pSession, DWORD transferredSize) {
 	int headerMoveRet;
 	int payloadDeqRet;
 	USHORT header;
+
+	pSession->_lastRecvdTime = timeGetTime();
 
 	//---------------------------
 	// 	   반복문 돌며 패킷 처리
@@ -701,8 +719,23 @@ bool CLanServer::SendThreadProc()
 	}
 	return false;
 }
+
 #endif // df_SENDTHREAD
 
+bool CLanServer::TimeOutProc()
+{
+	DWORD timeoutTime;
+	while (_isRunning) {
+		timeoutTime = timeGetTime();
+		Sleep(_timeoutMillisec);
+		for (int i = 1; i <= this->_maxConnection; ++i) {
+			if (InterlockedOr((LONG *) &this->_sessionContainer[i]._isAlive, 0) == 0) continue;
+			if (_sessionContainer[i]._lastRecvdTime >= timeoutTime) continue;
+			this->OnTimeout(_sessionContainer[i]._ID);
+		}
+	}
+	return false;
+}
 bool CLanServer::SendPost(SESSION* pSession, int logic) {
 	if (pSession == NULL) {
 		CRASH();
@@ -1008,6 +1041,7 @@ CLanServer::SESSION* CLanServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
 	pSession->_sock = sock;
 	pSession->_IP = addr.sin_addr.S_un.S_addr;
 	pSession->_port = addr.sin_port;
+	pSession->_lastRecvdTime = timeGetTime();
 
 	return pSession;
 }

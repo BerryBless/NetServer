@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "CEchoClient.h"
 
-#define dfDUMMY_CNT 1000
+#define dfDUMMY_CNT 10
 
 int main() {
 	CEchoClient *pDummy = new CEchoClient[dfDUMMY_CNT];
@@ -14,14 +14,14 @@ int main() {
 	int cnt = 0;
 	while (1)
 	{
-		CPacket *pPacket = CPacket::AllocAddRef();
+	/*	CPacket *pPacket = CPacket::AllocAddRef();
 
 		*pPacket << cnt++;
 
 		pPacket->SetHeader();
 		for (int i = 0; i < dfDUMMY_CNT; i++)
 			pDummy[i].SendPacket(pPacket);
-		pPacket->SubRef();
+		pPacket->SubRef();*/
 	}
 
 	return 0;

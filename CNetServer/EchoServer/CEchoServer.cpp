@@ -39,6 +39,12 @@ void CEchoServer::OnError(int errorcode, const WCHAR *log) {
 	wprintf_s(L"%d :: %s", errorcode, log);
 }
 
+void CEchoServer::OnTimeout(SESSION_ID SessionID)
+{
+	printf_s("OnTimeout :: %lld\n", SessionID);
+	Disconnect(SessionID);
+}
+
 bool CEchoServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
 	if (Start(IP, port, workerThreadCount, maxRunThreadCount, nagle, maxConnection) == false)
 		return false;
