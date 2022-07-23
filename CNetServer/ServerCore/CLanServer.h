@@ -7,6 +7,8 @@
 #include "CCrashDump.h"
 #include "Stack.hpp"
 #include "Queue.hpp"
+#include "HardWareMoniter.h"
+#include "ProcessMoniter.h"
 
 #ifndef CRASH
 #define CRASH() do{\
@@ -493,24 +495,42 @@ private:
 	//CObjectPool<CPacket> _packetPool; // TEMP :: global value
 protected:
 	// ==============================================
-	// TODO 
-	// 상속될 각죵 옵션
-	// ==============================================
-
 	// 모니터링
-	struct MONITOR {
-		// 현재(계산중)
-		DWORD _sendPacketCalc;							
-		DWORD _recvPacketCalc;					
-
-		// 결과값
-		DWORD _sendPacketTPS;
-		DWORD _recvPacketTPS;
-
-		DWORD _acceptCount;
-		DWORD _disconnectCount;
+	// ==============================================
+	struct MoniteringInfo {
+		DWORD								_workerThreadCount;
+		DWORD								_runningThreadCount;
+		ULONGLONG							_sessionCnt;
+		ULONGLONG							_totalPacket;
+		ULONGLONG							_totalProecessedBytes;
+		ULONGLONG							_totalAcceptSession;
+		ULONGLONG							_totalReleaseSession;
+		ULONGLONG							_recvPacketCount;
+		ULONGLONG							_sendPacketCount;
+		ULONGLONG							_acceptCount;
+		ULONGLONG							_queueSize;
+		ULONGLONG							_queueSizeAvr;
+		ULONGLONG							_queueCapacity;
+		ULONGLONG							_maxCapacity;
+		ULONGLONG							_stackSize;
+		ULONGLONG							_stackCapacity;
 	};
-	MONITOR _monitor;
+
+
+	// 패킷 처리 수치 및 패킷처리 완료 바이트수
+	alignas(64) ULONGLONG					_curSessionCount;
+	alignas(64) ULONGLONG					_totalPacket;
+	alignas(64) ULONGLONG					_recvPacketPerSec;
+	alignas(64) ULONGLONG					_sendPacketPerSec;
+
+	alignas(64) LONGLONG					_totalProcessedBytes;
+
+	alignas(64) ULONGLONG					_acceptPerSec;
+	alignas(64) ULONGLONG					_totalAcceptSession;
+	alignas(64) ULONGLONG					_totalDisconnectSession;
+
+	MoniteringInfo GetMoniteringInfo();
+	
 };
 
 

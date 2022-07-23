@@ -2,6 +2,7 @@
 #include "CEchoServer.h"
 #include <conio.h>
 #include <time.h>
+#include <stdio.h>
 #include "Profiler.h"
 
 bool CEchoServer::OnConnectionRequest(u_long IP, u_short Port) {
@@ -51,19 +52,20 @@ bool CEchoServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, B
 }
 
 void CEchoServer::KeyCheck() {
-	WCHAR FILENAME[50] = L"";
-	// timestemp
-	tm t;
-	time_t now;
+	
 	int printTick = 0;
 
 	for (;;) {
 		if (_kbhit()) {
 			char cmd = _getch();
 			if (cmd == 'Q' || cmd == 'q') {
-				PRO_PRINT(L"CLanserver_PROFILE.log");
+				
 				Quit();
 				break;
+			}
+			if (cmd == 'P' || cmd == 'p') {
+				PRO_PRINT(L"CLanserver_PROFILE.log");
+				PrintFileMonitor();
 			}
 			if (cmd == 'C' || cmd == 'c') {
 				CRASH();
@@ -81,38 +83,81 @@ void CEchoServer::KeyCheck() {
 				CLogger::SetLogLevel(dfLOG_LEVEL_NOTICE);
 			}
 		}
-		// 땜빵
+		// Monitor
 		Sleep(1000);
-		if (printTick >= 60) {
-			// timestemp
-			time(&now);
-			localtime_s(&t, &now);
-
-			swprintf_s(FILENAME, 50, L"Profile/%02d%02d%02d_%02d%02d%02d_PROFILE.log",
-				t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
-				t.tm_hour, t.tm_min, t.tm_sec);
-			PRO_PRINT(FILENAME);
+		_hardMoniter.UpdateHardWareTime();
+		_procMonitor.UpdateProcessTime();
+		// profile
+		if (printTick >= 3600) {
+			PrintFileMonitor();
 			printTick = 0;
-		}
+		}else
+			PrintMonitor(stdout);
 		printTick++;
-		PrintMonitor();
-
 	}
 }
 
-void CEchoServer::PrintMonitor() {
-	wprintf_s(
-		L"\n\
+void CEchoServer::PrintMonitor(FILE * outFP) {
+	MoniteringInfo _monitor = GetMoniteringInfo();
+	fwprintf_s(outFP ,L"\n\
 ====================================\n\
-Start Time [%02d/%02d/%02d %02d:%02d:%02d]\n\
+Start Time [%02d/%02d/%02d %02d:%02d:%02d]\n",
+_timeFormet.tm_mon + 1, _timeFormet.tm_mday, (_timeFormet.tm_year + 1900) % 100, _timeFormet.tm_hour, _timeFormet.tm_min, _timeFormet.tm_sec);
+
+	fwprintf_s(outFP ,L"\n\
 -----------------------------------\n\
-send packet TPS[%d]\n\
-recv packet TPS[%d]\n\
-accept Count[%d]\n\
-disconnect Count[%d]\n\
-------------------------------------\n",
-_timeFormet.tm_mon + 1, _timeFormet.tm_mday, (_timeFormet.tm_year + 1900) % 100, _timeFormet.tm_hour, _timeFormet.tm_min, _timeFormet.tm_sec,
-_monitor._sendPacketTPS, _monitor._recvPacketTPS, _monitor._acceptCount, _monitor._disconnectCount);
+_PACKET_\n\
+send packet TPS\t[%lld]\n\
+recv packet TPS\t[%lld]\n",
+_monitor._sendPacketCount, _monitor._recvPacketCount);
+	fwprintf_s(outFP, L"\n\
+-----------------------------------\n\
+_TOTAL_\n\
+packet\t\t\t[%lld]\n\
+send processed Byte\t[%lld]\n\
+accept Count\t\t[%lld]\n\
+disconnect Count\t[%lld]\n",
+_monitor._totalPacket, _monitor._totalProecessedBytes, _monitor._totalAcceptSession, _monitor._totalReleaseSession);
+	fwprintf_s(outFP, L"\n\
+----------------------------------- \n\
+_MEMORY_\n\
+Available\t[%lluMb]\n\
+NPPool\t\t[%lluMb]\n\
+Private Mem\t[%lluKb]\n",
+_hardMoniter.AvailableMemoryMBytes(), _hardMoniter.NonPagedPoolMBytes(), _procMonitor.PrivateMemoryKBytes());
+	fwprintf_s(outFP, L"\n\
+----------------------------------- \n\
+PROCESS\t[T %.1llf%% K %.1llf%% U %.1llf%%] \n\
+CPU\t[T %.1llf%% K %.1llf%% U %.1llf%%]\n", 
+_procMonitor.ProcessTotal(),_procMonitor.ProcessKernel(), _procMonitor.ProcessUser(),_hardMoniter.ProcessorTotal(), _hardMoniter.ProcessorKernel(), _hardMoniter.ProcessorUser());
+;
+}
+
+void CEchoServer::PrintFileMonitor()
+{
+	WCHAR FILENAME[128] = L"";
+	// timestemp
+	tm t;
+	time_t now;
+	// timestemp
+	time(&now);
+	localtime_s(&t, &now);
+#ifdef dfPROFILER
+	// PROFILE
+	swprintf_s(FILENAME, 50, L"Profile/%02d%02d%02d_%02d%02d%02d_PROFILE.log",
+		t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
+		t.tm_hour, t.tm_min, t.tm_sec);
+	PRO_PRINT(FILENAME);
+#endif // dfPROFILER
+
+	swprintf_s(FILENAME, 50, L"Monitor/%02d%02d%02d_%02d%02d%02d_SERVER_MONITOR.log",
+		t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
+		t.tm_hour, t.tm_min, t.tm_sec);
+	FILE *fp = stdout;
+	_wfopen_s(&fp, FILENAME, L"a+");
+	fseek(fp, 0, SEEK_END);
+	PrintMonitor(fp);
+	fclose(fp);
 }
 
 void CEchoServer::EchoProc(SESSION_ID sessionID, CPacket *pPacket) {

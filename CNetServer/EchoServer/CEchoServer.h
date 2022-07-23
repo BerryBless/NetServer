@@ -24,7 +24,8 @@ public:
 
 private:
 	void KeyCheck();
-	void PrintMonitor();
+	void PrintMonitor(FILE *outFP);
+	void PrintFileMonitor();
 	void EchoProc(SESSION_ID sessionID, CPacket *pPacket);
 	void LockMap();
 	void UnlockMap();
@@ -35,5 +36,8 @@ private:
 	// server start timestemp
 	tm _timeFormet;
 	time_t _startTime;
+
+	HardWareMoniter _hardMoniter;
+	ProcessMoniter _procMonitor;
 };
 

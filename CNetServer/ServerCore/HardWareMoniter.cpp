@@ -4,8 +4,9 @@
 #include <strsafe.h>
 #include <Psapi.h>
 
-HardWareMoniter::HardWareMoniter(HANDLE hProcess)
+HardWareMoniter::HardWareMoniter(HANDLE hProcess) : _EthernetStruct{ 0 }, _Process(hProcess), _EthernetQuery(nullptr), _NonPagedPoolQuery(nullptr), _NetworkRecvBytes(0), _NetworkSendBytes(0), _NonPagedPoolBytes(0), _AvailableMemoryQuery(nullptr), _AvailableMemoryBytes(0)
 {
+
 	//------------------------------------------------------------------
 		// 프로세스 핸들 입력이 없다면 자기 자신을 대상으로...
 		//------------------------------------------------------------------

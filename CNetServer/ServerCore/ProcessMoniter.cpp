@@ -4,6 +4,14 @@
 #include <Psapi.h>
 ProcessMoniter::ProcessMoniter(HANDLE process)
 {
+	_Process = process;
+	_ProcessTotal = 0;
+	_ProcessUser = 0;
+	_ProcessKernel = 0;
+	_ProcessLastKernel.QuadPart = 0;
+	_ProcessLastUser.QuadPart = 0;
+	_ProcessLastTime.QuadPart = 0;
+
 	if (_Process == INVALID_HANDLE_VALUE)
 		_Process = GetCurrentProcess();
 	//if (_PrivateMemoryQuery == nullptr)

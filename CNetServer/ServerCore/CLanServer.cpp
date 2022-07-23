@@ -28,11 +28,6 @@ CLanServer::CLanServer() {
 	timeBeginPeriod(1);
 
 	//---------------------------
-	// 모니터링 변수 초기화
-	//---------------------------
-	ZeroMemory(&_monitor, sizeof(MONITOR));
-
-	//---------------------------
 	// 세션 컨테이너 락 초기화
 	//---------------------------
 	InitializeSRWLock(&_sessionContainerLock);
@@ -193,7 +188,7 @@ bool CLanServer::SendPacket(SESSION_ID SessionID, CPacket* pPacket) {
 	//---------------------------
 	// monitor
 	//---------------------------
-	InterlockedIncrement(&_monitor._sendPacketCalc);
+	InterlockedIncrement(&_sendPacketPerSec);
 #ifndef df_SENDTHREAD
 	SendPost(pSession, dfLOGIC_SEND_PACKET)
 #endif // !df_SENDTHREAD
@@ -443,7 +438,7 @@ bool CLanServer::SendProc(SESSION* pSession, DWORD transferredSize) {
 	// 완료통지 온 패킷 지우기
 	//---------------------------
 	CPacket* pPacket;
-	int sendedPacketCnt = pSession->_sendPacketCnt;
+	DWORD sendedPacketCnt = pSession->_sendPacketCnt;
 
 	for (int i = 0; i < sendedPacketCnt; ++i)
 	{
@@ -459,7 +454,7 @@ bool CLanServer::SendProc(SESSION* pSession, DWORD transferredSize) {
 	// 	   Send가 끝났다
 	//---------------------------
 	InterlockedExchange(&pSession->_IOFlag, FALSE);
-
+	InterlockedAdd64(&_totalProcessedBytes, transferredSize);
 
 	//---------------------------
 	// SendQ에 보낼것이 남아있으면 Send
@@ -503,7 +498,8 @@ bool CLanServer::RecvProc(SESSION* pSession, DWORD transferredSize) {
 		//---------------------------
 		// 모니터링
 		//---------------------------
-		InterlockedIncrement(&_monitor._recvPacketCalc);
+		InterlockedIncrement(&_totalPacket);
+		InterlockedIncrement(&_recvPacketPerSec);
 
 		if (pSession->_recvQueue.GetUseSize() <= sizeof(USHORT)) {
 			//---------------------------
@@ -666,7 +662,9 @@ bool CLanServer::AcceptProc() {
 	//---------------------------
 	// 모니터링
 	//---------------------------
-	InterlockedIncrement(&_monitor._acceptCount);
+	InterlockedIncrement(&_acceptPerSec);
+	InterlockedIncrement(&_curSessionCount);
+	InterlockedIncrement(&_totalAcceptSession);
 	PRO_END(L"acceptProc");
 
 	return _isRunning;
@@ -678,11 +676,7 @@ bool CLanServer::NetMonitorProc() {
 	//---------------------------
 	Sleep(1000);
 
-	_monitor._sendPacketTPS = _monitor._sendPacketCalc;
-	_monitor._sendPacketCalc = 0;
-
-	_monitor._recvPacketTPS = _monitor._recvPacketCalc;
-	_monitor._recvPacketCalc = 0;
+	GetMoniteringInfo();
 
 	return _isRunning;
 }
@@ -973,7 +967,8 @@ bool CLanServer::ReleaseSession(SESSION* pSession, int logic) {
 	//---------------------------
 	// 	   모니터링
 	//---------------------------
-	InterlockedIncrement(&_monitor._disconnectCount);
+	InterlockedIncrement(&_totalDisconnectSession);
+	InterlockedDecrement(&_curSessionCount);
 	return true;
 }
 
@@ -1078,5 +1073,28 @@ void CLanServer::SessionContainerLock() {
 
 void CLanServer::SessionContainerUnlock() {
 	ReleaseSRWLockExclusive(&_sessionContainerLock);
+}
+CLanServer::MoniteringInfo CLanServer::GetMoniteringInfo()
+{
+	MoniteringInfo info;
+	info._workerThreadCount = _maxRunThreadCount;
+	info._runningThreadCount = _workerThreadCount;
+	info._acceptCount = InterlockedExchange(&_acceptPerSec, 0);
+	info._recvPacketCount = InterlockedExchange(&_recvPacketPerSec, 0);
+	info._sendPacketCount = InterlockedExchange(&_sendPacketPerSec, 0);
+	info._totalAcceptSession = _totalAcceptSession;
+	info._totalPacket = _totalPacket;
+	info._totalProecessedBytes = _totalProcessedBytes;
+	info._totalReleaseSession = _totalDisconnectSession;
+	info._sessionCnt = _curSessionCount;
+	//info._stackCapacity = 0;
+	info._stackSize = _emptyIndex.GetSize();
+	info._queueSize = 0;
+	//info._queueCapacity = 0;
+	//info._maxCapacity = 0;
+	for (int i = 1; i <= _maxConnection; i++)
+		info._queueSize += _sessionContainer[i]._sendQueue.GetSize();
+
+	return info;
 }
 #pragma endregion
