@@ -5,10 +5,7 @@
 #include "CCrashDump.h"
 #include "CLogger.h"
 
-#define CRASH() do{\
-					CLogger::_Log(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
-					int *nptr = nullptr; *nptr = 1;\
-				}while(0)
+
 
 
 //#define dfMAX_LOG_COUNT 10000

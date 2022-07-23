@@ -16,6 +16,18 @@
 #include <WinSock2.h>
 #include <iostream>
 #include <timeapi.h>
+#include "CLogger.h"
+#include "CCrashDump.h"
 using namespace std;
+
+
+
+#define CRASH() do{\
+					CLogger::_Log(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
+					CCrashDump::Crash();\
+				}while(0)
+
+
+
 
 void HelloWorld();

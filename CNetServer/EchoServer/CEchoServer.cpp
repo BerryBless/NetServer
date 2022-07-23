@@ -88,7 +88,7 @@ void CEchoServer::KeyCheck() {
 		_hardMoniter.UpdateHardWareTime();
 		_procMonitor.UpdateProcessTime();
 		// profile
-		if (printTick >= 3600) {
+		if (printTick >= 300) {
 			PrintFileMonitor();
 			printTick = 0;
 		}else

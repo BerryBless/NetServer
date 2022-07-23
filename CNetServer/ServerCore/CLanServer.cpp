@@ -190,7 +190,7 @@ bool CLanServer::SendPacket(SESSION_ID SessionID, CPacket* pPacket) {
 	//---------------------------
 	InterlockedIncrement(&_sendPacketPerSec);
 #ifndef df_SENDTHREAD
-	SendPost(pSession, dfLOGIC_SEND_PACKET)
+	SendPost(pSession, dfLOGIC_SEND_PACKET);
 #endif // !df_SENDTHREAD
 
 	PRO_END(L"SendPacket");
