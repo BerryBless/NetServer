@@ -59,8 +59,7 @@ HardWareMoniter::HardWareMoniter(HANDLE hProcess) : _EthernetStruct{ 0 }, _Proce
 	// 이를 문자열 단위로 끊어서 개수를 확인 해야 함. aaa\0bbb\0ccc\0ddd 이딴 식
 	//---------------------------------------------------------------------------------------
 	if (PdhEnumObjectItems(NULL, NULL, L"Network Interface", counterList, &counterSize, interfaceList, &instanceSize, PERF_DETAIL_WIZARD,
-		0) != ERROR_SUCCESS)
-	{
+		0) != ERROR_SUCCESS) {
 		delete[] counterList;
 		delete[] interfaceList;
 		return;
@@ -69,8 +68,7 @@ HardWareMoniter::HardWareMoniter(HANDLE hProcess) : _EthernetStruct{ 0 }, _Proce
 	//---------------------------------------------------------
 	// szInterfaces 에서 문자열 단위로 끊으면서 , 이름을 복사받는다.
 	//---------------------------------------------------------
-	for (int i = 0; *curInterface != L'\0' && i < PDH_ETHERNET_MAX; curInterface += wcslen(curInterface) + 1, i++)
-	{
+	for (int i = 0; *curInterface != L'\0' && i < PDH_ETHERNET_MAX; curInterface += wcslen(curInterface) + 1, i++) {
 		_EthernetStruct[i]._Used = true;
 		_EthernetStruct[i]._Name[0] = L'\0';
 		wcscpy_s(_EthernetStruct[i]._Name, curInterface);
@@ -93,8 +91,7 @@ HardWareMoniter::HardWareMoniter(HANDLE hProcess) : _EthernetStruct{ 0 }, _Proce
 	UpdateHardWareTime();
 }
 
-void HardWareMoniter::UpdateHardWareTime()
-{
+void HardWareMoniter::UpdateHardWareTime() {
 	//---------------------------------------------------------
 	// 프로세서 사용률을 갱신한다.
 	//
@@ -109,8 +106,7 @@ void HardWareMoniter::UpdateHardWareTime()
 	//
 	// 아이들 타임 / 커널 사용 타임 (아이들포함) / 유저 사용 타임
 	//---------------------------------------------------------
-	if (GetSystemTimes((PFILETIME) &idleTime, (PFILETIME) &kernelTime, (PFILETIME) &userTime) == false)
-	{
+	if (GetSystemTimes((PFILETIME) &idleTime, (PFILETIME) &kernelTime, (PFILETIME) &userTime) == false) {
 		return;
 	}
 	// 커널 타임에는 아이들 타임이 포함됨.
@@ -119,14 +115,11 @@ void HardWareMoniter::UpdateHardWareTime()
 	ULONGLONG IdleDiff = idleTime.QuadPart - _ProcessorLastIdle.QuadPart;
 	ULONGLONG Total = KernelDiff + UserDiff;
 	ULONGLONG TimeDiff;
-	if (Total == 0)
-	{
+	if (Total == 0) {
 		_ProcessorUser = 0.0f;
 		_ProcessorKernel = 0.0f;
 		_ProcessorTotal = 0.0f;
-	}
-	else
-	{
+	} else {
 		// 커널 타임에 아이들 타임이 있으므로 빼서 계산.
 		_ProcessorTotal = (double) ((double) (Total - IdleDiff) / Total * 100.0f);
 		_ProcessorUser = (double) ((double) UserDiff / Total * 100.0f);
@@ -141,10 +134,8 @@ void HardWareMoniter::UpdateHardWareTime()
 	PDH_FMT_COUNTERVALUE counterValue;
 	PdhCollectQueryData(_EthernetQuery);
 
-	for (int iCnt = 0; iCnt < PDH_ETHERNET_MAX; iCnt++)
-	{
-		if (_EthernetStruct[iCnt]._Used)
-		{
+	for (int iCnt = 0; iCnt < PDH_ETHERNET_MAX; iCnt++) {
+		if (_EthernetStruct[iCnt]._Used) {
 			status = PdhGetFormattedCounterValue(_EthernetStruct[iCnt]._CounterNetworkRecvBytes,
 				PDH_FMT_DOUBLE, nullptr, &counterValue);
 			if (status == ERROR_SUCCESS) _NetworkRecvBytes += counterValue.doubleValue;

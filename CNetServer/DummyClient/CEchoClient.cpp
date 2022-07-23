@@ -1,43 +1,32 @@
 #include "pch.h"
 #include "CEchoClient.h"
 
-CEchoClient::CEchoClient()
-{
+CEchoClient::CEchoClient() {
 	Start();
 }
 
-CEchoClient::~CEchoClient()
-{
+CEchoClient::~CEchoClient() {
 }
 
-void CEchoClient::OnEnterJoinServer()
-{
+void CEchoClient::OnEnterJoinServer() {
 }
 
-void CEchoClient::OnLeaveServer()
-{
+void CEchoClient::OnLeaveServer() {
 
 }
 
-void CEchoClient::OnRecv(CPacket *pPacket)
-{
-	if (_cnt++ == 0)
-	{
+void CEchoClient::OnRecv(CPacket *pPacket) {
+	if (_cnt++ == 0) {
 		int64_t value;
 
 		*pPacket >> value;
 
-		if (value == 0x7fffffffffffffff)
-		{
+		if (value == 0x7fffffffffffffff) {
 			printf("pass\n");
-		}
-		else
-		{
+		} else {
 			printf("fail\n");
 		}
-	}
-	else
-	{
+	} else {
 		int test = 0;
 
 		*pPacket >> test;
@@ -46,10 +35,8 @@ void CEchoClient::OnRecv(CPacket *pPacket)
 	}
 }
 
-void CEchoClient::OnSend(int sendsize)
-{
+void CEchoClient::OnSend(int sendsize) {
 }
 
-void CEchoClient::OnError(int errorcode, const WCHAR *)
-{
+void CEchoClient::OnError(int errorcode, const WCHAR *) {
 }

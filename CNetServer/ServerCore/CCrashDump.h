@@ -31,7 +31,7 @@ public:
 	}
 
 	static void Crash() {
-		int* p = nullptr;
+		int *p = nullptr;
 		*p = 10;
 	}
 
@@ -51,7 +51,7 @@ public:
 		}
 
 		if (GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc))) {
-			workingMemory = (int)(pmc.WorkingSetSize / 1024 / 1024);
+			workingMemory = (int) (pmc.WorkingSetSize / 1024 / 1024);
 		}
 		CloseHandle(hProcess);
 
@@ -99,11 +99,11 @@ public:
 		SetUnhandledExceptionFilter(DumpExceptionFilter);
 	}
 
-	static void DumpInvalidParameterHander(const wchar_t* expression, const wchar_t* function, const wchar_t* file, unsigned int line, uintptr_t pReserved) {
+	static void DumpInvalidParameterHander(const wchar_t *expression, const wchar_t *function, const wchar_t *file, unsigned int line, uintptr_t pReserved) {
 		Crash();
 	}
 
-	static int _custom_Report_hook(int ireposttype, char* message, int* returnvalue) {
+	static int _custom_Report_hook(int ireposttype, char *message, int *returnvalue) {
 		Crash();
 		return 0;
 	}

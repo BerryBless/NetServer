@@ -19,7 +19,7 @@ void CLogger::_Log(int logLevel, const WCHAR *format, ...) {
 	if (_logLevel > logLevel) return;
 	DWORD lcnt = InterlockedIncrement(&_logCount);
 
-	WCHAR log[dfLOG_BUF_SIZE] = {0};
+	WCHAR log[dfLOG_BUF_SIZE] = { 0 };
 	WCHAR *pLog = log;
 	int lenRet = 0;		// 로그 나눠서 복사
 	int lentotal = 0; // 로그길이
@@ -31,9 +31,9 @@ void CLogger::_Log(int logLevel, const WCHAR *format, ...) {
 	// timestemp
 	tm t;
 	time_t now;
-	
+
 	time(&now);
-	localtime_s(&t,&now);
+	localtime_s(&t, &now);
 
 	// log level
 	switch (logLevel) {
@@ -62,7 +62,7 @@ void CLogger::_Log(int logLevel, const WCHAR *format, ...) {
 
 	// 가변인자 safe string
 	va_start(ap, format);
-	do{
+	do {
 		DWORD len;
 		if (dfLOG_BUF_SIZE > lentotal)
 			len = dfLOG_BUF_SIZE - lentotal;
@@ -80,27 +80,27 @@ void CLogger::_Log(int logLevel, const WCHAR *format, ...) {
 
 
 	// 콘솔창에 띄우기
-	wprintf_s(L"%s\n",log);
+	wprintf_s(L"%s\n", log);
 	// 디버그는 파일로깅 안남김
 	if (logLevel == dfLOG_LEVEL_DEBUG) return;
 
 	// 파일 로깅
-	WCHAR fileName[MAX_PATH] = {0};
+	WCHAR fileName[MAX_PATH] = { 0 };
 
 	swprintf_s(fileName, _countof(fileName), L"%s/%04d%02d_Log.log",
 		_filePath, t.tm_year + 1900, t.tm_mon + 1);
 
 	FileLock();
-	do{
+	do {
 		FILE *fp;
 
 		do {
 			_wfopen_s(&fp, fileName, L"a+");
 		} while (fp == nullptr);
 
-		if(!bSpill)
+		if (!bSpill)
 			fwprintf_s(fp, L"%s\n", log);
-		else 
+		else
 			fwprintf_s(fp, L"[TRUNCATED LOG]%s\n", log);
 
 		fclose(fp);
@@ -121,8 +121,8 @@ void CLogger::SetDirectory(const WCHAR *path) {
 	if (_wmkdir(_filePath) == -1) {
 		// 실패
 		_get_errno(&err);
-		if(err != 17) // 이미 있어서 실패가 아님
-			wprintf_s(L"/////////////////////FAIL MAKE DIRECTORY\n ERROR NO[%d] :: DIR [%s]\n", err,_filePath);
+		if (err != 17) // 이미 있어서 실패가 아님
+			wprintf_s(L"/////////////////////FAIL MAKE DIRECTORY\n ERROR NO[%d] :: DIR [%s]\n", err, _filePath);
 	}
 }
 

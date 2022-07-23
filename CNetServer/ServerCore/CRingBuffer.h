@@ -21,7 +21,7 @@ public:
 	CRingBuffer(void); // 디폴트 : 10000byte만큼 사이즈 잡음
 	CRingBuffer(int iSize); // size만큼 버퍼잡기
 	~CRingBuffer(void);// 버퍼 소멸
-	
+
 public:
 	/////////////////////////////////////////////////////////////////////////
 	// 현재 버퍼의 크기

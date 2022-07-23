@@ -39,8 +39,7 @@ void CEchoServer::OnError(int errorcode, const WCHAR *log) {
 	wprintf_s(L"%d :: %s", errorcode, log);
 }
 
-void CEchoServer::OnTimeout(SESSION_ID SessionID)
-{
+void CEchoServer::OnTimeout(SESSION_ID SessionID) {
 	printf_s("OnTimeout :: %lld\n", SessionID);
 	Disconnect(SessionID);
 }
@@ -58,14 +57,14 @@ bool CEchoServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, B
 }
 
 void CEchoServer::KeyCheck() {
-	
+
 	int printTick = 0;
 
 	for (;;) {
 		if (_kbhit()) {
 			char cmd = _getch();
 			if (cmd == 'Q' || cmd == 'q') {
-				
+
 				Quit();
 				break;
 			}
@@ -97,20 +96,20 @@ void CEchoServer::KeyCheck() {
 		if (printTick >= 300) {
 			PrintFileMonitor();
 			printTick = 0;
-		}else
+		} else
 			PrintMonitor(stdout);
 		printTick++;
 	}
 }
 
-void CEchoServer::PrintMonitor(FILE * outFP) {
+void CEchoServer::PrintMonitor(FILE *outFP) {
 	MoniteringInfo _monitor = GetMoniteringInfo();
-	fwprintf_s(outFP ,L"\n\
+	fwprintf_s(outFP, L"\n\
 ====================================\n\
 Start Time [%02d/%02d/%02d %02d:%02d:%02d]\n",
 _timeFormet.tm_mon + 1, _timeFormet.tm_mday, (_timeFormet.tm_year + 1900) % 100, _timeFormet.tm_hour, _timeFormet.tm_min, _timeFormet.tm_sec);
 
-	fwprintf_s(outFP ,L"\n\
+	fwprintf_s(outFP, L"\n\
 -----------------------------------\n\
 _PACKET_\n\
 send packet TPS\t[%lld]\n\
@@ -134,13 +133,12 @@ _hardMoniter.AvailableMemoryMBytes(), _hardMoniter.NonPagedPoolMBytes(), _procMo
 	fwprintf_s(outFP, L"\n\
 ----------------------------------- \n\
 PROCESS\t[T %.1llf%% K %.1llf%% U %.1llf%%] \n\
-CPU\t[T %.1llf%% K %.1llf%% U %.1llf%%]\n", 
-_procMonitor.ProcessTotal(),_procMonitor.ProcessKernel(), _procMonitor.ProcessUser(),_hardMoniter.ProcessorTotal(), _hardMoniter.ProcessorKernel(), _hardMoniter.ProcessorUser());
-;
+CPU\t[T %.1llf%% K %.1llf%% U %.1llf%%]\n",
+_procMonitor.ProcessTotal(), _procMonitor.ProcessKernel(), _procMonitor.ProcessUser(), _hardMoniter.ProcessorTotal(), _hardMoniter.ProcessorKernel(), _hardMoniter.ProcessorUser());
+	;
 }
 
-void CEchoServer::PrintFileMonitor()
-{
+void CEchoServer::PrintFileMonitor() {
 	WCHAR FILENAME[128] = L"";
 	// timestemp
 	tm t;

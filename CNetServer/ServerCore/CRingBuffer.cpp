@@ -159,7 +159,7 @@ int CRingBuffer::Dequeue(char *pDest, int iSize) {
 		memcpy_s(pDest, iSize, _buffer + _front, iSize);
 		_front += iSize;
 	} else {
-		iDeq =  DirectDequeueSize(); // 한번에 뺄 사이즈 확인
+		iDeq = DirectDequeueSize(); // 한번에 뺄 사이즈 확인
 
 		if (iDeq >= iSize) {
 			// ■■■■□□□□□□□□□□■■■■
@@ -314,13 +314,13 @@ char *CRingBuffer::GetRearBufferPtr(void) {
 }
 
 void CRingBuffer::PrintfInfo(void) {
-	char buffer[dfRINGBUFFERSIZE] = {0};
+	char buffer[dfRINGBUFFERSIZE] = { 0 };
 	if (_rear >= _front) {
 		memcpy_s(buffer, dfRINGBUFFERSIZE, _buffer + _front, _rear - _front);
 	} else {
 		int dSize = DirectDequeueSize();
 		memcpy_s(buffer, dfRINGBUFFERSIZE, _buffer + _front, dSize);
-		memcpy_s(buffer, dfRINGBUFFERSIZE, _buffer , _rear);
+		memcpy_s(buffer, dfRINGBUFFERSIZE, _buffer, _rear);
 	}
 
 	printf_s("\n\nsize [%d], front [%d], rear [%d], buffer[%s]\n\n", GetUseSize(), _front, _rear, buffer);

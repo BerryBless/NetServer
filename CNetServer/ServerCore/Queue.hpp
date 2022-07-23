@@ -34,8 +34,7 @@ private:
 };
 
 template<typename T>
-inline Queue<T>::Queue()
-{
+inline Queue<T>::Queue() {
 	InitializeSRWLock(&_lock);
 	_size = 0;
 
@@ -48,14 +47,12 @@ inline Queue<T>::Queue()
 }
 
 template<typename T>
-inline Queue<T>::~Queue()
-{
+inline Queue<T>::~Queue() {
 	this->Clear();
 }
 
 template<typename T>
-inline void Queue<T>::Enqueue(T data)
-{
+inline void Queue<T>::Enqueue(T data) {
 	AcquireSRWLockExclusive(&_lock);
 	Node *pNode = (Node *) _nodePool.Alloc();
 	pNode->_data = data;
@@ -72,8 +69,7 @@ inline void Queue<T>::Enqueue(T data)
 }
 
 template<typename T>
-inline bool Queue<T>::Dequeue(T *data)
-{
+inline bool Queue<T>::Dequeue(T *data) {
 	if (_head._next == &_tail) return false;
 	AcquireSRWLockExclusive(&_lock);
 	Node *pNode = _head._next;
@@ -89,8 +85,7 @@ inline bool Queue<T>::Dequeue(T *data)
 }
 
 template<typename T>
-inline DWORD Queue<T>::Peek(T arr[], DWORD size)
-{
+inline DWORD Queue<T>::Peek(T arr[], DWORD size) {
 	int cnt = 0;
 	Node *temp = _head._next;
 	for (; cnt < size; ++cnt) {
@@ -102,11 +97,9 @@ inline DWORD Queue<T>::Peek(T arr[], DWORD size)
 }
 
 template<typename T>
-inline void Queue<T>::Clear()
-{
+inline void Queue<T>::Clear() {
 	AcquireSRWLockExclusive(&_lock);
-	while (_head._next != &_tail)
-	{
+	while (_head._next != &_tail) {
 		Node *pNode = _head._next;
 
 		pNode->_prev->_next = pNode->_next;

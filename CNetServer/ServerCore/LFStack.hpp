@@ -20,10 +20,10 @@ private:
 		NODE *_next;
 	};
 
-	
+
 	struct D_TOP {
 		NODE *_pNode = nullptr; // low
-		LONG64 _counter =0;		// high
+		LONG64 _counter = 0;		// high
 	};
 
 #ifdef dfMAX_LOGING_COUNT
@@ -149,7 +149,7 @@ inline void LFStack<T>::Push(T data) {
 	// 3번에서 경합이 발생하면 2번부터
 
 	// 1. new pNode
-	alignas(16) D_TOP old_top ;// 디버깅용
+	alignas(16) D_TOP old_top;// 디버깅용
 	old_top._counter = -1;
 
 	NODE *tempTop;
@@ -195,7 +195,7 @@ inline bool LFStack<T>::Pop(T *out) {
 		LOGGING('B', _top, old_top, next);
 
 		// 3. (ATOMIC) top = next
-	} while (InterlockedCompareExchange128((LONG64 *) &_top, old_top._counter + 1, (LONG64 ) next, (LONG64 *) &old_top) == 0);
+	} while (InterlockedCompareExchange128((LONG64 *) &_top, old_top._counter + 1, (LONG64) next, (LONG64 *) &old_top) == 0);
 
 	LOGGING('C', _top, old_top, next);
 

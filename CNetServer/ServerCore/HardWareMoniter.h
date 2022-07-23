@@ -28,7 +28,7 @@ public:
 
 	inline double EthernetRecvBytes() { return _NetworkRecvBytes; }
 	inline double EthernetRecvKBytes() { return _NetworkRecvBytes / 1024; }
-	inline double EthernetRecvMBytes() { return _NetworkRecvBytes / 1024/ 1024; }
+	inline double EthernetRecvMBytes() { return _NetworkRecvBytes / 1024 / 1024; }
 
 	inline unsigned long long NonPagedPoolBytes() { return _NonPagedPoolBytes; }
 	inline unsigned long long NonPagedPoolKBytes() { return _NonPagedPoolBytes >> 10; }

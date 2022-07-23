@@ -101,7 +101,7 @@ void CProfiler::ProfilePrintFile(const wchar_t *filename) {
 	// 주파수 얻기
 	LARGE_INTEGER freq;
 	QueryPerformanceFrequency(&freq);
-	
+
 	// timestemp
 	tm t;
 	time_t now;
@@ -163,7 +163,7 @@ void CProfiler::DestroyProfiler() {
 	for (int i = 0; i < _profilerCount; i++) {
 		delete _profiler[i];
 	}
-	delete []_profiler;
+	delete[]_profiler;
 
 }
 

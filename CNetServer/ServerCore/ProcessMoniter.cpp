@@ -2,8 +2,7 @@
 #include "ProcessMoniter.h"
 #include <strsafe.h>
 #include <Psapi.h>
-ProcessMoniter::ProcessMoniter(HANDLE process)
-{
+ProcessMoniter::ProcessMoniter(HANDLE process) {
 	_Process = process;
 	_ProcessTotal = 0;
 	_ProcessUser = 0;
@@ -26,8 +25,7 @@ ProcessMoniter::ProcessMoniter(HANDLE process)
 	UpdateProcessTime();
 }
 
-void ProcessMoniter::UpdateProcessTime()
-{
+void ProcessMoniter::UpdateProcessTime() {
 	ULARGE_INTEGER dummy;
 	ULARGE_INTEGER nowTime;
 

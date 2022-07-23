@@ -221,7 +221,7 @@ public:
 	// 할당받으며 참조포인트 리셋후 하나 증가
 	//
 	//////////////////////////////////////////////////////////////////////////
-	static CPacket* AllocAddRef();
+	static CPacket *AllocAddRef();
 
 	//////////////////////////////////////////////////////////////////////////
 	// 이 패킷의 참조 카운터 증가
@@ -239,7 +239,7 @@ public:
 	void ResetRef();
 
 	int _logSubLogic[100]; // 디버깅용 SubRef의 0dl 언재되었나
-	unsigned long _logidx=0;
+	unsigned long _logidx = 0;
 
 
 	static ObjectPool_TLS<CPacket> _packetPool;
@@ -269,13 +269,10 @@ protected:
 	//------------------------------------------------------------
 	// 참조카운터
 	//------------------------------------------------------------
-	struct RefCount
-	{
-		union
-		{
+	struct RefCount {
+		union {
 			long counter = 0;
-			struct
-			{
+			struct {
 				short count;
 				short isFreed; // 메모리풀에 돌아갔는지
 			} refStaus;

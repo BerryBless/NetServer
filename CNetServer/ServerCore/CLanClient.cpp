@@ -3,8 +3,7 @@
 
 #define dfEXIT_CODE 0xFFFFFFFF // GQCS()에서 이게 오면 종료
 
-CLanClient::CLanClient()
-{
+CLanClient::CLanClient() {
 	setlocale(LC_ALL, "korean");
 	_wsetlocale(LC_ALL, L"korean");
 	timeBeginPeriod(1);
@@ -17,13 +16,11 @@ CLanClient::CLanClient()
 	_isNagle = false;
 }
 
-CLanClient::~CLanClient()
-{
+CLanClient::~CLanClient() {
 	WSACleanup();
 }
 
-bool CLanClient::Connect(const WCHAR *serverIP, USHORT serverPort)
-{
+bool CLanClient::Connect(const WCHAR *serverIP, USHORT serverPort) {
 	wcscpy_s(_serverIP, _countof(_serverIP), serverIP);
 	_serverPort = serverPort;
 
@@ -33,17 +30,15 @@ bool CLanClient::Connect(const WCHAR *serverIP, USHORT serverPort)
 
 	if (ConnectServer()) {
 		OnEnterJoinServer();
-	}
-	else {
+	} else {
 		return false;
 	}
 
 
-    return true;
+	return true;
 }
 
-bool CLanClient::Disconnect()
-{
+bool CLanClient::Disconnect() {
 	bool ret;
 	IncrementIOCount(10000);
 
@@ -51,11 +46,10 @@ bool CLanClient::Disconnect()
 
 	DecrementIOCount(10010);
 
-    return ret;
+	return ret;
 }
 
-bool CLanClient::SendPacket(CPacket *pPacket)
-{
+bool CLanClient::SendPacket(CPacket *pPacket) {
 	//---------------------------
 	 // 페킷 포인터를 센드큐에
 	 //---------------------------
@@ -70,24 +64,21 @@ bool CLanClient::SendPacket(CPacket *pPacket)
 	return SendPost();
 }
 
-void CLanClient::SetThreadNum(BYTE worker, BYTE active)
-{
+void CLanClient::SetThreadNum(BYTE worker, BYTE active) {
 	_workerThreadCount = worker;
 	_maxRunThreadCount = active;
 }
 
-bool CLanClient::Start()
-{
-    if(_isRunning)
-        return false;
+bool CLanClient::Start() {
+	if (_isRunning)
+		return false;
 
-    _isRunning = true;
+	_isRunning = true;
 
-    return true;
+	return true;
 }
 
-void CLanClient::Quit()
-{
+void CLanClient::Quit() {
 	_isRunning = false;
 	PostQueuedCompletionStatus(_hIOCP, dfEXIT_CODE, dfEXIT_CODE, NULL);
 
@@ -102,8 +93,7 @@ void CLanClient::Quit()
 	}
 }
 
-bool CLanClient::ConnectServer()
-{
+bool CLanClient::ConnectServer() {
 	SOCKADDR_IN	addr;
 	timeval tval;
 	tval.tv_sec = 0;
@@ -115,19 +105,16 @@ bool CLanClient::ConnectServer()
 	addr.sin_port = htons(_serverPort);
 	InetPton(AF_INET, _serverIP, &addr.sin_addr);
 
-	if (_client._sock == INVALID_SOCKET)
-	{
+	if (_client._sock == INVALID_SOCKET) {
 		CreateSocket();
 	}
 
 	int connectRet = connect(_client._sock, (SOCKADDR *) &addr, sizeof(addr));
 
-	if (connectRet == SOCKET_ERROR)
-	{
+	if (connectRet == SOCKET_ERROR) {
 		int err = WSAGetLastError();
 
-		if (err == WSAEWOULDBLOCK)
-		{
+		if (err == WSAEWOULDBLOCK) {
 			FD_ZERO(&_client._wset);
 			FD_ZERO(&_client._errset);
 
@@ -136,19 +123,13 @@ bool CLanClient::ConnectServer()
 
 			int retval = select(0, nullptr, &_client._wset, &_client._errset, &tval);
 
-			if (retval > 0)
-			{
-				if (FD_ISSET(_client._sock, &_client._wset))
-				{
+			if (retval > 0) {
+				if (FD_ISSET(_client._sock, &_client._wset)) {
 					return RegisterIocp();
-				}
-				else if (FD_ISSET(_client._sock, &_client._errset))
-				{
+				} else if (FD_ISSET(_client._sock, &_client._errset)) {
 					return false;
 				}
-			}
-			else
-			{
+			} else {
 				closesocket(_client._sock);
 
 				CreateSocket();
@@ -157,19 +138,17 @@ bool CLanClient::ConnectServer()
 			return false;
 		}
 
-		if (err != WSAEISCONN)
-		{
+		if (err != WSAEISCONN) {
 			CLogger::_Log(dfLOG_LEVEL_ERROR, L"Unusual Connect Error %d", err);
 		}
 	}
-	
+
 
 	return RegisterIocp();
 }
 
 
-BOOL CLanClient::DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr)
-{
+BOOL CLanClient::DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr) {
 	ADDRINFOW *pAddrInfo;	// IP정보
 	SOCKADDR_IN *pSockAddr;
 
@@ -185,14 +164,12 @@ BOOL CLanClient::DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr)
 	return TRUE;
 }
 
-void CLanClient::BeginThreads()
-{
+void CLanClient::BeginThreads() {
 	BYTE i = 0;
 
 	_hThreads[i++] = (HANDLE) _beginthreadex(nullptr, 0, MonitorThread, this, 0, nullptr);
 
-	for (; i <=_workerThreadCount; ++i)
-	{
+	for (; i <= _workerThreadCount; ++i) {
 		_hThreads[i] = (HANDLE) _beginthreadex(nullptr, 0, WorkerThread, this, 0, nullptr);
 	}
 
@@ -200,8 +177,7 @@ void CLanClient::BeginThreads()
 
 }
 
-unsigned int __stdcall CLanClient::WorkerThread(LPVOID arg)
-{
+unsigned int __stdcall CLanClient::WorkerThread(LPVOID arg) {
 	CLanClient *pClient = (CLanClient *) arg;
 	while (true) {
 		if (pClient->OnGQCS() == false) {
@@ -212,8 +188,7 @@ unsigned int __stdcall CLanClient::WorkerThread(LPVOID arg)
 	return 0;
 }
 
-unsigned int __stdcall CLanClient::MonitorThread(LPVOID arg)
-{
+unsigned int __stdcall CLanClient::MonitorThread(LPVOID arg) {
 	CLanClient *pClient = (CLanClient *) arg;
 	while (true) {
 		if (pClient->NetMonitorProc() == false) {
@@ -224,10 +199,9 @@ unsigned int __stdcall CLanClient::MonitorThread(LPVOID arg)
 	return 0;
 }
 
-bool CLanClient::OnGQCS()
-{
+bool CLanClient::OnGQCS() {
 	DWORD transferredSize = 0;
-	SESSION * completionKey = 0;
+	SESSION *completionKey = 0;
 	WSAOVERLAPPED *pOverlapped = nullptr;
 
 	//---------------------------
@@ -260,19 +234,19 @@ bool CLanClient::OnGQCS()
 	//---------------------------
 
 	do {
-		
+
 		if (transferredSize > 0 && GQCSRet == TRUE) {
 			//---------------------------
 			// WSARecv가 완료됨
 			//---------------------------
 			if (pOverlapped == &_client._recvOverlapped) {
-				RecvProc( transferredSize);
+				RecvProc(transferredSize);
 			}
 			//---------------------------
 			// WSASend가 완료됨
 			//---------------------------
 			if (pOverlapped == &_client._sendOverlapped) {
-				SendProc( transferredSize);
+				SendProc(transferredSize);
 			}
 		}
 	} while (0);
@@ -284,16 +258,14 @@ bool CLanClient::OnGQCS()
 	return true;
 }
 
-bool CLanClient::SendProc(DWORD transferredSize)
-{
+bool CLanClient::SendProc(DWORD transferredSize) {
 	//---------------------------
 	// 완료통지 온 패킷 지우기
 	//---------------------------
 	CPacket *pPacket;
 	int sendedPacketCnt = _client._sendPacketCnt;
 
-	for (int i = 0; i < sendedPacketCnt; ++i)
-	{
+	for (int i = 0; i < sendedPacketCnt; ++i) {
 		_client._sendQueue.Dequeue(&pPacket);
 
 		pPacket->SubRef();
@@ -316,8 +288,7 @@ bool CLanClient::SendProc(DWORD transferredSize)
 	return true;
 }
 
-bool CLanClient::RecvProc(DWORD transferredSize)
-{
+bool CLanClient::RecvProc(DWORD transferredSize) {
 	//---------------------------
 // recv신호가 옴
 //---------------------------
@@ -406,7 +377,7 @@ bool CLanClient::RecvProc(DWORD transferredSize)
 		int MoveWritePosRet = pPacket->MoveWritePos(payloadDeqRet);
 		if (MoveWritePosRet != payloadDeqRet)
 			CRASH();
-		OnRecv( pPacket);
+		OnRecv(pPacket);
 
 		msgByte += (payloadDeqRet + sizeof(USHORT));
 
@@ -422,8 +393,7 @@ bool CLanClient::RecvProc(DWORD transferredSize)
 	return RecvPost();
 }
 
-bool CLanClient::NetMonitorProc()
-{
+bool CLanClient::NetMonitorProc() {
 	//---------------------------
 	// 1초마다 TPS계산
 	//---------------------------
@@ -438,12 +408,10 @@ bool CLanClient::NetMonitorProc()
 	return _isRunning;
 }
 
-bool CLanClient::RegisterIocp()
-{
+bool CLanClient::RegisterIocp() {
 	HANDLE hResult = CreateIoCompletionPort((HANDLE) _client._sock, _hIOCP, 0, 0);
 
-	if (hResult == NULL)
-	{
+	if (hResult == NULL) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"CreateIoCompletionPort [Error: %d]", WSAGetLastError());
 		closesocket(_client._sock);
 
@@ -456,8 +424,7 @@ bool CLanClient::RegisterIocp()
 	return true;
 }
 
-bool CLanClient::SendPost()
-{
+bool CLanClient::SendPost() {
 	//---------------------------
 	// 	   Send중인지 확인
 	//---------------------------
@@ -484,12 +451,12 @@ bool CLanClient::SendPost()
 	WSABUF bufferSet[100];
 	DWORD byteSends;
 
-	SetWSABuffer(bufferSet,  FALSE);
+	SetWSABuffer(bufferSet, FALSE);
 
 	//---------------------------
 	// IOCount ++
 	//---------------------------
-	IncrementIOCount( 40000);
+	IncrementIOCount(40000);
 
 	//---------------------------
 	// 오버랩 초기화
@@ -504,7 +471,7 @@ bool CLanClient::SendPost()
 
 		if (err != WSA_IO_PENDING) {
 			if (err != 10054 && err != 10053) {
-				CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// WSASend() ERROR [%d]",  err);
+				CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// WSASend() ERROR [%d]", err);
 				//CRASH();
 			}
 			//---------------------------
@@ -520,8 +487,7 @@ bool CLanClient::SendPost()
 	return true;
 }
 
-bool CLanClient::RecvPost(bool isAccept)
-{
+bool CLanClient::RecvPost(bool isAccept) {
 	//---------------------------
 	// IOCount ++
 	//---------------------------
@@ -536,7 +502,7 @@ bool CLanClient::RecvPost(bool isAccept)
 	DWORD flag = 0;
 	DWORD byteRecvs;
 
-	SetWSABuffer(bufferSet,  TRUE);
+	SetWSABuffer(bufferSet, TRUE);
 
 
 
@@ -553,7 +519,7 @@ bool CLanClient::RecvPost(bool isAccept)
 
 		if (err != WSA_IO_PENDING) {
 			if (err != 10054 && err != 10053) {
-				CLogger::_Log(dfLOG_LEVEL_ERROR, L"////  :: WSARecv ERROR [%d]\n",  err);
+				CLogger::_Log(dfLOG_LEVEL_ERROR, L"////  :: WSARecv ERROR [%d]\n", err);
 				//CRASH();
 
 			}
@@ -561,15 +527,14 @@ bool CLanClient::RecvPost(bool isAccept)
 			//	Error : Fail WSARecv
 			//  IOCount --
 			//---------------------------
-			DecrementIOCount( 50010);
+			DecrementIOCount(50010);
 			return false;
 		}
 	}
-    return false;
+	return false;
 }
 
-bool CLanClient::SetWSABuffer(WSABUF *BufSets, bool isRecv)
-{
+bool CLanClient::SetWSABuffer(WSABUF *BufSets, bool isRecv) {
 	if (isRecv) {
 		//---------------------------
 		// recv버퍼에 넣기
@@ -590,8 +555,7 @@ bool CLanClient::SetWSABuffer(WSABUF *BufSets, bool isRecv)
 			CLogger::_Log(dfLOG_LEVEL_ERROR, L"SetWSABuffer() :: BufSets[0].len + BufSets[1].len != FreeSize");
 			CRASH();
 		}
-	}
-	else {
+	} else {
 		//---------------------------
 		// SendQ의 패킷을 WSABUF에 등록
 		//---------------------------
@@ -620,46 +584,42 @@ bool CLanClient::SetWSABuffer(WSABUF *BufSets, bool isRecv)
 	return true;
 }
 
-bool CLanClient::IncrementIOCount(int logic)
-{
-    InterlockedIncrement(&_client._IOcount);
-    return true;
+bool CLanClient::IncrementIOCount(int logic) {
+	InterlockedIncrement(&_client._IOcount);
+	return true;
 }
 
-bool CLanClient::DecrementIOCount(int logic)
-{
-    DWORD ret = InterlockedDecrement(&_client._IOcount);
-    if (ret < 0)
-        CRASH();
+bool CLanClient::DecrementIOCount(int logic) {
+	DWORD ret = InterlockedDecrement(&_client._IOcount);
+	if (ret < 0)
+		CRASH();
 
-    if (ret == 0)
-        ReleaseProc(5000);
+	if (ret == 0)
+		ReleaseProc(5000);
 
-    return true;
+	return true;
 }
 
-bool CLanClient::ReleaseProc(int logic)
-{
+bool CLanClient::ReleaseProc(int logic) {
 
-    Lock();
-    OnLeaveServer();
-    closesocket(_client._sock);
+	Lock();
+	OnLeaveServer();
+	closesocket(_client._sock);
 
-    for (;;) {
-        CPacket *pPacket;
-        if (_client._sendQueue.Dequeue(&pPacket) == false) {
-            break;
-        }
-        pPacket->SubRef();
-    }
-    _client._recvQueue.ClearBuffer();
-    Unlock();
+	for (;;) {
+		CPacket *pPacket;
+		if (_client._sendQueue.Dequeue(&pPacket) == false) {
+			break;
+		}
+		pPacket->SubRef();
+	}
+	_client._recvQueue.ClearBuffer();
+	Unlock();
 
-    return false;
+	return false;
 }
 
-void CLanClient::Init()
-{
+void CLanClient::Init() {
 	SetStartUp();
 
 	CreateSocket();
@@ -669,25 +629,22 @@ void CLanClient::Init()
 	CreateIOCP();
 }
 
-void CLanClient::CreateIOCP()
-{
+void CLanClient::CreateIOCP() {
 	_hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, _maxRunThreadCount);
-	if (_hIOCP == NULL)
-	{
+	if (_hIOCP == NULL) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"CreateIoCompletionPort [Error: %d]", WSAGetLastError());
 
 	}
 }
 
-bool CLanClient::CreateSocket()
-{
+bool CLanClient::CreateSocket() {
 	_client._sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (_client._sock == INVALID_SOCKET) {
 		OnError(111, L"Create Socke Error");
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Create Socke Error[CODE : %d]\n", WSAGetLastError());
 		return false;
 	}
-	if(SetStartUp() == false)
+	if (SetStartUp() == false)
 		return false;
 	if (SetTimeWaitZero() == false)
 		return false;
@@ -697,12 +654,10 @@ bool CLanClient::CreateSocket()
 	return true;
 }
 
-bool CLanClient::SetStartUp()
-{
+bool CLanClient::SetStartUp() {
 	WSADATA			wsa;
 
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
-	{
+	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"WSAStartup [Error: %d]", WSAGetLastError());
 		return false;
 	}
@@ -710,16 +665,14 @@ bool CLanClient::SetStartUp()
 	return true;
 }
 
-bool CLanClient::SetTimeWaitZero()
-{
+bool CLanClient::SetTimeWaitZero() {
 	LINGER optval;
 
 	optval.l_onoff = 1;
 	optval.l_linger = 0;
 
 	int timeOutnRet = setsockopt(_client._sock, SOL_SOCKET, SO_LINGER, (char *) &optval, sizeof(optval));
-	if (timeOutnRet == SOCKET_ERROR)
-	{
+	if (timeOutnRet == SOCKET_ERROR) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Client Socket Linger [Error: %d]", WSAGetLastError());
 		closesocket(_client._sock);
 		return false;
@@ -728,14 +681,12 @@ bool CLanClient::SetTimeWaitZero()
 	return true;
 }
 
-bool CLanClient::SetNonBlockSocket()
-{
+bool CLanClient::SetNonBlockSocket() {
 	u_long on = 1;
 
 	int retval = ioctlsocket(_client._sock, FIONBIO, &on);
 
-	if (retval == SOCKET_ERROR)
-	{
+	if (retval == SOCKET_ERROR) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Set NonBlock Socket [Error: %d]", WSAGetLastError());
 		closesocket(_client._sock);
 		return false;
@@ -744,12 +695,10 @@ bool CLanClient::SetNonBlockSocket()
 	return true;
 }
 
-bool CLanClient::SetNagle(bool sw)
-{
+bool CLanClient::SetNagle(bool sw) {
 	BOOL optval = sw;
 
-	if (setsockopt(_client._sock, IPPROTO_TCP, TCP_NODELAY, (char *) &optval, sizeof(optval)) == SOCKET_ERROR)
-	{
+	if (setsockopt(_client._sock, IPPROTO_TCP, TCP_NODELAY, (char *) &optval, sizeof(optval)) == SOCKET_ERROR) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Socketopt Nagle [Error: %d]", WSAGetLastError());
 		closesocket(_client._sock);
 

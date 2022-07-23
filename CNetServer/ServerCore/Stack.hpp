@@ -32,22 +32,19 @@ private:
 };
 
 template<typename T>
-inline Stack<T>::Stack()
-{
+inline Stack<T>::Stack() {
 	InitializeSRWLock(&_lock);
 	_size = 0;
 	_pTop = nullptr;
 }
 
 template<typename T>
-inline Stack<T>::~Stack()
-{
+inline Stack<T>::~Stack() {
 	this->Clear();
 }
 
 template<typename T>
-inline void Stack<T>::Push(T data)
-{
+inline void Stack<T>::Push(T data) {
 	AcquireSRWLockExclusive(&_lock);
 	NODE *pNode = _nodePool.Alloc();
 	pNode->_data = data;
@@ -58,8 +55,7 @@ inline void Stack<T>::Push(T data)
 }
 
 template<typename T>
-inline bool Stack<T>::Pop(T *out)
-{
+inline bool Stack<T>::Pop(T *out) {
 	AcquireSRWLockExclusive(&_lock);
 	NODE *tempTop = _pTop;
 	*out = _pTop->_data;
@@ -71,8 +67,7 @@ inline bool Stack<T>::Pop(T *out)
 }
 
 template<typename T>
-inline void Stack<T>::Clear()
-{
+inline void Stack<T>::Clear() {
 	AcquireSRWLockExclusive(&_lock);
 	while (_pTop != nullptr) {
 		NODE *pTemp = _pTop;

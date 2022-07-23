@@ -72,7 +72,7 @@ private:
 		__int64			Call;				// 누적 호출 횟수.
 
 	};
-private :
+private:
 
 	DWORD _threadID;
 	PROFILE_SAMPLE _samples[dfPROFILE_SAMPLE_COUNT];

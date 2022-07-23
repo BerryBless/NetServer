@@ -12,11 +12,11 @@ private:
 
 	struct Node {
 		T _data;
-		Node* _next;
+		Node *_next;
 	};
 
 	struct D_TOP {
-		Node* _pNode = nullptr; // low
+		Node *_pNode = nullptr; // low
 		LONG64 _counter = -1234;		// high
 	};
 
@@ -26,7 +26,7 @@ private:
 		D_TOP _head;
 		D_TOP _tail;
 		D_TOP _snap_top;
-		Node* _next;
+		Node *_next;
 		bool _isHead;
 	};
 
@@ -43,21 +43,21 @@ public:
 	~LFQueue();
 
 	void Enqueue(T data);
-	bool Dequeue(T* data);
+	bool Dequeue(T *data);
 	DWORD Peek(T arr[], DWORD size);
 	long GetSize() { return _size; }
 	bool IsEmpty() { return _size == 0; }
 
 private:
-	void MoveTail(BYTE logic, D_TOP* snap, Node** next);
-	void Logging(BYTE logic, D_TOP snap_top, Node* next, bool isHead = false);
+	void MoveTail(BYTE logic, D_TOP *snap, Node **next);
+	void Logging(BYTE logic, D_TOP snap_top, Node *next, bool isHead = false);
 };
 
 
 template<typename T>
 inline LFQueue<T>::LFQueue() {
 	//Node *dummy = new Node;
-	Node* dummy = _nodePool.Alloc();
+	Node *dummy = _nodePool.Alloc();
 
 	dummy->_next = nullptr;
 	_head._pNode = dummy;
@@ -68,10 +68,10 @@ inline LFQueue<T>::LFQueue() {
 
 template<typename T>
 inline LFQueue<T>::~LFQueue() {
-	Node* node = _head._pNode;
+	Node *node = _head._pNode;
 	int cnt = 0;
 	while (node != nullptr) {
-		Node* t = node;
+		Node *t = node;
 		node = node->_next;
 		cnt++;
 		//delete t;
@@ -83,8 +83,8 @@ template<typename T>
 inline void LFQueue<T>::Enqueue(T data) {
 	alignas(16) D_TOP top;
 	//Node *node = new Node;
-	Node* node = _nodePool.Alloc();
-	Node* next;
+	Node *node = _nodePool.Alloc();
+	Node *next;
 
 	node->_data = data;
 	node->_next = nullptr;
@@ -96,12 +96,12 @@ inline void LFQueue<T>::Enqueue(T data) {
 		next = top._pNode->_next;
 
 		if (next == nullptr) {
-			Node* snap_next = _tail._pNode;
-			if (InterlockedCompareExchangePointer((PVOID*)&top._pNode->_next, node, nullptr) == nullptr) {
+			Node *snap_next = _tail._pNode;
+			if (InterlockedCompareExchangePointer((PVOID *) &top._pNode->_next, node, nullptr) == nullptr) {
 				if (snap_next == node) {
 					int test = 0;
 				}
-				InterlockedIncrement((DWORD*)&_size);
+				InterlockedIncrement((DWORD *) &_size);
 				Logging(LOGIC_ENQ + 1, top, next);
 
 				// 하나만 옮기고 끝.
@@ -109,8 +109,7 @@ inline void LFQueue<T>::Enqueue(T data) {
 
 				break;
 			}
-		}
-		else {
+		} else {
 			// 급한놈이 꼬리 옮기기
 			MoveTail(LOGIC_ENQ + 20, &top, &next);
 		}
@@ -118,17 +117,17 @@ inline void LFQueue<T>::Enqueue(T data) {
 }
 
 template<typename T>
-inline bool LFQueue<T>::Dequeue(T* data) {
+inline bool LFQueue<T>::Dequeue(T *data) {
 	alignas(16) D_TOP top;
 	alignas(16) D_TOP tail;
-	Node* next;
-	Node* tail_next;
+	Node *next;
+	Node *tail_next;
 	T snap_data;
 
-	InterlockedDecrement((DWORD*)&_size);
+	InterlockedDecrement((DWORD *) &_size);
 
 	if (_size < 0) {
-		InterlockedIncrement((DWORD*)&_size);
+		InterlockedIncrement((DWORD *) &_size);
 		return false;
 	}
 
@@ -144,10 +143,9 @@ inline bool LFQueue<T>::Dequeue(T* data) {
 		if (next != nullptr) {
 			if (top._pNode == tail._pNode) {
 				MoveTail(LOGIC_DEQ + 20, &tail, &tail_next);
-			}
-			else {
+			} else {
 				snap_data = next->_data;
-				if (InterlockedCompareExchange128((LONG64*)&_head, top._counter + 1, (LONG64)next, (LONG64*)&top)) {
+				if (InterlockedCompareExchange128((LONG64 *) &_head, top._counter + 1, (LONG64) next, (LONG64 *) &top)) {
 					Logging(LOGIC_DEQ + 50, top, next, true);
 					break;
 				}
@@ -163,9 +161,8 @@ inline bool LFQueue<T>::Dequeue(T* data) {
 }
 
 template<typename T>
-inline DWORD LFQueue<T>::Peek(T arr[], DWORD size)
-{
-	Node* pHead = _head._pNode->_next;
+inline DWORD LFQueue<T>::Peek(T arr[], DWORD size) {
+	Node *pHead = _head._pNode->_next;
 
 	for (DWORD i = 0; i < size; i++) {
 		if (pHead == nullptr)
@@ -179,16 +176,15 @@ inline DWORD LFQueue<T>::Peek(T arr[], DWORD size)
 
 
 template<typename T>
-inline void LFQueue<T>::MoveTail(BYTE logic, D_TOP* snap, Node** next) {
+inline void LFQueue<T>::MoveTail(BYTE logic, D_TOP *snap, Node **next) {
 	snap->_counter = _tail._counter;
 	snap->_pNode = _tail._pNode;
 	*next = snap->_pNode->_next;
 	if (*next != nullptr) {
-		if (InterlockedCompareExchange128((LONG64*)&_tail, snap->_counter + 1, (LONG64)*next, (LONG64*)snap) == 0) {
+		if (InterlockedCompareExchange128((LONG64 *) &_tail, snap->_counter + 1, (LONG64) *next, (LONG64 *) snap) == 0) {
 			// 커밋
 			Logging(logic, *snap, nullptr);
-		}
-		else {
+		} else {
 			// 실패
 			Logging(logic, *snap, *next);
 		}
@@ -197,7 +193,7 @@ inline void LFQueue<T>::MoveTail(BYTE logic, D_TOP* snap, Node** next) {
 }
 
 template<typename T>
-inline void LFQueue<T>::Logging(BYTE logic, D_TOP snap_top, Node* next, bool isHead) {
+inline void LFQueue<T>::Logging(BYTE logic, D_TOP snap_top, Node *next, bool isHead) {
 	long idx = InterlockedIncrement(&_logcnt);
 	if (idx > dfLOGGING_COUNT) {
 		_logcnt = 0;

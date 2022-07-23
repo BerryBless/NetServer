@@ -12,16 +12,15 @@ int main() {
 
 
 	int cnt = 0;
-	while (1)
-	{
-	/*	CPacket *pPacket = CPacket::AllocAddRef();
+	while (1) {
+		/*	CPacket *pPacket = CPacket::AllocAddRef();
 
-		*pPacket << cnt++;
+			*pPacket << cnt++;
 
-		pPacket->SetHeader();
-		for (int i = 0; i < dfDUMMY_CNT; i++)
-			pDummy[i].SendPacket(pPacket);
-		pPacket->SubRef();*/
+			pPacket->SetHeader();
+			for (int i = 0; i < dfDUMMY_CNT; i++)
+				pDummy[i].SendPacket(pPacket);
+			pPacket->SubRef();*/
 	}
 
 	return 0;

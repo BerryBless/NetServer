@@ -8,7 +8,7 @@
 #define MAX_SESSION_COUNT 20000
 
 int main() {
-	PRO_INIT(dfWORKERTHREAD*2);
+	PRO_INIT(dfWORKERTHREAD * 2);
 
 	CEchoServer server;
 

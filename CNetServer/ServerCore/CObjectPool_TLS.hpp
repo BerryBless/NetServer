@@ -48,8 +48,7 @@ public:
 };
 
 template<typename DATA>
-inline ObjectPool_TLS<DATA>::ObjectPool_TLS(bool bPlacementNew, bool sizeCheck)
-{
+inline ObjectPool_TLS<DATA>::ObjectPool_TLS(bool bPlacementNew, bool sizeCheck) {
 	_Size = 0;
 	_bSizeCheck = sizeCheck;
 	_bPlacementNew = bPlacementNew;
@@ -59,16 +58,13 @@ inline ObjectPool_TLS<DATA>::ObjectPool_TLS(bool bPlacementNew, bool sizeCheck)
 	_tlsIdx = TlsAlloc();
 }
 template<typename DATA>
-inline ObjectPool_TLS<DATA>::~ObjectPool_TLS()
-{
-	if (_pObjectPool != nullptr)
-	{
+inline ObjectPool_TLS<DATA>::~ObjectPool_TLS() {
+	if (_pObjectPool != nullptr) {
 		_aligned_free(_pObjectPool);
 	}
 }
 template<typename DATA>
-inline DATA *ObjectPool_TLS<DATA>::Alloc(void)
-{
+inline DATA *ObjectPool_TLS<DATA>::Alloc(void) {
 	CChunk *chunk = (CChunk *) TlsGetValue(_tlsIdx);
 	DWORD myID = GetCurrentThreadId();
 
@@ -83,11 +79,10 @@ inline DATA *ObjectPool_TLS<DATA>::Alloc(void)
 		chunk->_FreeCount = 0;
 		TlsSetValue(_tlsIdx, chunk);
 
-		
+
 	}
 
-	if (_bSizeCheck)
-	{
+	if (_bSizeCheck) {
 		InterlockedIncrement((LONG *) &_Size);
 	}
 	DATA *ret = chunk->Alloc();
@@ -97,8 +92,7 @@ inline DATA *ObjectPool_TLS<DATA>::Alloc(void)
 	return ret;
 }
 template<typename DATA>
-inline void ObjectPool_TLS<DATA>::Free(DATA *pData)
-{
+inline void ObjectPool_TLS<DATA>::Free(DATA *pData) {
 	if (_bPlacementNew) {
 		pData->~DATA();
 	}
@@ -107,31 +101,26 @@ inline void ObjectPool_TLS<DATA>::Free(DATA *pData)
 
 	block->pOrigin->Free(pData);
 
-	if (_bSizeCheck)
-	{
+	if (_bSizeCheck) {
 		InterlockedDecrement((LONG *) &_Size);
 	}
-	
+
 
 }
 template<typename DATA>
-inline int ObjectPool_TLS<DATA>::GetCapacity(void)
-{
+inline int ObjectPool_TLS<DATA>::GetCapacity(void) {
 	return _pObjectPool->GetCapacity() * CChunk::MAX_SIZE;
 }
 template<typename DATA>
-inline DWORD ObjectPool_TLS<DATA>::GetSize(void)
-{
-	if (_bSizeCheck)
-	{
+inline DWORD ObjectPool_TLS<DATA>::GetSize(void) {
+	if (_bSizeCheck) {
 		return _Size;
 	}
 
 	return _pObjectPool->GetSize();
 }
 template<typename DATA>
-inline DATA *ObjectPool_TLS<DATA>::CChunk::Alloc(void)
-{
+inline DATA *ObjectPool_TLS<DATA>::CChunk::Alloc(void) {
 	st_Element *pBlock = (st_Element *) &_ObjectArr[_AllocCount++];
 
 	//packetLog(20000, GetCurrent_threadID(), this, pBlock, _AllocCount, _FreeCount);
@@ -142,18 +131,15 @@ inline DATA *ObjectPool_TLS<DATA>::CChunk::Alloc(void)
 	return (DATA *) pBlock;
 }
 template<typename DATA>
-inline bool ObjectPool_TLS<DATA>::CChunk::Free(DATA *pData)
-{
+inline bool ObjectPool_TLS<DATA>::CChunk::Free(DATA *pData) {
 	st_Element *block = (st_Element *) pData;
 
-	if (block->code != _pObjPool)
-	{
+	if (block->code != _pObjPool) {
 		CRASH();
 		return false;
 	}
 
-	if (InterlockedIncrement(&_FreeCount) == CChunk::MAX_SIZE)
-	{
+	if (InterlockedIncrement(&_FreeCount) == CChunk::MAX_SIZE) {
 		//packetLog(40040, GetCurrent_threadID(), this, block, _AllocCount, ret);
 		//block->pOrigin->_threadID = 0;
 		_pObjPool->_pObjectPool->Free(block->pOrigin);
@@ -209,8 +195,7 @@ public:
 };
 
 template<typename DATA>
-inline LF_ObjectPool_TLS<DATA>::LF_ObjectPool_TLS(bool bPlacementNew, bool sizeCheck)
-{
+inline LF_ObjectPool_TLS<DATA>::LF_ObjectPool_TLS(bool bPlacementNew, bool sizeCheck) {
 	_Size = 0;
 	_bSizeCheck = sizeCheck;
 	//_pObjectPool = new CObjectPool<CChunk>(0, bPlacementNew);
@@ -219,16 +204,13 @@ inline LF_ObjectPool_TLS<DATA>::LF_ObjectPool_TLS(bool bPlacementNew, bool sizeC
 	_tlsIdx = TlsAlloc();
 }
 template<typename DATA>
-inline LF_ObjectPool_TLS<DATA>::~LF_ObjectPool_TLS()
-{
-	if (_pObjectPool != nullptr)
-	{
+inline LF_ObjectPool_TLS<DATA>::~LF_ObjectPool_TLS() {
+	if (_pObjectPool != nullptr) {
 		_aligned_free(_pObjectPool);
 	}
 }
 template<typename DATA>
-inline DATA *LF_ObjectPool_TLS<DATA>::Alloc(void)
-{
+inline DATA *LF_ObjectPool_TLS<DATA>::Alloc(void) {
 	CChunk *chunk = (CChunk *) TlsGetValue(_tlsIdx);
 	DWORD myID = GetCurrentThreadId();
 
@@ -246,44 +228,37 @@ inline DATA *LF_ObjectPool_TLS<DATA>::Alloc(void)
 
 	}
 
-	if (_bSizeCheck)
-	{
+	if (_bSizeCheck) {
 		InterlockedIncrement((LONG *) &_Size);
 	}
 
 	return chunk->Alloc();
 }
 template<typename DATA>
-inline void LF_ObjectPool_TLS<DATA>::Free(DATA *pData)
-{
+inline void LF_ObjectPool_TLS<DATA>::Free(DATA *pData) {
 	st_Element *block = (st_Element *) pData;
 
 	block->pOrigin->Free(pData);
 
-	if (_bSizeCheck)
-	{
+	if (_bSizeCheck) {
 		InterlockedDecrement((LONG *) &_Size);
 	}
 
 }
 template<typename DATA>
-inline int LF_ObjectPool_TLS<DATA>::GetCapacity(void)
-{
+inline int LF_ObjectPool_TLS<DATA>::GetCapacity(void) {
 	return _pObjectPool->GetCapacity() * CChunk::MAX_SIZE;
 }
 template<typename DATA>
-inline DWORD LF_ObjectPool_TLS<DATA>::GetSize(void)
-{
-	if (_bSizeCheck)
-	{
+inline DWORD LF_ObjectPool_TLS<DATA>::GetSize(void) {
+	if (_bSizeCheck) {
 		return _Size;
 	}
 
 	return _pObjectPool->GetSize();
 }
 template<typename DATA>
-inline DATA *LF_ObjectPool_TLS<DATA>::CChunk::Alloc(void)
-{
+inline DATA *LF_ObjectPool_TLS<DATA>::CChunk::Alloc(void) {
 	st_Element *pBlock = (st_Element *) &_ObjectArr[_AllocCount++];
 
 	//packetLog(20000, GetCurrent_threadID(), this, pBlock, _AllocCount, _FreeCount);
@@ -294,18 +269,15 @@ inline DATA *LF_ObjectPool_TLS<DATA>::CChunk::Alloc(void)
 	return (DATA *) pBlock;
 }
 template<typename DATA>
-inline bool LF_ObjectPool_TLS<DATA>::CChunk::Free(DATA *pData)
-{
+inline bool LF_ObjectPool_TLS<DATA>::CChunk::Free(DATA *pData) {
 	st_Element *block = (st_Element *) pData;
 
-	if (block->code != _pObjPool)
-	{
+	if (block->code != _pObjPool) {
 		CRASH();
 		return false;
 	}
 
-	if (InterlockedIncrement(&_FreeCount) == CChunk::MAX_SIZE)
-	{
+	if (InterlockedIncrement(&_FreeCount) == CChunk::MAX_SIZE) {
 		//packetLog(40040, GetCurrent_threadID(), this, block, _AllocCount, ret);
 		//block->pOrigin->_threadID = 0;
 		_pObjPool->_pObjectPool->Free(block->pOrigin);

@@ -78,7 +78,7 @@ protected:
 	// 설정값대로 서버를 실행
 	// ----------------------------------------------
 	bool Start(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
-	bool Start(wchar_t *wsConfigPath); 
+	bool Start(wchar_t *wsConfigPath);
 
 
 	// ----------------------------------------------
@@ -94,8 +94,8 @@ protected:
 	// 
 	// 현재 연결된 세션개수 얻어오기
 	// ----------------------------------------------
-	int GetSessionCount();	
-	
+	int GetSessionCount();
+
 	// ----------------------------------------------
 	// Disconnect(ID) 
 	// 
@@ -116,7 +116,7 @@ protected:
 	// TRUE  : ID에 해당하는 세션의 send buffer에 복사 성공
 	// FALSE : ID에 해당하는 세션의 send buffer에 복사 실패
 	// ----------------------------------------------
-	bool SendPacket(SESSION_ID SessionID, CPacket *pPacket); 
+	bool SendPacket(SESSION_ID SessionID, CPacket *pPacket);
 
 
 	// ----------------------------------------------
@@ -128,14 +128,14 @@ protected:
 	// TRUE  : 해당 (IP, port)에 대한연결 허용
 	// FALSE : 해당 (IP, port)에 대한연결 비허용
 	// ----------------------------------------------
-	virtual bool OnConnectionRequest(u_long IP, u_short Port) = 0; 
+	virtual bool OnConnectionRequest(u_long IP, u_short Port) = 0;
 
 	// ----------------------------------------------
 	// OnClientJoin(ID)
 	// 
 	// Accept 후 접속처리 완료 후 호출
 	// ----------------------------------------------
-	virtual void OnClientJoin(SESSION_ID SessionID) = 0; 
+	virtual void OnClientJoin(SESSION_ID SessionID) = 0;
 
 	// ----------------------------------------------
 	// OnClientLeave(ID)
@@ -166,7 +166,7 @@ protected:
 	// 
 	// 도메인주소로 IP주소 얻어오기
 	// ----------------------------------------------
-	BOOL DomainToIP(const WCHAR* szDomain, IN_ADDR* pAddr);
+	BOOL DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr);
 
 	void SetTimeoutTime(DWORD ms) { _timeoutMillisec = ms; }
 
@@ -175,7 +175,7 @@ private:
 	// Server Framework
 	// ==============================================
 
-	
+
 
 	// ----------------------------------------------
 	// CreateListenSocket()
@@ -249,7 +249,7 @@ private:
 	// TRUE  : Send 완료통지에 대한 처리 성공
 	// FALSE : Send 완료통지에 대한 처리 실패
 	// ----------------------------------------------
-	bool SendProc(SESSION *pSession, DWORD transferredSize); 
+	bool SendProc(SESSION *pSession, DWORD transferredSize);
 	// ----------------------------------------------
 	// RecvProc(pSession, transferredSize)
 	// 
@@ -261,7 +261,7 @@ private:
 	// TRUE  : Recv 완료통지에 대한 처리 성공
 	// FALSE : Recv 완료통지에 대한 처리 실패
 	// ----------------------------------------------
-	bool RecvProc(SESSION *pSession, DWORD transferredSize); 
+	bool RecvProc(SESSION *pSession, DWORD transferredSize);
 
 	// ----------------------------------------------
 	// AcceptProc()
@@ -304,7 +304,7 @@ private:
 	// TRUE  : WSASend 성공 (IO_PENDING, 동기로 완료)
 	// FALSE : WSASend 실패 (그외 모든 경우)
 	// ----------------------------------------------
-	bool SendPost(SESSION *pSession, int logic);	
+	bool SendPost(SESSION *pSession, int logic);
 
 	// ----------------------------------------------
 	// RecvPost(pSession, logic, isAccept)
@@ -545,7 +545,7 @@ protected:
 	alignas(64) ULONGLONG					_totalDisconnectSession;
 
 	MoniteringInfo GetMoniteringInfo();
-	
+
 };
 
 

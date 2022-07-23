@@ -212,7 +212,7 @@ inline DATA *CLF_ObjectPool<DATA>::Alloc(void) {
 		// 3. (ATOMIC) top = next
 	} while (InterlockedCompareExchange128((LONG64 *) &_freeTop, old_top._counter + 1, (LONG64) next, (LONG64 *) &old_top) == 0);
 
-	
+
 	// 4. out = old_top->data
 	pRet = (DATA *) old_top._pNode;
 
@@ -220,7 +220,7 @@ inline DATA *CLF_ObjectPool<DATA>::Alloc(void) {
 	if (_isPlacementNew)
 		new (pRet) (DATA);
 	// checksum
-	((BLOCK_NODE*)pRet)->_checksum ^= FREE_CHECK;
+	((BLOCK_NODE *) pRet)->_checksum ^= FREE_CHECK;
 
 	InterlockedIncrement(&_useCount);
 	return pRet;
@@ -258,7 +258,7 @@ inline bool CLF_ObjectPool<DATA>::Free(DATA *pData) {
 	} while (InterlockedCompareExchangePointer((PVOID *) &_freeTop._pNode, pNode, oldTop) != oldTop);
 
 
-	
+
 
 	InterlockedDecrement(&_useCount);
 
@@ -283,12 +283,12 @@ private:
 	struct BLOCK_NODE {
 		DATA				_data;
 		unsigned long long	_checksum;			// 체크섬
-		BLOCK_NODE* _next;						// 다음노드
+		BLOCK_NODE *_next;						// 다음노드
 	};
 
 
 private:
-	BLOCK_NODE* _top;
+	BLOCK_NODE *_top;
 	long			_capacity;									// 현재 확보된 블럭수
 	long			_useCount;									// 현재 사용중인 블럭수
 	bool			_isPlacementNew;							// 생성자 호출 유무 (true :호출)
@@ -326,7 +326,7 @@ public:
 	// Parameters: 없음.
 	// Return: (DATA *) 데이타 블럭 포인터.
 	//////////////////////////////////////////////////////////////////////////
-	DATA* Alloc(void);
+	DATA *Alloc(void);
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -336,7 +336,7 @@ public:
 	// Parameters: (DATA *) 블럭 포인터.
 	// Return: (BOOL) TRUE, FALSE.
 	//////////////////////////////////////////////////////////////////////////
-	bool	Free(DATA* pData);
+	bool	Free(DATA *pData);
 
 	//////////////////////////////////////////////////////////////////////////
 	// 현재 확보 된 블럭 개수를 얻는다. (메모리풀 내부의 전체 개수)
@@ -356,18 +356,17 @@ public:
 };
 
 template<class DATA>
-inline void CObjectPool<DATA>::AllocMemory(int size)
-{
+inline void CObjectPool<DATA>::AllocMemory(int size) {
 	// push
-	BLOCK_NODE* pNode;
+	BLOCK_NODE *pNode;
 
 	for (int i = 0; i < size; ++i) {
-		pNode = (BLOCK_NODE*)malloc(sizeof(BLOCK_NODE));
+		pNode = (BLOCK_NODE *) malloc(sizeof(BLOCK_NODE));
 
 		// checksum
 		pNode->_checksum = (unsigned long long)this;
 		pNode->_checksum ^= FREE_CHECK;
-		
+
 		pNode->_next = _top;
 
 		_top = pNode;
@@ -377,23 +376,21 @@ inline void CObjectPool<DATA>::AllocMemory(int size)
 }
 
 template<class DATA>
-inline CObjectPool<DATA>::CObjectPool(int size, bool isPlacementNew)
-{
+inline CObjectPool<DATA>::CObjectPool(int size, bool isPlacementNew) {
 	InitializeSRWLock(&_lock);
 
 	_useCount = 0;
 	_capacity = 0;
 	_isPlacementNew = isPlacementNew;
-	_top= nullptr;
+	_top = nullptr;
 	AllocMemory(size);
 }
 
 template<class DATA>
-inline CObjectPool<DATA>::~CObjectPool()
-{
+inline CObjectPool<DATA>::~CObjectPool() {
 	// 소멸자..
-	BLOCK_NODE* pNode = _top;
-	BLOCK_NODE* pNext;
+	BLOCK_NODE *pNode = _top;
+	BLOCK_NODE *pNext;
 	while (pNode != nullptr) {
 		pNext = pNode->_next;
 		free(pNode);
@@ -402,12 +399,11 @@ inline CObjectPool<DATA>::~CObjectPool()
 }
 
 template<class DATA>
-inline DATA* CObjectPool<DATA>::Alloc(void)
-{
+inline DATA *CObjectPool<DATA>::Alloc(void) {
 	AcquireSRWLockExclusive(&_lock);
 	// pop()
-	DATA* pRet = nullptr;
-	BLOCK_NODE* next = nullptr;
+	DATA *pRet = nullptr;
+	BLOCK_NODE *next = nullptr;
 
 
 	// alloc
@@ -416,9 +412,9 @@ inline DATA* CObjectPool<DATA>::Alloc(void)
 	}
 
 
-	pRet = (DATA*)_top;
+	pRet = (DATA *) _top;
 	// checksum
-	((BLOCK_NODE*)pRet)->_checksum ^= FREE_CHECK;
+	((BLOCK_NODE *) pRet)->_checksum ^= FREE_CHECK;
 
 	_top = _top->_next;
 
@@ -432,11 +428,10 @@ inline DATA* CObjectPool<DATA>::Alloc(void)
 }
 
 template<class DATA>
-inline bool CObjectPool<DATA>::Free(DATA* pData)
-{
+inline bool CObjectPool<DATA>::Free(DATA *pData) {
 	AcquireSRWLockExclusive(&_lock);
 	// push()
-	BLOCK_NODE* pNode = (BLOCK_NODE*)pData;
+	BLOCK_NODE *pNode = (BLOCK_NODE *) pData;
 
 	// checksum
 	if (pNode->_checksum & FREE_CHECK) {
