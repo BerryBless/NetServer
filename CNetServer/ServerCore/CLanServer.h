@@ -520,9 +520,11 @@ protected:
 		ULONGLONG							_totalProecessedBytes;
 		ULONGLONG							_totalAcceptSession;
 		ULONGLONG							_totalReleaseSession;
-		ULONGLONG							_recvPacketCount;
-		ULONGLONG							_sendPacketCount;
-		ULONGLONG							_acceptCount;
+		//ULONGLONG							_recvPacketCount;
+		ULONGLONG							_recvPacketPerSec;
+		//ULONGLONG							_sendPacketCount;
+		ULONGLONG							_sendPacketPerSec;
+		ULONGLONG							_acceptPerSec;
 		ULONGLONG							_queueSize;
 		ULONGLONG							_queueSizeAvr;
 		ULONGLONG							_queueCapacity;
@@ -535,15 +537,19 @@ protected:
 	// 패킷 처리 수치 및 패킷처리 완료 바이트수
 	alignas(64) ULONGLONG					_curSessionCount;
 	alignas(64) ULONGLONG					_totalPacket;
+	alignas(64) ULONGLONG					_recvPacketCalc;
 	alignas(64) ULONGLONG					_recvPacketPerSec;
+	alignas(64) ULONGLONG					_sendPacketCalc;
 	alignas(64) ULONGLONG					_sendPacketPerSec;
 
 	alignas(64) LONGLONG					_totalProcessedBytes;
 
+	alignas(64) ULONGLONG					_acceptCalc;
 	alignas(64) ULONGLONG					_acceptPerSec;
 	alignas(64) ULONGLONG					_totalAcceptSession;
 	alignas(64) ULONGLONG					_totalDisconnectSession;
 
+	void CalcTPS();
 	MoniteringInfo GetMoniteringInfo();
 
 };

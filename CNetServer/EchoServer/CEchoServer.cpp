@@ -114,7 +114,7 @@ _timeFormet.tm_mon + 1, _timeFormet.tm_mday, (_timeFormet.tm_year + 1900) % 100,
 _PACKET_\n\
 send packet TPS\t[%lld]\n\
 recv packet TPS\t[%lld]\n",
-_monitor._sendPacketCount, _monitor._recvPacketCount);
+_monitor._sendPacketPerSec, _monitor._recvPacketPerSec);
 	fwprintf_s(outFP, L"\n\
 -----------------------------------\n\
 _TOTAL_\n\

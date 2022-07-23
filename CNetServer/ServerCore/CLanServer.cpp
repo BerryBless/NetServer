@@ -191,7 +191,7 @@ bool CLanServer::SendPacket(SESSION_ID SessionID, CPacket *pPacket) {
 	//---------------------------
 	// monitor
 	//---------------------------
-	InterlockedIncrement(&_sendPacketPerSec);
+	InterlockedIncrement(&_sendPacketCalc);
 #ifndef df_SENDTHREAD
 	SendPost(pSession, dfLOGIC_SEND_PACKET);
 #endif // !df_SENDTHREAD
@@ -354,7 +354,7 @@ unsigned int __stdcall CLanServer::TimeOutThread(LPVOID arg) {
 			break;
 		}
 	}
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- Monitor Thread IS Closed..\n");
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- TimeOutThread IS Closed..\n");
 	return 0;
 }
 #ifdef df_SENDTHREAD
@@ -365,7 +365,7 @@ unsigned int __stdcall CLanServer::SendThread(LPVOID arg) {
 			break;
 		}
 	}
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- Monitor Thread IS Closed..\n");
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- SendThread IS Closed..\n");
 	return 0;
 }
 #endif // df_SENDTHREAD
@@ -513,7 +513,7 @@ bool CLanServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 		// 모니터링
 		//---------------------------
 		InterlockedIncrement(&_totalPacket);
-		InterlockedIncrement(&_recvPacketPerSec);
+		InterlockedIncrement(&_recvPacketCalc);
 
 		if (pSession->_recvQueue.GetUseSize() <= sizeof(USHORT)) {
 			//---------------------------
@@ -676,7 +676,7 @@ bool CLanServer::AcceptProc() {
 	//---------------------------
 	// 모니터링
 	//---------------------------
-	InterlockedIncrement(&_acceptPerSec);
+	InterlockedIncrement(&_acceptCalc);
 	InterlockedIncrement(&_curSessionCount);
 	InterlockedIncrement(&_totalAcceptSession);
 	PRO_END(L"acceptProc");
@@ -689,8 +689,7 @@ bool CLanServer::NetMonitorProc() {
 	// 1초마다 TPS계산
 	//---------------------------
 	Sleep(1000);
-
-	GetMoniteringInfo();
+	CalcTPS();
 
 	return _isRunning;
 }
@@ -1101,13 +1100,20 @@ void CLanServer::SessionContainerLock() {
 void CLanServer::SessionContainerUnlock() {
 	ReleaseSRWLockExclusive(&_sessionContainerLock);
 }
+void CLanServer::CalcTPS() {
+	_acceptPerSec= InterlockedExchange(&_acceptCalc, 0);
+	_recvPacketPerSec = InterlockedExchange(&_recvPacketCalc, 0);
+	_sendPacketPerSec = InterlockedExchange(&_sendPacketCalc, 0);
+
+}
+
 CLanServer::MoniteringInfo CLanServer::GetMoniteringInfo() {
 	MoniteringInfo info;
 	info._workerThreadCount = _maxRunThreadCount;
 	info._runningThreadCount = _workerThreadCount;
-	info._acceptCount = InterlockedExchange(&_acceptPerSec, 0);
-	info._recvPacketCount = InterlockedExchange(&_recvPacketPerSec, 0);
-	info._sendPacketCount = InterlockedExchange(&_sendPacketPerSec, 0);
+	info._acceptPerSec = _acceptPerSec;
+	info._recvPacketPerSec = _recvPacketPerSec;
+	info._sendPacketPerSec = _sendPacketPerSec;
 	info._totalAcceptSession = _totalAcceptSession;
 	info._totalPacket = _totalPacket;
 	info._totalProecessedBytes = _totalProcessedBytes;
