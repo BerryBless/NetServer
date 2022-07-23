@@ -32,7 +32,7 @@ CLanServer::CLanServer() {
 	//---------------------------
 	InitializeSRWLock(&_sessionContainerLock);
 
-	_timeoutMillisec = 1000;
+	_timeoutMillisec = 10000;
 }
 
 CLanServer::~CLanServer() {
