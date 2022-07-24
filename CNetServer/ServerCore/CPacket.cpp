@@ -12,6 +12,7 @@
 #endif // !CRASH
 
 ObjectPool_TLS<CPacket> CPacket::_packetPool(true);
+//CObjectPool<CPacket> CPacket::_packetPool(0,true);
 
 CPacket::CPacket() {
 	// 기본 사이즈만큼 할당

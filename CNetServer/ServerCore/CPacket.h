@@ -242,6 +242,8 @@ public:
 
 
 	static ObjectPool_TLS<CPacket> _packetPool;
+	//static CObjectPool<CPacket> _packetPool;
+
 protected:
 	//------------------------------------------------------------
 	// 현재 버퍼의 사이즈.

@@ -829,9 +829,7 @@ bool CLanServer::RecvPost(SESSION *pSession, int logic, bool isAccept) {
 	//---------------------------
 	//WSARecv()
 	//---------------------------
-	SESSION_ID TEMP = pSession->_ID;
-	DWORD IOcount = pSession->_IOcount;
-	SOCKET sock = pSession->_sock;
+	
 
 	int recvRet = WSARecv(pSession->_sock, bufferSet, 2, &byteRecvs, &flag, &pSession->_recvOverlapped, nullptr);
 	if (recvRet == SOCKET_ERROR) {
