@@ -17,7 +17,7 @@
 }while(0)
 #endif // !CRASH
 
-#define df_SENDTHREAD
+//#define df_SENDTHREAD
 
 // ----------------------------------------------
 // SESSION_ID
