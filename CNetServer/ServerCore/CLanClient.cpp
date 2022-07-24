@@ -28,7 +28,13 @@ bool CLanClient::Connect(const WCHAR *serverIP, USHORT serverPort) {
 	wcscpy_s(_serverIP, _countof(_serverIP), serverIP);
 	_serverPort = serverPort;
 
-	
+	_client._IOcount = 0;
+	_client._IOFlag = FALSE;
+	_client._sock = INVALID_SOCKET;
+	_client._sendPacketCnt = 0;
+	_client._recvQueue.ClearBuffer();
+	_client._sendQueue.Clear();
+
 
 	if (ConnectServer()) {
 		OnEnterJoinServer();
@@ -403,6 +409,8 @@ bool CLanClient::NetMonitorProc() {
 }
 
 bool CLanClient::RegisterIocp() {
+	if (_client._sock == INVALID_SOCKET) return false;
+
 	HANDLE hResult = CreateIoCompletionPort((HANDLE) _client._sock, _hIOCP, 0, 0);
 
 	if (hResult == NULL) {
@@ -515,7 +523,7 @@ bool CLanClient::RecvPost(bool isAccept) {
 		int err = WSAGetLastError();
 
 		if (err != WSA_IO_PENDING) {
-			if (err != 10054 && err != 10053 && err != 10004) {
+			if (err != 10054 && err != 10053) {
 				CLogger::_Log(dfLOG_LEVEL_ERROR, L"////  :: WSARecv ERROR [%d]\n", err);
 				//CRASH();
 
@@ -599,7 +607,6 @@ bool CLanClient::DecrementIOCount(int logic) {
 
 bool CLanClient::ReleaseSessionProc(int logic) {
 	if (_client._sock == INVALID_SOCKET) {
-		Unlock();
 		return false;
 	}
 	OnLeaveServer();

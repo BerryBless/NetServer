@@ -121,9 +121,7 @@ void CLanServer::Quit() {
 	_isRunning = false;
 	PostQueuedCompletionStatus(_hIOCP, dfEXIT_CODE, dfEXIT_CODE, NULL);
 	closesocket(_listensock);
-}
 
-void CLanServer::WaitForThreadsFin() {
 	//---------------------------
 	// 서버 종료 기다리기
 	//---------------------------
@@ -138,18 +136,9 @@ void CLanServer::WaitForThreadsFin() {
 	}
 }
 
-int CLanServer::GetSessionCount() {
-	//---------------------------
-	// 현재 연결된 세션 카운터
-	//---------------------------
-	int count;
-
-	return count;
-}
-
 bool CLanServer::Disconnect(SESSION_ID SessionID) {
 	//---------------------------
-	// 세션 끊기?
+	// 세션 끊기
 	//---------------------------
 	bool ret;
 	SESSION *pSession = FindSession(SessionID);

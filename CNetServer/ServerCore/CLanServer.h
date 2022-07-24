@@ -72,8 +72,7 @@ protected:
 	bool Start(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
 	bool Start(wchar_t *wsConfigPath);
 	void Quit();
-	void WaitForThreadsFin();
-	int GetSessionCount();
+	ULONGLONG GetSessionCount() { return _curSessionCount; }
 	bool Disconnect(SESSION_ID SessionID);
 	bool SendPacket(SESSION_ID SessionID, CPacket *pPacket);
 
