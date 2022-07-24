@@ -28,8 +28,6 @@ void CEchoServer::OnClientJoin(SESSION_ID SessionID) {
 }
 
 void CEchoServer::OnClientLeave(SESSION_ID SessionID) {
-	int idx = SessionID >> (8 * 6);
-	//if (idx == 0) CRASH();
 }
 
 void CEchoServer::OnRecv(SESSION_ID SessionID, CPacket *pPacket) {
