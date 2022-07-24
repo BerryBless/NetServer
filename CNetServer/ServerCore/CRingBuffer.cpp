@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "CRingBuffer.h"
 #include <stdio.h>
-#define CRASH() do{int*p =NULL; *p = 10;}while(0)
 #define BLINK 1 // 큐가 다찼는지 확인할 공간 (실제 큐사이즈 = _iBufferSize - BLINK)
 
 

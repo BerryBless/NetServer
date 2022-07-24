@@ -6,6 +6,15 @@
 #include "CCrashDump.h"
 #include "Stack.hpp"
 #include "Queue.hpp"
+#include "HardWareMoniter.h"
+#include "ProcessMoniter.h"
+
+#ifndef CRASH
+#define CRASH() do{\
+	CLogger::_Log(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
+	int *nptr = nullptr; *nptr = 1;\
+}while(0)
+#endif // !CRASH
 
 class CLanClient {
 public:
@@ -18,10 +27,9 @@ public:
 		Queue<CPacket *> _sendQueue;
 
 		// session state
-		DWORD _IOcount;
-		DWORD _enqPacketCnt;
-		DWORD _sendPacketCnt;
-		BOOL _isSend;
+		alignas(64) DWORD _IOcount;
+		alignas(64) DWORD _IOFlag;
+		alignas(64) DWORD _sendPacketCnt;
 
 		// Network
 		SOCKET _sock;
@@ -30,7 +38,7 @@ public:
 
 		SESSION() {
 			_IOcount = 0;
-			_isSend = false;
+			_IOFlag = 0;
 			_sendPacketCnt = 0;
 			ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
 			ZeroMemory(&_sendOverlapped, sizeof(WSAOVERLAPPED));
@@ -40,16 +48,18 @@ public:
 public:
 	CLanClient();
 	~CLanClient();
-
+	// ==============================================
+	// Client Interface
+	// ==============================================
 	bool Connect(const WCHAR *serverIP, USHORT serverPort);	// 서버IP
 	bool Disconnect();
 	bool SendPacket(CPacket *pPacket);
 	void SetThreadNum(BYTE worker, BYTE active);
-protected:
 	bool Start();
 	void Quit();
 	bool ConnectServer();
 
+protected:
 
 	virtual void OnEnterJoinServer() = 0; //< 서버와의 연결 성공 후
 	virtual void OnLeaveServer() = 0; //< 서버와의 연결이 끊어졌을 때
@@ -58,10 +68,12 @@ protected:
 	virtual void OnError(int errorcode, const WCHAR *) = 0;
 
 
-
 	BOOL DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr);
 
 private:
+	// ==============================================
+	// Client IOCP Framework
+	// ==============================================
 
 	void BeginThreads();
 	static unsigned int __stdcall WorkerThread(LPVOID arg);
@@ -76,13 +88,12 @@ private:
 
 	bool SendPost();
 	bool RecvPost(bool isAccept = false);
-
 	bool SetWSABuffer(WSABUF *BufSets, bool isRecv);
 
 	bool IncrementIOCount(int logic);
 	bool DecrementIOCount(int logic);
 
-	bool ReleaseProc(int logic);
+	bool ReleaseSessionProc(int logic);
 
 	void Init();
 	void CreateIOCP();
@@ -92,7 +103,9 @@ private:
 	bool SetNonBlockSocket();
 	bool SetNagle(bool sw);
 private:
-
+	// ==============================================
+	// LOCK
+	// ==============================================
 	void Lock() { AcquireSRWLockExclusive(&_lock); }
 	void Unlock() { ReleaseSRWLockExclusive(&_lock); }
 
@@ -125,19 +138,33 @@ private:
 	HANDLE *_hThreads;			// WorkerThread Handle
 
 protected:
+	// ==============================================
 	// 모니터링
-	struct MONITOR {
-		// 현재(계산중)
-		DWORD _sendPacketCalc;
-		DWORD _recvPacketCalc;
-
-		// 결과값
-		DWORD _sendPacketTPS;
-		DWORD _recvPacketTPS;
-
-		DWORD _acceptCount;
-		DWORD _disconnectCount;
+	// ==============================================
+	struct MoniteringInfo {
+		DWORD								_workerThreadCount;
+		DWORD								_runningThreadCount;
+		ULONGLONG							_totalPacket;
+		ULONGLONG							_totalProecessedBytes;
+		ULONGLONG							_recvPacketPerSec;
+		ULONGLONG							_sendPacketPerSec;
+		ULONGLONG							_queueSize;
+		ULONGLONG							_stackSize;
+		ULONGLONG							_stackCapacity;
 	};
-	MONITOR _monitor;
+
+
+	// 모니터링 변수
+	alignas(64) ULONGLONG					_totalPacket;
+	alignas(64) ULONGLONG					_recvPacketCalc;
+	alignas(64) ULONGLONG					_recvPacketPerSec;
+	alignas(64) ULONGLONG					_sendPacketCalc;
+	alignas(64) ULONGLONG					_sendPacketPerSec;
+	alignas(64) LONGLONG					_totalProcessedBytes;
+
+	void CalcTPS();
+	MoniteringInfo GetMoniteringInfo();
+
+	void ResetMonitor();
 };
 

@@ -16,8 +16,16 @@
 #include <WinSock2.h>
 #include <iostream>
 #include <timeapi.h>
+#include "CRingBuffer.h"
 #include "CLogger.h"
+#include "CObjectPool.hpp"
 #include "CCrashDump.h"
+#include "Stack.hpp"
+#include "Queue.hpp"
+#include "HardWareMoniter.h"
+#include "ProcessMoniter.h"
+#include "SerializingBuffer.h"
+#include "CPacket.h"
 using namespace std;
 
 

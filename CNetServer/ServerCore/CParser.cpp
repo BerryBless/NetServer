@@ -2,7 +2,6 @@
 #include "CParser.h"
 #include <stringapiset.h>	// MultiByteToWideChar()
 #include <locale.h>
-#define CRASH() int *p = nullptr; *p++
 
 #pragma region StringFunc
 

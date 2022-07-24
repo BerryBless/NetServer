@@ -16,14 +16,7 @@ ObjectPool_TLS<CPacket> CPacket::_packetPool(true);
 CPacket::CPacket() {
 	// 기본 사이즈만큼 할당
 	_iBufferSize = eBUFFER_DEFAULT;
-	_pBuffer = new char[_iBufferSize];
-	Clear();
-}
-
-CPacket::CPacket(int iBufferSize) {
-	// 할당된 사이즈 만큼 할당
-	_iBufferSize = iBufferSize;
-	_pBuffer = new char[_iBufferSize];
+	//_pBuffer = new char[_iBufferSize];
 	Clear();
 }
 
@@ -32,8 +25,8 @@ CPacket::~CPacket() {
 }
 
 void CPacket::Release(void) {
-	if (_pBuffer != nullptr)
-		delete[]_pBuffer;
+	/*if (_pBuffer != nullptr)
+		delete[]_pBuffer;*/
 }
 
 void CPacket::Clear(void) {

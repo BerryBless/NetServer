@@ -9,9 +9,8 @@ CLanClient::CLanClient() {
 	timeBeginPeriod(1);
 
 
-	ZeroMemory(&_monitor, sizeof(MONITOR));
 	InitializeSRWLock(&_lock);
-
+	ResetMonitor();
 	_client._sock = INVALID_SOCKET;
 	_isNagle = false;
 }
@@ -40,12 +39,8 @@ bool CLanClient::Connect(const WCHAR *serverIP, USHORT serverPort) {
 
 bool CLanClient::Disconnect() {
 	bool ret;
-	IncrementIOCount(10000);
-
 	ret = CancelIoEx((HANDLE) _client._sock, nullptr);
-
-	DecrementIOCount(10010);
-
+	ReleaseSessionProc(3);
 	return ret;
 }
 
@@ -60,7 +55,7 @@ bool CLanClient::SendPacket(CPacket *pPacket) {
 	//---------------------------
 	// monitor
 	//---------------------------
-	InterlockedIncrement(&_monitor._sendPacketCalc);
+	InterlockedIncrement(&_sendPacketCalc);
 	return SendPost();
 }
 
@@ -120,7 +115,9 @@ bool CLanClient::ConnectServer() {
 
 			FD_SET(_client._sock, &_client._wset);
 			FD_SET(_client._sock, &_client._errset);
+			
 
+			// 연결 실패시 한번더 대기
 			int retval = select(0, nullptr, &_client._wset, &_client._errset, &tval);
 
 			if (retval > 0) {
@@ -277,8 +274,8 @@ bool CLanClient::SendProc(DWORD transferredSize) {
 	//---------------------------
 	// 	   Send가 끝났다
 	//---------------------------
-	//InterlockedExchange8((CHAR *) &_client._isSend, FALSE);
-	_client._isSend = false;
+	//InterlockedExchange8((CHAR *) &_client._IOFlag, FALSE);
+	_client._IOFlag = false;
 
 
 	//---------------------------
@@ -317,7 +314,7 @@ bool CLanClient::RecvProc(DWORD transferredSize) {
 		//---------------------------
 		// 모니터링
 		//---------------------------
-		InterlockedIncrement(&_monitor._recvPacketCalc);
+		InterlockedIncrement(&_recvPacketCalc);
 
 		if (_client._recvQueue.GetUseSize() <= sizeof(USHORT)) {
 			//---------------------------
@@ -398,12 +395,8 @@ bool CLanClient::NetMonitorProc() {
 	// 1초마다 TPS계산
 	//---------------------------
 	Sleep(1000);
-
-	_monitor._sendPacketTPS = _monitor._sendPacketCalc;
-	_monitor._sendPacketCalc = 0;
-
-	_monitor._recvPacketTPS = _monitor._recvPacketCalc;
-	_monitor._recvPacketCalc = 0;
+ 
+	CalcTPS();
 
 	return _isRunning;
 }
@@ -428,7 +421,7 @@ bool CLanClient::SendPost() {
 	//---------------------------
 	// 	   Send중인지 확인
 	//---------------------------
-	BOOL isSend = InterlockedExchange8((CHAR *) &_client._isSend, TRUE);
+	BOOL isSend = InterlockedExchange8((CHAR *) &_client._IOFlag, TRUE);
 	if (isSend == TRUE) {
 		return FALSE;
 	}
@@ -436,7 +429,7 @@ bool CLanClient::SendPost() {
 	// 	   Send가능한데 보낼게 없는지 확인
 	//---------------------------
 	if (_client._sendQueue.GetSize() == 0) {
-		if (InterlockedExchange8((CHAR *) &_client._isSend, FALSE) == FALSE) {
+		if (InterlockedExchange8((CHAR *) &_client._IOFlag, FALSE) == FALSE) {
 			CLogger::_Log(dfLOG_LEVEL_ERROR, L"SendPost() _isSend Exchange false to false");
 			CRASH();
 		}
@@ -595,13 +588,12 @@ bool CLanClient::DecrementIOCount(int logic) {
 		CRASH();
 
 	if (ret == 0)
-		ReleaseProc(5000);
+		ReleaseSessionProc(5000);
 
 	return true;
 }
 
-bool CLanClient::ReleaseProc(int logic) {
-
+bool CLanClient::ReleaseSessionProc(int logic) {
 	Lock();
 	OnLeaveServer();
 	closesocket(_client._sock);
@@ -705,4 +697,31 @@ bool CLanClient::SetNagle(bool sw) {
 		return true;
 	}
 	return false;
+}
+
+void CLanClient::CalcTPS() {
+	_recvPacketPerSec = InterlockedExchange(&_recvPacketCalc, 0);
+	_sendPacketPerSec = InterlockedExchange(&_sendPacketCalc, 0);
+}
+
+CLanClient::MoniteringInfo CLanClient::GetMoniteringInfo() {
+	MoniteringInfo info;
+	info._workerThreadCount = _maxRunThreadCount;
+	info._runningThreadCount = _workerThreadCount;
+	info._recvPacketPerSec = _recvPacketPerSec;
+	info._sendPacketPerSec = _sendPacketPerSec;
+	info._totalPacket = _totalPacket;
+	info._totalProecessedBytes = _totalProcessedBytes;
+		info._queueSize += _client._sendQueue.GetSize();
+	return info;
+}
+
+void CLanClient::ResetMonitor() {
+	_totalPacket=0;
+	_recvPacketCalc=0;
+	_recvPacketPerSec=0;
+	_sendPacketCalc=0;
+	_sendPacketPerSec=0;
+	_totalProcessedBytes=0;
+
 }

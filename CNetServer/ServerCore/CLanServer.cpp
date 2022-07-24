@@ -32,6 +32,8 @@ CLanServer::CLanServer() {
 	//---------------------------
 	InitializeSRWLock(&_sessionContainerLock);
 
+	ResetMonitor();
+
 	_timeoutMillisec = 10000;
 }
 
@@ -1181,5 +1183,21 @@ CLanServer::MoniteringInfo CLanServer::GetMoniteringInfo() {
 		info._queueSize += _sessionContainer[i]._sendQueue.GetSize();
 	info._queueSizeAvg = info._queueSize / _maxConnection;
 	return info;
+}
+void CLanServer::ResetMonitor() {
+	_curSessionCount=0;
+	_totalPacket=0;
+	_recvPacketCalc=0;
+	_recvPacketPerSec=0;
+	_sendPacketCalc=0;
+	_sendPacketPerSec=0;
+
+	_totalProcessedBytes=0;
+
+	_acceptCalc=0;
+	_acceptPerSec=0;
+	_totalAcceptSession=0;
+	_totalDisconnectSession=0;
+
 }
 #pragma endregion

@@ -7,6 +7,12 @@
 #include <minidumpapiset.h>
 #pragma comment(lib, "Dbghelp.lib")
 
+#ifndef CRASH
+#define CRASH() do{\
+	CLogger::_Log(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
+	int *nptr = nullptr; *nptr = 1;\
+}while(0)
+#endif // !CRASH
 
 class CCrashDump {
 public:
