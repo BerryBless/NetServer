@@ -99,16 +99,9 @@ inline DWORD Queue<T>::Peek(T arr[], DWORD size) {
 template<typename T>
 inline void Queue<T>::Clear() {
 	AcquireSRWLockExclusive(&_lock);
-	while (_head._next != &_tail) {
-		Node *pNode = _head._next;
-
-		pNode->_prev->_next = pNode->_next;
-		pNode->_next->_prev = pNode->_prev;
-
-		_nodePool.Free(pNode);
-	}
+	T temp;
+	while (Dequeue(&temp));
 
 
-	_size = 0;
 	ReleaseSRWLockExclusive(&_lock);
 }

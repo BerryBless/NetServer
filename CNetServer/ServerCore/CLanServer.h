@@ -17,7 +17,7 @@
 }while(0)
 #endif // !CRASH
 
-#define df_SENDTHREAD
+//#define df_SENDTHREAD
 
 // ----------------------------------------------
 // SESSION_ID
@@ -30,7 +30,6 @@ public:
 	typedef u_int64 SESSION_ID;
 	struct SESSION {
 		SESSION_ID _ID;
-		DWORD _isAlive;
 
 		// IOCP Buffer
 		WSAOVERLAPPED _recvOverlapped;
@@ -38,11 +37,7 @@ public:
 		CRingBuffer _recvQueue;
 		Queue<CPacket *> _sendQueue;
 
-		// session state
-		DWORD _IOcount;
-		DWORD _IOFlag;
-		DWORD _sendPacketCnt;
-		DWORD _lastRecvdTime;
+		
 
 		// session information
 		SOCKET _sock;
@@ -51,13 +46,21 @@ public:
 
 		// session lock
 		SRWLOCK _lock;
-		DWORD _ThreadBlockIdx;
 
+
+		// session state
+		DWORD _lastRecvdTime;
+		alignas(64) DWORD _IOcount;
+		alignas(64) DWORD _IOFlag;
+		alignas(64) DWORD _sendPacketCnt;
 		SESSION() {
 			_ID = 0;
 			_IOcount = 0;
 			_IOFlag = 0;
 			_sendPacketCnt = 0;
+			_sock = 0;
+			_IP = 0;
+			_port = 0;
 			ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
 			ZeroMemory(&_sendOverlapped, sizeof(WSAOVERLAPPED));
 		}
@@ -342,7 +345,7 @@ private:
 	// TRUE  : IOcount 증가 성공
 	// FALSE : IOcount 증가 실패
 	// ----------------------------------------------
-	bool IncrementIOCount(SESSION *pSession, int logic);
+	//bool IncrementIOCount(SESSION *pSession, int logic);
 	// ----------------------------------------------
 	// DecrementIOCount( pSession,  logic)
 	// logic	: 어느 곳에서 호출을 했다를 알 수 있는 디버깅용 숫자
@@ -353,7 +356,12 @@ private:
 	// TRUE  : IOcount 증가 성공
 	// FALSE : IOcount 증가 실패
 	// ----------------------------------------------
-	bool DecrementIOCount(SESSION *pSession, int logic);
+	//bool DecrementIOCount(SESSION *pSession, int logic);
+
+	SESSION *GetSessionAddIORef(SESSION_ID sessionID, DWORD logic);
+	void SessionSubIORef(SESSION * pSession, DWORD logic);
+
+
 
 	// ----------------------------------------------
 	// ReleaseSession( pSession,  logic)
@@ -431,14 +439,7 @@ private:
 	// ----------------------------------------------
 	SESSION *FindSession(SESSION_ID sessionID);
 
-	// ----------------------------------------------
-	// InsertSessionData(pSession)
-	// 
-	// ID를 키값으로 관리 컨테이너에서 삭제
-	// 해당 세션을 오브젝트 풀에 반환
-	// ----------------------------------------------
-	void DeleteSessionData(SESSION_ID sessionID);
-
+	
 private:
 	// ==============================================
 	// LOCK
