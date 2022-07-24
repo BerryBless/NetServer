@@ -13,6 +13,11 @@ CLanClient::CLanClient() {
 	ResetMonitor();
 	_client._sock = INVALID_SOCKET;
 	_isNagle = false;
+
+
+	Init();
+	SetThreadNum(1, 2);
+	BeginThreads();
 }
 
 CLanClient::~CLanClient() {
@@ -23,12 +28,11 @@ bool CLanClient::Connect(const WCHAR *serverIP, USHORT serverPort) {
 	wcscpy_s(_serverIP, _countof(_serverIP), serverIP);
 	_serverPort = serverPort;
 
-	Init();
-	SetThreadNum(2, 2);
-	BeginThreads();
+	
 
 	if (ConnectServer()) {
 		OnEnterJoinServer();
+		_isRunning = true;
 	} else {
 		return false;
 	}
@@ -41,6 +45,8 @@ bool CLanClient::Disconnect() {
 	bool ret;
 	ret = CancelIoEx((HANDLE) _client._sock, nullptr);
 	ReleaseSessionProc(3);
+
+	//Quit();
 	return ret;
 }
 
@@ -115,7 +121,7 @@ bool CLanClient::ConnectServer() {
 
 			FD_SET(_client._sock, &_client._wset);
 			FD_SET(_client._sock, &_client._errset);
-			
+
 
 			// 연결 실패시 한번더 대기
 			int retval = select(0, nullptr, &_client._wset, &_client._errset, &tval);
@@ -226,27 +232,22 @@ bool CLanClient::OnGQCS() {
 		return true;
 	}
 
-	//---------------------------
-	// completionKey(ID) 로 세션포인터 찾기
-	//---------------------------
 
-	do {
 
-		if (transferredSize > 0 && GQCSRet == TRUE) {
-			//---------------------------
-			// WSARecv가 완료됨
-			//---------------------------
-			if (pOverlapped == &_client._recvOverlapped) {
-				RecvProc(transferredSize);
-			}
-			//---------------------------
-			// WSASend가 완료됨
-			//---------------------------
-			if (pOverlapped == &_client._sendOverlapped) {
-				SendProc(transferredSize);
-			}
+	if (transferredSize > 0 && GQCSRet == TRUE && _isRunning) {
+		//---------------------------
+		// WSARecv가 완료됨
+		//---------------------------
+		if (pOverlapped == &_client._recvOverlapped) {
+			RecvProc(transferredSize);
 		}
-	} while (0);
+		//---------------------------
+		// WSASend가 완료됨
+		//---------------------------
+		if (pOverlapped == &_client._sendOverlapped) {
+			SendProc(transferredSize);
+		}
+	}
 	//---------------------------
 	// 	   IOCount --
 	//---------------------------
@@ -256,6 +257,7 @@ bool CLanClient::OnGQCS() {
 }
 
 bool CLanClient::SendProc(DWORD transferredSize) {
+	OnSend(transferredSize);
 	//---------------------------
 	// 완료통지 온 패킷 지우기
 	//---------------------------
@@ -264,8 +266,7 @@ bool CLanClient::SendProc(DWORD transferredSize) {
 
 	for (int i = 0; i < sendedPacketCnt; ++i) {
 		_client._sendQueue.Dequeue(&pPacket);
-
-		pPacket->SubRef();
+		pPacket->SubRef(4);
 		pPacket = nullptr;
 	}
 
@@ -395,7 +396,7 @@ bool CLanClient::NetMonitorProc() {
 	// 1초마다 TPS계산
 	//---------------------------
 	Sleep(1000);
- 
+
 	CalcTPS();
 
 	return _isRunning;
@@ -481,6 +482,7 @@ bool CLanClient::SendPost() {
 }
 
 bool CLanClient::RecvPost(bool isAccept) {
+
 	//---------------------------
 	// IOCount ++
 	//---------------------------
@@ -497,11 +499,13 @@ bool CLanClient::RecvPost(bool isAccept) {
 
 	SetWSABuffer(bufferSet, TRUE);
 
-
-
 	//---------------------------
 	// 오버랩 초기화
 	//---------------------------
+
+	DWORD IOcount = _client._IOcount;
+	DWORD sock = _client._sock;
+
 	memset(&_client._recvOverlapped, 0, sizeof(_client._recvOverlapped));
 	//---------------------------
 	//WSARecv()
@@ -511,7 +515,7 @@ bool CLanClient::RecvPost(bool isAccept) {
 		int err = WSAGetLastError();
 
 		if (err != WSA_IO_PENDING) {
-			if (err != 10054 && err != 10053) {
+			if (err != 10054 && err != 10053 && err != 10004) {
 				CLogger::_Log(dfLOG_LEVEL_ERROR, L"////  :: WSARecv ERROR [%d]\n", err);
 				//CRASH();
 
@@ -594,20 +598,20 @@ bool CLanClient::DecrementIOCount(int logic) {
 }
 
 bool CLanClient::ReleaseSessionProc(int logic) {
-	Lock();
+	if (_client._sock == INVALID_SOCKET) {
+		Unlock();
+		return false;
+	}
 	OnLeaveServer();
 	closesocket(_client._sock);
-
-	for (;;) {
-		CPacket *pPacket;
-		if (_client._sendQueue.Dequeue(&pPacket) == false) {
-			break;
-		}
-		pPacket->SubRef();
+	_client._sock = INVALID_SOCKET;
+	CPacket *pPacket;
+	while (_client._sendQueue.Dequeue(&pPacket)) {
+		pPacket->SubRef(66);
 	}
 	_client._recvQueue.ClearBuffer();
-	Unlock();
 
+	_isRunning = false;
 	return false;
 }
 
@@ -619,6 +623,8 @@ void CLanClient::Init() {
 	_hThreads = new HANDLE[(long long) _workerThreadCount + 1];
 
 	CreateIOCP();
+
+
 }
 
 void CLanClient::CreateIOCP() {
@@ -712,16 +718,17 @@ CLanClient::MoniteringInfo CLanClient::GetMoniteringInfo() {
 	info._sendPacketPerSec = _sendPacketPerSec;
 	info._totalPacket = _totalPacket;
 	info._totalProecessedBytes = _totalProcessedBytes;
-		info._queueSize += _client._sendQueue.GetSize();
+	info._queueSize = 0;
+	info._queueSize = _client._sendQueue.GetSize();
 	return info;
 }
 
 void CLanClient::ResetMonitor() {
-	_totalPacket=0;
-	_recvPacketCalc=0;
-	_recvPacketPerSec=0;
-	_sendPacketCalc=0;
-	_sendPacketPerSec=0;
-	_totalProcessedBytes=0;
+	_totalPacket = 0;
+	_recvPacketCalc = 0;
+	_recvPacketPerSec = 0;
+	_sendPacketCalc = 0;
+	_sendPacketPerSec = 0;
+	_totalProcessedBytes = 0;
 
 }
