@@ -37,7 +37,7 @@ public:
 		FD_SET _errset;
 
 		SESSION() {
-			_IOcount = 0;
+			_IOcount = 0x80000000;
 			_IOFlag = 0;
 			_sendPacketCnt = 0;
 			ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
@@ -121,7 +121,7 @@ private:
 	// ----------------------------------------------
 	// Network State
 	// ----------------------------------------------
-	bool _isRunning = false;	// 서버가 진행중인가?
+	long _isRunning = 0;		// 서버가 진행중인가?
 	BYTE _NumThreads = 0;		// 몇개의 스레드가 생성되었는가
 
 	// ----------------------------------------------
@@ -166,5 +166,13 @@ protected:
 	MoniteringInfo GetMoniteringInfo();
 
 	void ResetMonitor();
+
+	// temp
+	long incArr[10000];
+	long incIdx = 0;
+	long decArr[10000];
+	long decIdx = 0;
 };
+
+
 

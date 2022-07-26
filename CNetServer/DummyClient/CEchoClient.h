@@ -1,10 +1,10 @@
 #pragma once
-//#include "CLanClient.h"
-#include "CNetClient.h"
+#include "CLanClient.h"
+//#include "CNetClient.h"
 #define df_PACKET_CODE 0x73
 #define df_SENDOVER 100
-//class CEchoClient : public CLanClient {
-class CEchoClient : public CNetClient {
+class CEchoClient : public CLanClient {
+//class CEchoClient : public CNetClient {
 public:
 	struct Protocol {
 		BYTE _code; // 0x73

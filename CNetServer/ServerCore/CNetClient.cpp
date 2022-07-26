@@ -11,13 +11,10 @@ CNetClient::CNetClient() {
 
 	InitializeSRWLock(&_lock);
 	ResetMonitor();
+	_client._IOcount = 0x80000000;
 	_client._sock = INVALID_SOCKET;
 	_isNagle = false;
-
-
-	Init();
-	SetThreadNum(1, 2);
-	BeginThreads();
+	SetThreadNum(1, 1);
 }
 
 CNetClient::~CNetClient() {
@@ -25,32 +22,44 @@ CNetClient::~CNetClient() {
 }
 
 bool CNetClient::Connect(const WCHAR *serverIP, USHORT serverPort) {
-	wcscpy_s(_serverIP, _countof(_serverIP), serverIP);
+	int ret;
+	while (ret = InterlockedCompareExchange(&_client._IOcount, 0, 0x80000000) != 0x80000000) {
+		//CRASH();
+	}
+
+		wcscpy_s(_serverIP, _countof(_serverIP), serverIP);
 	_serverPort = serverPort;
 
-	_client._IOcount = 0;
-	_client._IOFlag = FALSE;
+	//InterlockedIncrement(&_client._IOcount);
+	//InterlockedAnd((long *) &_client._IOcount, 0x7fffffff);
+
+	IncrementIOCount(300);
+	Lock();
+	InterlockedExchange(&_client._IOFlag, FALSE);
 	_client._sock = INVALID_SOCKET;
 	_client._sendPacketCnt = 0;
 	_client._recvQueue.ClearBuffer();
 	_client._sendQueue.Clear();
-
+	Unlock();
 
 	if (ConnectServer()) {
 		OnEnterJoinServer();
-		_isRunning = true;
 	} else {
 		return false;
 	}
 
-
+	DecrementIOCount(300);
+	InterlockedExchange(&_isRunning, TRUE);
 	return true;
 }
 
 bool CNetClient::Disconnect() {
-	bool ret;
+	if (InterlockedOr(&_isRunning, FALSE) == FALSE) return false;
+	bool ret = true;
+	IncrementIOCount(33);
 	ret = CancelIoEx((HANDLE) _client._sock, nullptr);
-	ReleaseSessionProc(3);
+	closesocket( _client._sock);
+	DecrementIOCount(33);
 
 	//Quit();
 	return ret;
@@ -77,16 +86,16 @@ void CNetClient::SetThreadNum(BYTE worker, BYTE active) {
 }
 
 bool CNetClient::Start() {
-	if (_isRunning)
+	if (InterlockedOr(&_isRunning, FALSE) != FALSE)
 		return false;
-
-	_isRunning = true;
+	Init();
+	BeginThreads();
 
 	return true;
 }
 
 void CNetClient::Quit() {
-	_isRunning = false;
+	//_isRunning = false;
 	PostQueuedCompletionStatus(_hIOCP, dfEXIT_CODE, dfEXIT_CODE, NULL);
 
 	DWORD retval = WaitForMultipleObjects(_NumThreads, _hThreads, TRUE, INFINITE);
@@ -140,8 +149,6 @@ bool CNetClient::ConnectServer() {
 				}
 			} else {
 				closesocket(_client._sock);
-
-				CreateSocket();
 			}
 
 			return false;
@@ -204,7 +211,7 @@ unsigned int __stdcall CNetClient::MonitorThread(LPVOID arg) {
 			break;
 		}
 	}
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- Worker Thread IS Closed..\n");
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- Monitor Thread IS Closed..\n");
 	return 0;
 }
 
@@ -239,25 +246,27 @@ bool CNetClient::OnGQCS() {
 	}
 
 
-
-	if (transferredSize > 0 && GQCSRet == TRUE && _isRunning) {
+	int log = 0;
+	if (transferredSize > 0 && GQCSRet == TRUE) {
 		//---------------------------
 		// WSARecv가 완료됨
 		//---------------------------
 		if (pOverlapped == &_client._recvOverlapped) {
 			RecvProc(transferredSize);
+			log = 10;
 		}
 		//---------------------------
 		// WSASend가 완료됨
 		//---------------------------
 		if (pOverlapped == &_client._sendOverlapped) {
 			SendProc(transferredSize);
+			log = 30;
 		}
 	}
 	//---------------------------
 	// 	   IOCount --
 	//---------------------------
-	DecrementIOCount(30010);
+	DecrementIOCount(3000 + log);
 
 	return true;
 }
@@ -395,7 +404,7 @@ bool CNetClient::NetMonitorProc() {
 
 	CalcTPS();
 
-	return _isRunning;
+	return true;
 }
 
 bool CNetClient::RegisterIocp() {
@@ -410,9 +419,9 @@ bool CNetClient::RegisterIocp() {
 		return false;
 	}
 
-	IncrementIOCount(10000);
+	IncrementIOCount(1000);
 	RecvPost(true);
-
+	DecrementIOCount(1000);
 	return true;
 }
 
@@ -448,7 +457,7 @@ bool CNetClient::SendPost() {
 	//---------------------------
 	// IOCount ++
 	//---------------------------
-	IncrementIOCount(40000);
+	IncrementIOCount(4000);
 
 	//---------------------------
 	// 오버랩 초기화
@@ -470,7 +479,7 @@ bool CNetClient::SendPost() {
 			//	Error Fail WSASend
 			//  IOCount --
 			//---------------------------
-			DecrementIOCount(40010);
+			DecrementIOCount(4000);
 			return false;
 		}
 		//CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// WSASend WSA_IO_PENDING [%d]", err);
@@ -485,7 +494,7 @@ bool CNetClient::RecvPost(bool isAccept) {
 	// IOCount ++
 	//---------------------------
 	//if(isAccept == false)
-	IncrementIOCount(50000);
+	IncrementIOCount(5000);
 
 	//---------------------------
 	// WSABUF 셋팅
@@ -522,11 +531,11 @@ bool CNetClient::RecvPost(bool isAccept) {
 			//	Error : Fail WSARecv
 			//  IOCount --
 			//---------------------------
-			DecrementIOCount(50010);
-			return false;
+			DecrementIOCount(5000);
+			//return false;
 		}
 	}
-	return false;
+	return true;
 }
 
 bool CNetClient::SetWSABuffer(WSABUF *BufSets, bool isRecv) {
@@ -566,7 +575,7 @@ bool CNetClient::SetWSABuffer(WSABUF *BufSets, bool isRecv) {
 		//---------------------------
 		for (int i = 0; i < snapSize; ++i) {
 
-			BufSets[i].buf = (CHAR *) pPacketBufs[i]->GetSendPtr();
+			BufSets[i].buf = (CHAR *)pPacketBufs[i]->GetSendPtr();
 			BufSets[i].len = pPacketBufs[i]->GetSendSize();
 		}
 
@@ -578,19 +587,36 @@ bool CNetClient::SetWSABuffer(WSABUF *BufSets, bool isRecv) {
 
 	return true;
 }
+long incArr[10000];
+long incIdx = 0;
+long decArr[10000];
+long decIdx = 0;
 
 bool CNetClient::IncrementIOCount(int logic) {
-	InterlockedIncrement(&_client._IOcount);
+	int idx = InterlockedIncrement(&incIdx);
+	if (idx >= 10000) idx = incIdx = 0;
+	incArr[idx] = logic;
+
+	if ((InterlockedIncrement(&_client._IOcount) & 0x80000000) != 0) {
+		if (InterlockedDecrement(&_client._IOcount) == 0)
+			this->ReleaseSessionProc(logic);
+		return false;
+	}
 	return true;
 }
 
 bool CNetClient::DecrementIOCount(int logic) {
+	int idx = InterlockedIncrement(&decIdx);
+	if (idx >= 10000) idx = decIdx = 0;
+	decArr[idx] = logic;
+
+
 	DWORD ret = InterlockedDecrement(&_client._IOcount);
 	if (ret < 0)
 		CRASH();
 
 	if (ret == 0)
-		ReleaseSessionProc(5000);
+		ReleaseSessionProc(logic + 5000);
 
 	return true;
 }
@@ -599,23 +625,28 @@ bool CNetClient::ReleaseSessionProc(int logic) {
 	if (_client._sock == INVALID_SOCKET) {
 		return false;
 	}
+	if (InterlockedCompareExchange(&_client._IOcount, 0x80000000, 0) != 0) {
+		return false;
+	}
+
+	Lock();
 	OnLeaveServer();
-	closesocket(_client._sock);
+	//closesocket(_client._sock);
 	_client._sock = INVALID_SOCKET;
+	InterlockedExchange(&_client._IOFlag, FALSE);
 	CPacket *pPacket;
 	while (_client._sendQueue.Dequeue(&pPacket)) {
 		pPacket->SubRef(66);
 	}
 	_client._recvQueue.ClearBuffer();
 
-	_isRunning = false;
+	if(InterlockedExchange(&_isRunning, FALSE) == FALSE) CRASH();
+	Unlock();
 	return false;
 }
 
 void CNetClient::Init() {
 	SetStartUp();
-
-	CreateSocket();
 
 	_hThreads = new HANDLE[(long long) _workerThreadCount + 1];
 

@@ -141,14 +141,14 @@ bool CNetServer::Disconnect(SESSION_ID SessionID) {
 	// 세션 끊기
 	//---------------------------
 	bool ret;
-	SESSION *pSession = FindSession(SessionID);
+	SESSION *pSession = GetSessionAddIORef(SessionID, dfLOGIC_DISCONNECT);
 	if (pSession == NULL) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"//Disconnect ERROR :: can not find session..");
 		OnError(dfLOGIC_DISCONNECT, L"Disconnect ERROR :: can not find session..");
 		return false;
 	}
 	ret = CancelIoEx((HANDLE) pSession->_sock, nullptr);
-	ReleaseSession(pSession, dfLOGIC_DISCONNECT);
+	SessionSubIORef(pSession, dfLOGIC_DISCONNECT);
 	return ret;
 }
 
@@ -1056,13 +1056,11 @@ CNetServer::SESSION *CNetServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
 	//---------------------------
 	// 정보 셋팅
 	//---------------------------
-	SESSION_LOCK(pSession);
 	pSession->_ID = id;
 	pSession->_sock = sock;
 	pSession->_IP = addr.sin_addr.S_un.S_addr;
 	pSession->_port = addr.sin_port;
 	pSession->_lastRecvdTime = timeGetTime();
-	SESSION_UNLOCK(pSession);
 
 
 	//---------------------------

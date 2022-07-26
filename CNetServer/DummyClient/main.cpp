@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "CEchoClient.h"
 
-#define dfDUMMY_CNT 2
+#define dfDUMMY_CNT 10
 
 extern LONG g_sendCalc;
 extern LONG g_recvCalc;
@@ -43,11 +43,14 @@ int main() {
 
 unsigned int __stdcall ClientThread(LPVOID arg) {
 	CEchoClient *pDummy = new CEchoClient;
-	pDummy->Connect(L"127.0.0.1", 6000);
+	pDummy->Start();
 	for (;;) {
-		pDummy->Test();
+		if (pDummy->Connect(L"127.0.0.1", 6000)) {
+			pDummy->Test();
+			pDummy->Disconnect();
+		}
 	}
-	pDummy->Disconnect();
 	delete pDummy;
+	printf_s("CLOSED ClientThread");
 	return 0;
 }

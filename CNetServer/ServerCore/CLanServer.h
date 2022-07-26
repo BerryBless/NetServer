@@ -52,7 +52,7 @@ public:
 		alignas(64) DWORD _sendPacketCnt;
 		SESSION() {
 			_ID = 0;
-			_IOcount = 0;
+			_IOcount = 0x80000000;
 			_IOFlag = 0;
 			_sendPacketCnt = 0;
 			_sock = 0;
