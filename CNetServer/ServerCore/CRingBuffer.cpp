@@ -81,7 +81,7 @@ int CRingBuffer::DirectDequeueSize(void) {
 	return _iBufferSize - _front;
 }
 
-int CRingBuffer::Enqueue(const char *pData, int iSize) {
+int CRingBuffer::Enqueue(const unsigned char *pData, int iSize) {
 	int iEnq; // 끊기지 않고 한번에 넣을 수 있는 사이즈
 
 	if (pData == nullptr) {
@@ -133,7 +133,7 @@ int CRingBuffer::Enqueue(const char *pData, int iSize) {
 	return iSize;
 }
 
-int CRingBuffer::Dequeue(char *pDest, int iSize) {
+int CRingBuffer::Dequeue(unsigned char *pDest, int iSize) {
 	int iDeq;	// 끊기지 않고 한번에 뺄 수 있는 크기
 
 	if (pDest == nullptr) {
@@ -183,7 +183,7 @@ int CRingBuffer::Dequeue(char *pDest, int iSize) {
 }
 
 
-int CRingBuffer::Peek(char *pDest, int iSize) {
+int CRingBuffer::Peek(unsigned char *pDest, int iSize) {
 	// Dequeue와 알고리즘은 같지만 _front가 움직이지는 않는다!
 
 	int iDeq;	// 끊기지 않고 한번에 뺄 수 있는 크기

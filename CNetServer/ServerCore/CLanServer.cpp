@@ -174,7 +174,7 @@ bool CLanServer::SendPacket(SESSION_ID SessionID, CPacket *pPacket) {
 	//---------------------------
 	// 페킷 포인터를 센드큐에
 	//---------------------------
-	pPacket->SetHeader();
+	pPacket->SetLanHeader();
 	pPacket->AddRef();
 
 	pSession->_sendQueue.Enqueue(pPacket);
@@ -488,7 +488,7 @@ bool CLanServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 	int headerPeekRet;
 	int headerMoveRet;
 	int payloadDeqRet;
-	USHORT header;
+	PACKET_LAN_HEADER header;
 
 	pSession->_lastRecvdTime = timeGetTime();
 
@@ -507,7 +507,7 @@ bool CLanServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 		InterlockedIncrement(&_totalPacket);
 		InterlockedIncrement(&_recvPacketCalc);
 
-		if (pSession->_recvQueue.GetUseSize() <= sizeof(USHORT)) {
+		if (pSession->_recvQueue.GetUseSize() <= PACKET_LAN_HEADER_SIZE) {
 			//---------------------------
 			// 헤더보다 적음
 			//---------------------------
@@ -517,13 +517,13 @@ bool CLanServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 		//---------------------------
 		// 헤더는 읽을 수 있음
 		//---------------------------
-		headerPeekRet = pSession->_recvQueue.Peek((char *) &header, sizeof(USHORT));
-		if (headerPeekRet != sizeof(USHORT)) {
+		headerPeekRet = pSession->_recvQueue.Peek((unsigned char *) &header, PACKET_LAN_HEADER_SIZE);
+		if (headerPeekRet != PACKET_LAN_HEADER_SIZE) {
 			// 무결성 검사
 			CRASH();
 		}
 
-		if (pSession->_recvQueue.GetUseSize() < (int) (sizeof(USHORT) + header)) {
+		if (pSession->_recvQueue.GetUseSize() < (int) (PACKET_LAN_HEADER_SIZE + header.len)) {
 			//---------------------------
 			// 패킷 전체크기보다 적게 남아있음
 			//---------------------------
@@ -534,8 +534,8 @@ bool CLanServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 		// 온전한 패킷이 온걸 확인
 		// 이미 알고있는 정보는 넘어가기
 		//---------------------------
-		headerMoveRet = pSession->_recvQueue.MoveFront(sizeof(USHORT));
-		if (headerMoveRet != sizeof(USHORT)) {
+		headerMoveRet = pSession->_recvQueue.MoveFront(PACKET_LAN_HEADER_SIZE);
+		if (headerMoveRet != PACKET_LAN_HEADER_SIZE) {
 			//---------------------------
 			// 무결성 검사
 			//---------------------------
@@ -556,8 +556,8 @@ bool CLanServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 		// 페이로드 크기를 알았으니 헤더는 제 역할을 다함
 		// 페이로드만 페킷에 넣어주기
 		//---------------------------
-		payloadDeqRet = pSession->_recvQueue.Dequeue(pPacket->GetWritePtr(), (int) header);
-		if (payloadDeqRet != header) {
+		payloadDeqRet = pSession->_recvQueue.Dequeue(pPacket->GetWritePtr(), header.len);
+		if (payloadDeqRet != header.len) {
 			//---------------------------
 			// 무결성 검사
 			//---------------------------
@@ -568,7 +568,7 @@ bool CLanServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 			CRASH();
 		OnRecv(pSession->_ID, pPacket);
 
-		msgByte += (payloadDeqRet + sizeof(USHORT));
+		msgByte += (payloadDeqRet + PACKET_LAN_HEADER_SIZE);
 
 		//---------------------------
 		// 참조카운트 하나감소
@@ -880,7 +880,7 @@ bool CLanServer::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, i
 		//---------------------------
 		for (int i = 0; i < snapSize; ++i) {
 
-			BufSets[i].buf = pPacketBufs[i]->GetSendPtr();
+			BufSets[i].buf = (CHAR *)pPacketBufs[i]->GetSendPtr();
 			BufSets[i].len = pPacketBufs[i]->GetSendSize();
 		}
 

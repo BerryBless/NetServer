@@ -60,7 +60,7 @@ bool CLanClient::SendPacket(CPacket *pPacket) {
 	//---------------------------
 	 // 페킷 포인터를 센드큐에
 	 //---------------------------
-	pPacket->SetHeader();
+	pPacket->SetLanHeader();
 	pPacket->AddRef();
 
 	_client._sendQueue.Enqueue(pPacket);
@@ -311,7 +311,7 @@ bool CLanClient::RecvProc(DWORD transferredSize) {
 	int headerPeekRet;
 	int headerMoveRet;
 	int payloadDeqRet;
-	USHORT header;
+	PACKET_LAN_HEADER header;
 
 	//---------------------------
 	// 	   반복문 돌며 패킷 처리
@@ -323,7 +323,7 @@ bool CLanClient::RecvProc(DWORD transferredSize) {
 		//---------------------------
 		InterlockedIncrement(&_recvPacketCalc);
 
-		if (_client._recvQueue.GetUseSize() <= sizeof(USHORT)) {
+		if (_client._recvQueue.GetUseSize() <= PACKET_LAN_HEADER_SIZE) {
 			//---------------------------
 			// 헤더보다 적음
 			//---------------------------
@@ -333,13 +333,13 @@ bool CLanClient::RecvProc(DWORD transferredSize) {
 		//---------------------------
 		// 헤더는 읽을 수 있음
 		//---------------------------
-		headerPeekRet = _client._recvQueue.Peek((char *) &header, sizeof(USHORT));
-		if (headerPeekRet != sizeof(USHORT)) {
+		headerPeekRet = _client._recvQueue.Peek((unsigned char *) &header, PACKET_LAN_HEADER_SIZE);
+		if (headerPeekRet != PACKET_LAN_HEADER_SIZE) {
 			// 무결성 검사
 			CRASH();
 		}
 
-		if (_client._recvQueue.GetUseSize() < (int) (sizeof(USHORT) + header)) {
+		if (_client._recvQueue.GetUseSize() < (int) (PACKET_LAN_HEADER_SIZE + header.len)) {
 			//---------------------------
 			// 패킷 전체크기보다 적게 남아있음
 			//---------------------------
@@ -350,11 +350,8 @@ bool CLanClient::RecvProc(DWORD transferredSize) {
 		// 온전한 패킷이 온걸 확인
 		// 이미 알고있는 정보는 넘어가기
 		//---------------------------
-		headerMoveRet = _client._recvQueue.MoveFront(sizeof(USHORT));
-		if (headerMoveRet != sizeof(USHORT)) {
-			//---------------------------
-			// 무결성 검사
-			//---------------------------
+		headerMoveRet = _client._recvQueue.MoveFront(PACKET_LAN_HEADER_SIZE);
+		if (headerMoveRet != PACKET_LAN_HEADER_SIZE) {
 			CRASH();
 		}
 
@@ -371,8 +368,8 @@ bool CLanClient::RecvProc(DWORD transferredSize) {
 		// 페이로드 크기를 알았으니 헤더는 제 역할을 다함
 		// 페이로드만 페킷에 넣어주기
 		//---------------------------
-		payloadDeqRet = _client._recvQueue.Dequeue(pPacket->GetWritePtr(), (int) header);
-		if (payloadDeqRet != header) {
+		payloadDeqRet = _client._recvQueue.Dequeue(pPacket->GetWritePtr(), (int) header.len);
+		if (payloadDeqRet != header.len) {
 			//---------------------------
 			// 무결성 검사
 			//---------------------------
@@ -383,7 +380,7 @@ bool CLanClient::RecvProc(DWORD transferredSize) {
 			CRASH();
 		OnRecv(pPacket);
 
-		msgByte += (payloadDeqRet + sizeof(USHORT));
+		msgByte += (payloadDeqRet + PACKET_LAN_HEADER_SIZE);
 
 		//---------------------------
 		// 참조카운트 하나감소
@@ -576,7 +573,7 @@ bool CLanClient::SetWSABuffer(WSABUF *BufSets, bool isRecv) {
 		//---------------------------
 		for (int i = 0; i < snapSize; ++i) {
 
-			BufSets[i].buf = pPacketBufs[i]->GetSendPtr();
+			BufSets[i].buf = (CHAR *)pPacketBufs[i]->GetSendPtr();
 			BufSets[i].len = pPacketBufs[i]->GetSendSize();
 		}
 

@@ -24,7 +24,6 @@
 #include "Queue.hpp"
 #include "HardWareMoniter.h"
 #include "ProcessMoniter.h"
-#include "SerializingBuffer.h"
 #include "CPacket.h"
 using namespace std;
 

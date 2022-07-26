@@ -170,11 +170,11 @@
     <ClInclude Include="CParser.h" />
     <ClInclude Include="HardWareMoniter.h" />
     <ClInclude Include="JobMessage.h" />
+    <ClInclude Include="MoniteringProtocol.h" />
     <ClInclude Include="ProcessMoniter.h" />
     <ClInclude Include="Profiler.h" />
     <ClInclude Include="Queue.hpp" />
     <ClInclude Include="CRingBuffer.h" />
-    <ClInclude Include="SerializingBuffer.h" />
     <ClInclude Include="Session.h" />
     <ClInclude Include="Stack.hpp" />
     <ClInclude Include="LFQueue.hpp" />
@@ -201,7 +201,6 @@
     </ClCompile>
     <ClCompile Include="ProcessMoniter.cpp" />
     <ClCompile Include="Profiler.cpp" />
-    <ClCompile Include="SerializingBuffer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

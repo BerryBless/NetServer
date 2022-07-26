@@ -1,78 +1,14 @@
-/////////////////////////////////////////////////////////////////////
-// www.gamecodi.com						이주행 master@gamecodi.com
-//
-//
-/////////////////////////////////////////////////////////////////////
-/*---------------------------------------------------------------
-
-	Packet.
-
-	네트워크 패킷용 클래스.
-	간편하게 패킷에 순서대로 데이타를 In, Out 한다.
-
-	- 사용법.
-
-	CPacket cPacket;
-
-	넣기.
-	clPacket << 40030;		or	clPacket << iValue;	(int 넣기)
-	clPacket << 1.4;		or	clPacket << fValue;	(float 넣기)
-
-
-	빼기.
-	clPacket >> iValue;		(int 빼기)
-	clPacket >> byValue;		(BYTE 빼기)
-	clPacket >> fValue;		(float 빼기)
-
-	!.	삽입되는 데이타 FIFO 순서로 관리된다.
-		환형 큐는 아니므로, 넣기(<<).빼기(>>) 를 혼합해서 사용하지 않도록 한다
-
-
-
-	* 실제 패킷 프로시저에서의 처리
-
-	BOOL	netPacketProc_CreateMyCharacter(CPacket *pPacket)
-	{
-		DWORD dwSessionID;
-		short shX, shY;
-		char chHP;
-		BYTE byDirection;
-
-//		*pPacket >> dwSessionID >> byDirection >> shX >> shY >> chHP;
-
-
-		*pPacket >> dwSessionID;
-		*pPacket >> byDirection;
-		*pPacket >> shX;
-		*pPacket >> shY;
-		*pPacket >> chHP;
-
-		...
-		...
-	}
-
-
-	* 실제 메시지(패킷) 생성부에서의 처리
-
-	void	mpMoveStart(CPacket *pPacket, BYTE byDirection, short shX, short shY)
-	{
-		st_NETWORK_PACKET_HEADER	stPacketHeader;
-		stPacketHeader.byCode = dfNETWORK_PACKET_CODE;
-		stPacketHeader.bySize = 5;
-		stPacketHeader.byType = dfPACKET_CS_MOVE_START;
-
-		pPacket->PutData((char *)&stPacketHeader, dfNETWORK_PACKET_HEADER_SIZE);
-
-		*pPacket << byDirection;
-		*pPacket << shX;
-		*pPacket << shY;
-
-	}
-
-----------------------------------------------------------------*/
 #ifndef  __PACKET__
 #define  __PACKET__
 #include "CObjectPool_TLS.hpp"
+
+#define PACKET_NET_HEADER		CPacket::NET_HEADER
+#define PACKET_NET_HEADER_SIZE	sizeof(PACKET_NET_HEADER)
+#define PACKET_LAN_HEADER		CPacket::LAN_HEADER
+#define PACKET_LAN_HEADER_SIZE	sizeof(PACKET_LAN_HEADER)
+
+
+
 class CPacket {
 public:
 
@@ -118,15 +54,15 @@ public:
 	// Parameters: 없음.
 	// Return: (int)패킷 버퍼 사이즈 얻기.
 	//////////////////////////////////////////////////////////////////////////
-	int	GetBufferSize(void) { return _iBufferSize - sizeof(HEADER); }
+	int	GetBufferSize(void) { return _iBufferSize; }
 	//////////////////////////////////////////////////////////////////////////
 	// 현재 사용중인 사이즈 얻기.
 	//
 	// Parameters: 없음.
 	// Return: (int)사용중인 데이타 사이즈.
 	//////////////////////////////////////////////////////////////////////////
-	int		GetSendSize(void);
-	int		GetDataSize(void);
+	int		GetSendSize(void) { return _writePos - _sendPos; }
+	int		GetDataSize(void) {	return _writePos - _readPos;}
 
 
 
@@ -136,10 +72,10 @@ public:
 	// Parameters: 없음.
 	// Return: (char *)버퍼 포인터.
 	//////////////////////////////////////////////////////////////////////////
-	char *GetBufferPtr(void) { return _pBuffer; }
-	char *GetSendPtr(void) { return _pBuffer + _sendPos; }
-	char *GetReadPtr(void) { return _pBuffer + _readPos; }
-	char *GetWritePtr(void) { return _pBuffer + _writePos; }
+	unsigned char *GetBufferPtr(void) { return _pBuffer; }
+	unsigned char *GetSendPtr(void) { return _pBuffer + _sendPos; }
+	unsigned char *GetReadPtr(void) { return _pBuffer + _readPos; }
+	unsigned char *GetWritePtr(void) { return _pBuffer + _writePos; }
 
 	//////////////////////////////////////////////////////////////////////////
 	// 버퍼 Pos 이동. (음수이동은 안됨)
@@ -155,8 +91,11 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	// 	   헤더 설정
 	//////////////////////////////////////////////////////////////////////////
-	void SetHeader();
+	void SetLanHeader();
+	void SetNetHeader();
 
+	void Encode();
+	bool Decode();
 
 
 	/* ============================================================================= */
@@ -251,14 +190,14 @@ protected:
 	int	_iBufferSize;
 
 	//------------------------------------------------------------
-	// 현재 버퍼에 사용중인 사이즈.
+	// 이 패킷이 인코딩 되었는지
 	//------------------------------------------------------------
-	//int	_iDataSize;
+	bool _isEncode = false;
 
 	//------------------------------------------------------------
 	// 현재 버퍼에 사용중인 메모리 포인터.
 	//------------------------------------------------------------
-	char _pBuffer[eBUFFER_DEFAULT];
+	unsigned char _pBuffer[eBUFFER_DEFAULT];
 
 	//------------------------------------------------------------
 	// 현재 버퍼에 읽거나 쓸 위치
@@ -280,12 +219,31 @@ protected:
 		};
 	};
 	RefCount _refCount;
+
+
+	static constexpr int MSS = 1460;
+	static constexpr int PACKET_CODE = 0x77;
+	static constexpr int FIXED_KEY = 0x32;
+public:
 	// 헤더 : 길이
 	// buffer :: XX XX AA AA AA~~~ XX XX: CLan헤더, AA ~ 내용물
 	// 헤더 : AA의 길이(바이트)
-	struct HEADER {
-		unsigned short len;
+#pragma pack(push, 1)
+	struct LAN_HEADER {
+		unsigned short	len;
 	};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+	struct NET_HEADER {
+		unsigned char	code;
+		unsigned short	len;
+		unsigned char	randKey;
+		unsigned char	checksum;
+
+	};
+#pragma pack(pop)
+
 
 };
 

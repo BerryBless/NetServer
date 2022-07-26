@@ -31,18 +31,11 @@ void CPacket::Release(void) {
 }
 
 void CPacket::Clear(void) {
-	_readPos = sizeof(HEADER);
-	_writePos = sizeof(HEADER);
+	_readPos = sizeof(NET_HEADER);
+	_writePos = sizeof(NET_HEADER);
 	_sendPos = 0;
 }
 
-int CPacket::GetSendSize(void) {
-	return _writePos - _readPos + sizeof(HEADER);
-}
-
-int CPacket::GetDataSize(void) {
-	return _writePos - _readPos;
-}
 
 int CPacket::MoveWritePos(int iSize) {
 	if (iSize > _iBufferSize - _writePos) {
@@ -60,12 +53,91 @@ int CPacket::MoveReadPos(int iSize) {
 	return iSize;
 }
 
-void CPacket::SetHeader() {
+void CPacket::SetLanHeader() {
 	unsigned short len = GetDataSize();
-	_sendPos = _readPos - sizeof(HEADER);
+	_sendPos = _readPos - sizeof(LAN_HEADER);
 	// 헤더 내용물 넣어주기
-	((HEADER *) (_pBuffer + _sendPos))->len = len;
+	((LAN_HEADER *) (_pBuffer + _sendPos))->len = len;
 }
+
+void CPacket::SetNetHeader() {
+	if (_isEncode) return;
+	_isEncode = true;
+	_sendPos = _readPos - sizeof(NET_HEADER);
+
+	NET_HEADER header  { 0 };
+	header.code = PACKET_CODE;
+	header.len = GetDataSize();
+
+	int checksum = 0;
+	for(int i = _readPos; i < _writePos; ++i) {
+		unsigned char *temp = (unsigned char*)(_pBuffer + i);
+		checksum += *temp;
+	}
+	header.checksum =  checksum % 256;
+	header.randKey = 0x31;
+	//header.randKey = (unsigned char)rand();
+	memcpy_s(_pBuffer+ _sendPos, sizeof(NET_HEADER), &header, sizeof(NET_HEADER));
+	Encode();
+}
+
+void CPacket::Encode() {
+	unsigned char *temp = _pBuffer + _readPos;
+
+	BYTE P = 0;
+	BYTE E = 0;
+	BYTE D;
+
+	int len = GetDataSize();
+	int randKey = ((NET_HEADER *) _pBuffer)->randKey;
+	for (int i = 1; i <= len; ++i) {
+		D = *temp;
+		P = D ^ (P + randKey + i);
+		E = P ^ (E + FIXED_KEY + i);
+
+		*temp = E;
+		temp++;
+	}
+}
+
+bool CPacket::Decode() {
+	unsigned char *temp = _pBuffer + _readPos;
+	NET_HEADER header = *((NET_HEADER *) _pBuffer);
+
+	BYTE curP;
+	BYTE prevP = 0;
+	BYTE curE;
+	BYTE prevE = 0;
+	BYTE D;
+
+	int len = GetDataSize();
+	int randKey = header.randKey;
+
+	for (int i = 1; i <= len; ++i) {
+		curE = (BYTE) *temp;
+		curP = curE ^ (prevE + FIXED_KEY + i);
+		D = curP ^ (prevP + randKey + i);
+
+		*temp = D;
+		prevE = curE;
+		prevP = curP;
+
+		temp++;
+	}
+
+
+	int checksum = 0;
+	for (int i = _readPos; i < _writePos; ++i) {
+		unsigned char *temp = (unsigned char *) (_pBuffer + i);
+		checksum += *temp;
+	}
+	checksum %= 256;
+	if (checksum != header.checksum)
+		return false;
+	_isEncode = false;
+	return true;
+}
+
 
 CPacket &CPacket::operator=(CPacket &clSrcPacket) {
 	// 버퍼 내용물 복사

@@ -87,8 +87,8 @@
     <ClInclude Include="CommonProtocol.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="SerializingBuffer.h">
-      <Filter>Utils</Filter>
+    <ClInclude Include="MoniteringProtocol.h">
+      <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -129,9 +129,6 @@
       <Filter>Main\Net</Filter>
     </ClCompile>
     <ClCompile Include="CParser.cpp">
-      <Filter>Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="SerializingBuffer.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>
