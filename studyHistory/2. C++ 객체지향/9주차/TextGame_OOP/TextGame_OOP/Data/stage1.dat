@@ -1,0 +1,24 @@
+[MAPDATA]
+iMapW=4
+iMapH=3
+sMap="___@
+__P_
+M___"
+
+[STAGE]
+sNextScene = "stage2"
+
+[PLAYER]
+iPlayerHp=10
+iPlayerDamage = 1
+iPlayerAttackDelay = 5
+iPlayerMoveDelay = 1
+
+[MONSTER]
+iSpaghettiHp = 4
+iSpaghettiDamage = 10
+iSpaghettiAttackSpeed = 4
+iSpaghettiMoveSpeed = 4
+iTurretHp = 4
+iTurretDamage = 30
+iTurretAttackSpeed = 35

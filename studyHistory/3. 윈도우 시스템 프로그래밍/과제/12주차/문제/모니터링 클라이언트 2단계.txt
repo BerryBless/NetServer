@@ -1,0 +1,577 @@
+# This 테이블을 쓰지 않고 윈도우 API 고유기능을 쓰기
+
+앞서 만들어본 자식윈도우 클래스에서 static 맴버 함수인 WndProc 에서 this 를 사용하기 위해
+별도의 HWND -> this 테이블을 만들어서 사용 했습니다.
+
+이번에는 언어차원의 구현이 아닌  윈도우의 기본 기능을 통해서 이를 해결해보도록 합니다.
+
+
+WNDCLASSEX wcex;
+
+// 윈도우 마다 추가 데이터 영역을 설정한다.
+// 우리는 여기를 해당 클래스의 포인터로 사용 할 것이다.
+..
+wcex.cbClsExtra	= 30;  클래스 영역에 30 바이트 추가 할당
+wcex.cbWndExtra	= 30;	윈도우 영역 추가 30바이트
+
+윈도우에는 이런 상황,  하나의 WndProc 코드로 여러개의 윈도우를 처리하는 상황을 대비하여
+각 윈도우 창 마다,  또는 각 윈도우 클래스 마다  추가적이 데이터 저장 공간을 제공하고 있습니다.
+
+그것이 extra 영역 입니다.
+
+ClsExtra 는  클래스 정보에 저장되는 영역이며
+WndExtra 는  윈도우 정보마다 저장되는 영역 입니다.
+
+각 윈도우마다 개별적인 RegisterClassEx 를 진행 한다면  클래스 1개 = 윈도우 1개  의 규칙이 되므로
+클래스 엑스트라 공간도 윈도우의 개별적인 공간으로 사용 할 수 있습니다.
+
+관련 함수는 
+SetWindowLongPtr
+GetWindowLongPtr  
+SetClassLongPtr
+GetClassLongPtr  
+
+입니다.
+
+본래 이 함수들은 이미 등록된 윈도우 클래스와 이미 생성된 윈도우의 옵션 정보들을 확인,변경하는 목적의 함수 입니다.
+그리고 이 함수를 통해서 추가로 제공된 Extra 영역 접근이 가능합니다.
+
+
+== 샘플 ==...
+
+.. 클래스 등록 ..
+.. 윈도우 생성 ..
+
+LONG_PTR p;
+LPVOID a;
+p = SetWindowLongPtr(_hWnd, 0, 0x1111111111111111);
+p = SetWindowLongPtr(_hWnd, 8, 0x2222222222222222);
+p = SetWindowLongPtr(_hWnd, 16, 0x3333333333333333);
+
+p = SetClassLongPtr(_hWnd, 0, 0x1111111111111111);
+p = SetClassLongPtr(_hWnd, 8, 0x2222222222222222);
+p = SetClassLongPtr(_hWnd, 16, 0x3333333333333333);
+
+a = (LPVOID)GetClassLongPtr(_hWnd, 0);
+a = (LPVOID)GetClassLongPtr(_hWnd, 8);
+a = (LPVOID)GetClassLongPtr(_hWnd, 16);
+
+a = (LPVOID)GetWindowLongPtr(_hWnd, 0);
+a = (LPVOID)GetWindowLongPtr(_hWnd, 8);
+a = (LPVOID)GetWindowLongPtr(_hWnd, 16);
+
+이처럼 Set, Get 에  2번째 인자에 byte 단위의 위치를 지정하여  값을 넣고, 저장된 값을 얻는것이 가능합니다.
+
+이 기능을 활용하여  this 포인터를  WndExtra 공간에 넣어둔다면 간단하게 this 포인터 저장,사용이 가능하게 됩니다.
+
+
+== 기본 영역인 USERDATA 공간 ==
+
+WndExtra 공간 외에도  UserData 라는 공간이 1개 기본으로 제공 됩니다. (포인터 사이즈)
+
+
+SetWindowLongPtr(_hWnd, GWLP_USERDATA, (LONG_PTR)this);
+void * p = (void *)GetWindowLongPtr(_hWnd, GWLP_USERDATA);
+
+포인터 크기만큼만 딱 하나 필요하다면 굳이 Extra 공간을 확보하지 않아도 원래 존재하는 user data 공간만을 활용 하여도 됩니다.
+
+
+
+
+
+# 모니터링 클라이언트  그럴싸 하게 모양 잡아보기 
+
+모니터링 클라이언트는 각자 스타일대로 만들어 주시면 되기 때문에 꼭  모양을 제가 만든 것처럼 만드실 필요는 없습니다.
+아래 설명되는 내용의 기능들은 필수적이지만, 모양에 대한 부분은 선택사항 입니다.
+
+
+* 외형적인 변화
+
+- 자식 윈도우의  프레임,캡션을 없애버림
+- 타이틀 바를 직접 그려줌
+
+
+* 기능적인 변화
+
+- 각 윈도우마다 그래프의 최대치를 지정 - cpu 사용률은 0 ~ 100 / 동접은 0 ~ 10000 등... 윈도우마다 표현해야할 데이터의 범위가 다름.
+- 경고수치를 지정하여 지정된 수치를 초과할 경우 경고를 울림
+
+
+
+
+
+# 프레임 없애기 
+
+_hWnd = CreateWindow(_szWindowClass, NULL, WS_CHILD | WS_VISIBLE,   ...
+
+스타일을 WS_CHILD | WS_VISIBLE  만 넣어서  프레임,캡션을 없애 버렸습니다.
+눈에는 보이지 않을 수 있지만  실제로 만들어 졌습니다.
+				
+
+# 필요한 GDI 리소스 준비
+
+모니터링클라이언트를  아름답게 준비하기 위해선  굉장히 많은 GDI 오브젝트가 필요합니다.
+
+0. 백버퍼 비트맵 - 메모리 DC 용 (만들었음)
+0. 백버퍼 DC - 메모리 DC 용 (만들었음)
+1. 폰트1 - 타이틀 캡션용 큰 폰트
+2. 폰트2 - 그리드용 작은 폰트
+3. 브러시1 - 백그라운드용
+4. 브러시2 - 타이틀 캡션 백그라운드용 조금 진함
+5. 펜1 - 그래프용 펜
+6. 펜2 - 그리드용 펜 (밝은 색)
+
+
+우리는 생성자에서 모든 리소스를 한번에 생성하여 맴버 변수로 보관하고 사용 할 것입니다.
+
+
+	//------------------------------------------------------
+	// Font 생성.
+	//------------------------------------------------------
+	_hFontTitle = CreateFont(dfFONT_TITLE_SIZE, 0, 0, 0, dfFONT_TITLE_WIDTH, 0, 0, 0, DEFAULT_CHARSET, 0, 0, ANTIALIASED_QUALITY, 0, L"맑은 고딕");
+	_hFontGrid = CreateFont(dfFONT_POINT_SIZE, 0, 0, 0, 0, 0, 0, 0, DEFAULT_CHARSET, 0, 0, ANTIALIASED_QUALITY, 0, L"맑은 고딕");
+
+	//------------------------------------------------------
+	// 백 브러쉬 생성  (색상 채우기용)
+	//------------------------------------------------------
+	_hBackBrush = CreateSolidBrush(BackColor);
+	_hBackBrush_Title = CreateSolidBrush(TitleColor);
+
+	// 각 자식 윈도우의 색상은  1개로 통일 하셔도 됩니다.
+	//  저도 처음에는 RGB 값을 생성자 인자로 받아서 사용 하였으나  사용이 너무 불편하였으며
+	//  그리고 4가지 정도의 색상을 고정적으로 쓰고 있습니다. 
+	// 실제로 써보니 늘 쓰던 진한 먹색 정도만 늘상 사용하게 됩니다.
+
+ 
+
+	//------------------------------------------------------
+	// 펜 생성
+	//------------------------------------------------------
+	BYTE byR = min(255, GetRValue(BackColor) + 200);
+	BYTE byG = min(255, GetGValue(BackColor) + 200);
+	BYTE byB = min(255, GetBValue(BackColor) + 200);
+
+	_hLinePen = CreatePen(PS_SOLID, 2, RGB(byR,byG,byB));
+
+	// 백 화면보다  많이 밝은 색을 표현하기 위해  RGB 각 요소에 + 200 을 함, 거의 흰색에 가깝겠음
+
+	byR = min(255, GetRValue(BackColor) + 50);
+	byG = min(255, GetGValue(BackColor) + 50);
+	byB = min(255, GetBValue(BackColor) + 50);
+
+	_hGridPen = CreatePen(PS_SOLID, 1, RGB(byR,byG,byB));
+
+	// 백 화면보다  조금 밝은 색을 표현하기 위해  RGB 각 요소에 + 50 을 함, 약간 있는 둥 마는둥 함
+
+
+	// 외에 필요한 리소스를 모두 생성항여 보관
+	// 각 오브젝트의 삭제는 클래스 파괴자에서 진행 하도록 합.
+
+
+
+
+
+# WM_PAINT
+
+	자식윈도우 클래스 내부의 WM_PAINT 는 아래와 같은 형태를 띄게 됩니다.
+
+
+	case WM_PAINT:
+		switch ( pThis->_enGraphType )
+		{
+		case LINE_SINGLE:
+			pThis->Paint_LineSingle();
+			break;
+
+		case LINE_MULTI:
+			pThis->Paint_LineMulti();
+			break;
+
+		case PIE:
+			pThis->Paint_Pie();
+			break;
+
+		case ONOFF:
+			pThis->Paint_Onoff();
+			break;
+
+		case NUMBER:
+			pThis->Paint_Number();
+			break;
+
+		}
+
+		hDC = BeginPaint(hWnd, &ps);
+		pThis->FlipMemDC(hDC);	// Bitblt 를 함수로 만듬.
+		EndPaint(hWnd, &ps);
+		break;
+
+랜더 타입별로 분기를 나누어 각 모양별로 랜더링을 시도 합니다.
+모든 랜더링이 끝난 뒤  메모리DC 를  윈도우로 bitblt 하여 출력 합니다.
+	
+
+메모리 DC 를 쓴다고 하여서  로직 부분부분에 메모리 DC 를 향한 랜더링 코드가 여기저기 들어가는 것이 아닙니다.
+모든 랜더 로직은 WM_PAINT 에만 들어가며,  1차 랜더링이 메모리 DC 를 향하고,  2차로 메모리DC -> 윈도우DC 로의 출력 방식 입니다.
+
+
+void CGraphUnit::Paint_LineSingle(void)
+{
+	1. 큐에서 데이터 뽑아 선긋기
+	2. 타이틀바 출력;
+	3. 그리드 출력;
+}
+
+실제 Paint_타입    에 해당하는 함수는 위와 같습니다.
+모두 같은 데이터를 가지고 각자의 방법대로  출력을 해주면 됩니다.
+
+
+
+
+
+# 추가적인 정보를 입력 받기
+
+하나의 윈도우에는 필요한 정보가 은근 많습니다.
+
+생성위치
+크기
+색상 (필요에 따라)
+타이틀바 이름
+데이터 최대값
+경고수치
+
+서버번호 - 차후 추가
+데이터번호 - 차후 추가
+표시단위 - 차후추가
+.....
+
+생성자에서 모두 입력해주기 어렵기 때문에  생성시 필수적인 부분만 생성자에서 받아들이고
+그 외위 정보들은 별도의 함수를 만들어서 넣도록 합니다.
+
+
+void CGraphUnit::SetInformation(WCHAR *szTitle, int iDataMax, int iDataAlert)
+{
+	wcscpy_s(_szTitle, szTitle);
+	_iDataMax = iDataMax;
+	_iDataAlert = iDataAlert;
+}
+
+간단하게  이름과 데이터 최대치, 경고수치 정도받 받아서 보관 되었습니다.
+
+메인 윈도우에서 자식 윈도우 클래스 동적 생성 후 SetInformation 을 호출하여 정보를 셋팅 하도록 합니다. 
+
+
+
+
+
+
+# 타이틀바, 캡션바 그리기
+
+////////////////////////////////////////////////////////////
+// 타이틀 글자 찍기
+//
+////////////////////////////////////////////////////////////
+void CGraphUnit::Paint_Title(void)
+{
+	byR = min(255, GetRValue(BackColor) + 170);
+	byG = min(255, GetGValue(BackColor) + 170);
+	byB = min(255, GetBValue(BackColor) + 170);
+
+	SetTextColor(_hMemDC, RGB(byR, byG, byB));
+
+	// 이는 DC 에 텍스트 출력시 글자의 색상을 지정합니다.
+	// 백 색상보다 밝은 색상을 지정 했습니다.
+
+
+	HPEN	hPen		= CreatePen(PS_NULL, 0, 0);
+	HPEN	hOldPen		= (HPEN)SelectObject(_hMemDC, hPen);
+
+	.. 만들어둔 부러시도 SelectObject 해야 함 ..
+
+	Rectangle(_hMemDC, 0, 0, width + 1, 30);
+
+	// Ractangle 사각형 그리기로  상단 부분에 30pixel 높이로 사각형을 그립니다.
+	// Ractangle 출력시 외곽선은 Pen, 내부는 Brush 로 채워집니다.
+
+	//  외곽선을 없애기 위해서 CreatePen(PS_NULL  로 Null 펜을 만들어서 지정 하였습니다.
+	//  이 nulll 펜도 하나 만들어 두고 재사용 하셔도 됩니다
+
+
+	SelectObject(_hMemDC, hOldPen);
+	DeleteObject(hPen);
+
+
+
+	HFONT hOldFont = (HFONT)SelectObject(_hMemDC, _hFontTitle);
+	TextOut(_hMemDC, 7, 3, _szTitle, wcslen(_szTitle));
+	SelectObject(_hMemDC, hOldFont);
+
+	// 폰트 지정 후 TextOut 으로 캡션 타이틀을 출력 합니다.
+
+
+	이처럼 했을시 글자에 배경이 볼품없이 나올 것입니다.
+
+	이는 다음 함수 호출로 투명으로 변경 가능합니다.
+	SetBkMode(_hMemDC, TRANSPARENT);
+	이는 DC 에 옵션을 지정하는 것으로 MemDC 는 우리가 만든 우리소유 이므로 1회만 지정 해두어도 됩니다.
+
+
+
+
+
+# 그리드 출력
+
+void CMonitorGraphUnit::Paint_Grid(void)
+{
+	HPEN	hOldPen = (HPEN)SelectObject(_hMemDC, _hGridPen);
+
+	int iDataInterval = _iDataMax / 4;		// Max 데이터를 기준으로 4등분 해보았습니다.  
+						// Max 데이터를 기준으로 4등분이 아닌,  그냥 윈도우 크기 기준으로 4등분을 하면 안되느냐 ? 라고 하실 수 있으나
+						//  4등분 그리드 선에  실제 데이터 수치도 표기를 해주어야 하므로  실제 데이터값 기준으로 구한 것입니다.
+
+
+	int iX = Rect.left;
+	int iY = Rect.top;
+
+	int iIntervalY = (Rect.bottom - Rect.top) / 4;	// 실제 화면 윈도우 크기기준 4등분
+
+
+	HFONT hOldFont = (HFONT)SelectObject(_hMemDC, _hFontGrid);
+
+	....
+
+	//----------------------------------------------------
+	// 각 위치별 수치 찍기
+	//----------------------------------------------------
+	TextOut(_hMemDC, iX + 1, iY + 1, szPoint, wcslen(szPoint));	// 가장 상단부의 수치를 찍어봅니다.  수치가 szPoint 에 구해져 있습니다.  
+
+	for ( int iCnt = 3; iCnt > 0; --iCnt )
+	{
+		iY += iIntervalY;
+
+		//----------------------------------------------------
+		// 세로축 선 긋기
+		//----------------------------------------------------
+		MoveToEx(...
+		LineTo(..._
+
+		//----------------------------------------------------
+		// 각 위치별 수치 찍기
+		//----------------------------------------------------
+		TextOut(
+	}
+
+	SelectObject(_hMemDC, hOldFont);
+	SelectObject(_hMemDC, hOldPen);
+
+}
+
+
+
+
+#  경고 수치에 도달시 소리내기
+
+	경고수치 발생 여부이 판단은  지난번 만들어진 InsertData 를 통해서 데이터가 들어올 때 판단 하면 되겠습니다.
+	
+
+	 PlaySound((LPCTSTR)SND_ALIAS_SYSTEMHAND, NULL, SND_ALIAS_ID | SND_ASYNC);
+
+	PlaySound 는  wav 소리를 재생하는 함수로  사운드재생이 됩니다.
+	위 샘플 코드는  윈도우의 경고 사운드를 지정한 코드 입니다.
+
+	마지막 인자에 SND_ASYNC 플래그가 들어가지 않으면 동기 플레이로  해당 사운드가 끝날때까지 함수가 리턴되지 못합니다.
+
+
+	그럼 일단   지정한 수치 이상의 값이 온다며,  땡땡땡 소리는 낼 수 있게 되었습니다.
+
+
+
+
+# 경고 수치에 도달시 색상 변경하기
+
+
+	경고상황이 되었을때  해당 윈도우의 배경을 빨간색으로 바꿔주면 효과적일듯 합니다.
+	어떤 데이터에 문제가 생긴 것인지 한눈에 보여야 하니까요.
+
+	색상변경은 크게 어렵지 않을 것입니다.  경고 상황에  백 브러시를 빨간색으로 새로 만들고,  InvalidateRect 로 갱신 시켜주면  빨간 윈도우가 될거 같습니다.
+
+
+	다만!
+
+	1회 경고 후 다시 본래 색으로 돌아와야 합니다.
+	그럼 일정시간 후에 복구가 되어야 한다는 뜻이지요.	
+
+	이는 타이머를 사용하여 간단하게 해결이 되겠습니다.
+
+	경고 발생시 SetTimer 를 500ms 정도로 등록한 뒤에  경고음과, 빨간색 배경을 만들어주고
+	해당 타이머 이벤트 발생시  본래 색상으로 돌려놓고 InvaludateRect 해주면 0.5 초후 돌아올 것입니다.
+	
+	물론...  바로 KillTimer 로 지워주어야 되겠습니다.  1회용 타이머 이니까요.
+
+
+
+# 보내드린 샘플에서는 경고가 부모 윈도우에 뜹니다 ?
+
+	위에서 설명은 자식 윈도우의 색상을 빨간색으로 하는것을 설명 드렸으나
+	제가 보내드린 샘플에서는  자식 윈도우는 타이틀바 색상만 변경이 되고,  부모 윈도우의 색상이 빨간색이 됩니다.
+
+	이를 위해서는  부모 윈도우에게 경고 발생을 알려주어서 부모 윈도우가  화면을 빨간색으로 채우도록 해야합니다.
+
+	윈도우간 메시지를 전달하는 SendMessage  함수를 사용하시면 됩니다.
+	임의의 메시지를  해당 윈도우에게 보낼 수 있는 함수입죠.
+
+	그럼 어떤 메시지를 보내느냐 ?
+
+	기존에 없던,  우리가 필요로 하는 메시지 이므로  메시지를 하나 만들어야 합니다.
+
+
+	그래서 존재하는 것은 WM_USER  입니다.
+
+	WM_USER 는 윈도우 메시지의 가장 끝 번호로 define 이 되어 있습니다.  그래서 WM_USER 뒤로 붙는 번호의 메시지는 윈도우 내부에서 사용하지 않는 다는 것이지요.
+
+	#define UM_ALERT					WM_USER + 1
+
+	이런 방식으로 사용합니다.  WM_USER + 1  + 2  + 3  방식으로 얼마든지 메시지를 추가해도 됩니다.
+
+
+
+	SendMessage(부모핸들, UM_ALERT...) 를 통해서 부모에게 경고를 알린다
+
+	그렇다면 이렇게    자식 윈도우가 SendMessage(부모, UM_ALERT .. ) 을 보내주면
+	부모 윈도우의 WndProc 로  UM_ALERT 가 전달 됩니다.
+
+
+	이 방식을 사용하시면 부모 윈도우가 경고 상황에 반응 보이도록 개발이 가능하게 됩니다.
+
+
+
+
+
+
+
+
+class CMonitorGraphUnit
+{
+public:
+
+	enum TYPE
+	{
+		LINE_SINGLE,
+		LINE_MULTI,
+		NUMBER,
+		ONOFF,
+		PIE
+	};
+
+public:
+
+	CMonitorGraphUnit(HINSTANCE hInstance, HWND hWndParent, COLORREF BackColor, TYPE enType, int iPosX, int iPosY, int iWidth, int iHeight);
+	~CMonitorGraphUnit();
+
+	/////////////////////////////////////////////////////////
+	// 그래프 정보 입력
+	//
+	// 윈도우 이름, 최대치, 경보수치 (0이면 없음)
+	/////////////////////////////////////////////////////////
+	void	SetInformation(WCHAR *szTitle, int iDataMax, int iDataAlert);
+
+	/////////////////////////////////////////////////////////
+	// 윈도우 프로시저
+	/////////////////////////////////////////////////////////
+	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+	/////////////////////////////////////////////////////////
+	// 데이터 넣기.
+	/////////////////////////////////////////////////////////
+	BOOL	InsertData(int iData);
+	
+
+
+protected:
+
+	/////////////////////////////////////////////////////////////
+	// 타입별 Paint 함수
+	/////////////////////////////////////////////////////////////
+	void	Paint_Title(void);
+	void	Paint_Grid(void);
+
+	void	Paint_LineSingle(void);
+	void	Paint_LineMulti(void);
+	void	Paint_Pie(void);
+
+	////////////////////////////////////////////////////////////
+	// 메모리DC 화면 지우기
+	////////////////////////////////////////////////////////////
+	void	ClearMemDC(void);
+
+	/////////////////////////////////////////////////////////////
+	// 메모리DC   Bitblt 
+	////////////////////////////////////////////////////////////
+	void	FlipMemDC(HDC hDC);
+
+private:
+
+	//------------------------------------------------------
+	// 윈도우 핸들, 인스턴스 핸들
+	//------------------------------------------------------
+	HWND		_hWndParent;
+	HWND		_hWnd;
+	HINSTANCE	_hInstance;
+
+	//------------------------------------------------------
+	//------------------------------------------------------
+
+
+	//------------------------------------------------------
+	// 윈도우 위치,크기,색상 
+	//------------------------------------------------------
+	COLORREF	_BackColor;
+	int		_iWindowPosX;
+	int		_iWindowPosY;
+	int		_iWindowWidth;
+	int		_iWindowHeight;
+
+	TYPE		_enGraphType;
+
+	//------------------------------------------------------
+	// GDI 리소스들
+	//------------------------------------------------------
+	HDC		_hMemDC;		// 더블 버퍼링용 메모리 DC
+	HBITMAP		_hMemBitmap;
+
+	HBRUSH		_hBackBrush;		
+	HBRUSH		_hBackBrush_Title;	
+
+	HFONT		_hFontTitle;		// 타이틀 폰트
+	HFONT		_hFontGrid;		// 그래프 지표 폰트
+
+	HPEN		_hGridPen;		// 그리드 그리기 펜
+	HPEN		_hLinePen;		// 그래프 그리기 펜
+
+
+	//------------------------------------------------------
+	// 정보창 이름
+	//------------------------------------------------------
+	WCHAR		_szTitle[32];
+
+	//------------------------------------------------------
+	// 데이터, 최고치, 경보 수치
+	//------------------------------------------------------
+	CQueue<int>	_Data;
+
+	int		_iDataMax;	// 그래프 맥스 값
+	int		_iDataAlert;	// 경보 울리는 기준값
+
+	//------------------------------------------------------
+	// 경고모드 - 
+	//
+	// 데이터 경고수치 도달시 경고음과 함께 자신을 제외한 모든 윈도우에 UM_ALERT 메시지를 보낸다.
+	//
+	// _bAlertMode = TRUE 가 된 후 타이머를 사용하여 일정시간 후 해제.
+	//
+	//  경고 상황을 굳이  맴버 변수 플래그로 들고 있는 이유는 ... ?  
+	//  필요치 않다면 안만드셔도 되며,  구현하다 보면 필요하게 될 것입니다.  
+	//------------------------------------------------------
+	BOOL		_bAlertMode;		
+
+};
+

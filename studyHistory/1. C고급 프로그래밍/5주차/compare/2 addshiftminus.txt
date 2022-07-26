@@ -1,0 +1,19 @@
+정수 숫자값 3개를 입력 받습니다.
+
+받은 숫자에 대하여 어떤 연산을 거치고 있습니다.
+
+(덛셈,뺄셈,쉬프트 등..)
+
+
+입력받은 값을 어떤 공식으로 계산하는지 찾아내셔요
+
+
+008D1192  mov         eax,dword ptr [ebp-0Ch]  
+008D1195  add         eax,dword ptr [ebp-8]  
+008D1198  shl         eax,3  
+008D119B  sub         eax,dword ptr [ebp-8]  
+008D119E  mov         dword ptr [ebp-14h],eax  
+008D11A1  mov         ecx,dword ptr [ebp-14h]  
+008D11A4  push        ecx  
+008D11A5  push        8D2164h  
+008D11AA  call        008D1050  

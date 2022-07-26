@@ -1,0 +1,186 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Utils">
+      <UniqueIdentifier>{757bfffd-d5ce-41a2-9d1e-fe98461c3de3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Managers">
+      <UniqueIdentifier>{bdb4f0fb-08c0-457b-803f-70e6499c1f37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Managers\Core">
+      <UniqueIdentifier>{ec49c93f-00a8-4d08-b455-cd60e6029c79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Managers\Contents">
+      <UniqueIdentifier>{a54ef9ce-a9cf-4e27-9c67-c6802c08eb17}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Objects">
+      <UniqueIdentifier>{33263941-ef70-42b1-84a2-21293d0a364b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Templates">
+      <UniqueIdentifier>{a7d28aa9-a478-48e9-a496-131f8ba61bcc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interfaces">
+      <UniqueIdentifier>{ee093b8f-b640-4eae-afba-cf465bc5dc54}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Objects\Creatures">
+      <UniqueIdentifier>{32d99811-74bf-49cd-b841-b0da2b9dcffa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Objects\Stage">
+      <UniqueIdentifier>{e378ca56-bfe0-4067-b80d-291899e3c900}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scenes">
+      <UniqueIdentifier>{d5925bed-7332-4b1e-aa05-35188beb4305}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Objects\Projectiles">
+      <UniqueIdentifier>{703b3f89-b1b3-4a80-8904-f79794700e72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Objects\sfx">
+      <UniqueIdentifier>{ac2d63d9-38ed-4416-b4c5-c1ef3c0a4859}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Objects\Creatures\Monsters">
+      <UniqueIdentifier>{fe224918-49df-4d98-ac68-74471e96061c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CList.h">
+      <Filter>Templates</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CQueue.h">
+      <Filter>Templates</Filter>
+    </ClInclude>
+    <ClInclude Include="IObject.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="CScreenBuffer.h">
+      <Filter>Managers\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="CFramework.h">
+      <Filter>Managers\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="CWall.h">
+      <Filter>Objects\Stage</Filter>
+    </ClInclude>
+    <ClInclude Include="CPlayer.h">
+      <Filter>Objects\Creatures</Filter>
+    </ClInclude>
+    <ClInclude Include="CCreature.h">
+      <Filter>Objects\Creatures</Filter>
+    </ClInclude>
+    <ClInclude Include="IScene.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="Managers.h">
+      <Filter>Managers</Filter>
+    </ClInclude>
+    <ClInclude Include="CGame.h">
+      <Filter>Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="MemProfiler.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CProjectile.h">
+      <Filter>Objects\Projectiles</Filter>
+    </ClInclude>
+    <ClInclude Include="CSceneManager.h">
+      <Filter>Managers\Contents</Filter>
+    </ClInclude>
+    <ClInclude Include="CTitleScene.h">
+      <Filter>Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="CEndingScene.h">
+      <Filter>Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="CParser.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CSFX.h">
+      <Filter>Objects\sfx</Filter>
+    </ClInclude>
+    <ClInclude Include="CMonster.h">
+      <Filter>Objects\Creatures\Monsters</Filter>
+    </ClInclude>
+    <ClInclude Include="CSpaghetti.h">
+      <Filter>Objects\Creatures\Monsters</Filter>
+    </ClInclude>
+    <ClInclude Include="CTurret.h">
+      <Filter>Objects\Creatures\Monsters</Filter>
+    </ClInclude>
+    <ClInclude Include="CPortal.h">
+      <Filter>Objects\Stage</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CFramework.cpp">
+      <Filter>Managers\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="CScreenBuffer.cpp">
+      <Filter>Managers\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="CWall.cpp">
+      <Filter>Objects\Stage</Filter>
+    </ClCompile>
+    <ClCompile Include="CPlayer.cpp">
+      <Filter>Objects\Creatures</Filter>
+    </ClCompile>
+    <ClCompile Include="CCreature.cpp">
+      <Filter>Objects\Creatures</Filter>
+    </ClCompile>
+    <ClCompile Include="CGame.cpp">
+      <Filter>Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="MemProfiler.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CProjectile.cpp">
+      <Filter>Objects\Projectiles</Filter>
+    </ClCompile>
+    <ClCompile Include="CSceneManager.cpp">
+      <Filter>Managers\Contents</Filter>
+    </ClCompile>
+    <ClCompile Include="CTitleScene.cpp">
+      <Filter>Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="CEndingScene.cpp">
+      <Filter>Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="CParser.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CSFX.cpp">
+      <Filter>Objects\sfx</Filter>
+    </ClCompile>
+    <ClCompile Include="CMonster.cpp">
+      <Filter>Objects\Creatures\Monsters</Filter>
+    </ClCompile>
+    <ClCompile Include="CSpaghetti.cpp">
+      <Filter>Objects\Creatures\Monsters</Filter>
+    </ClCompile>
+    <ClCompile Include="CTurret.cpp">
+      <Filter>Objects\Creatures\Monsters</Filter>
+    </ClCompile>
+    <ClCompile Include="CPortal.cpp">
+      <Filter>Objects\Stage</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,154 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="GameSystemClasses">
+      <UniqueIdentifier>{1f0fe8f7-6ffd-4f44-ad20-af73b562b9ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils">
+      <UniqueIdentifier>{83662655-c029-4b0c-92e3-4c7cad7d3040}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameObjectClasses">
+      <UniqueIdentifier>{7dd84c53-17e6-4877-9cb0-fda1ae49d29d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Network">
+      <UniqueIdentifier>{fda3d18f-844b-46af-aff6-8496cd136a8d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TCP_Fighter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CFrameSkip.h">
+      <Filter>GameSystemClasses</Filter>
+    </ClInclude>
+    <ClInclude Include="CScreenDib.h">
+      <Filter>GameSystemClasses</Filter>
+    </ClInclude>
+    <ClInclude Include="CSpriteDib.h">
+      <Filter>GameSystemClasses</Filter>
+    </ClInclude>
+    <ClInclude Include="CBaseObject.h">
+      <Filter>GameObjectClasses</Filter>
+    </ClInclude>
+    <ClInclude Include="CEffectObject.h">
+      <Filter>GameObjectClasses</Filter>
+    </ClInclude>
+    <ClInclude Include="CPlayerObject.h">
+      <Filter>GameObjectClasses</Filter>
+    </ClInclude>
+    <ClInclude Include="GDefine.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CFramework.h">
+      <Filter>GameSystemClasses</Filter>
+    </ClInclude>
+    <ClInclude Include="framework.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Managers.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CList.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CCalcFPS.h">
+      <Filter>GameSystemClasses</Filter>
+    </ClInclude>
+    <ClInclude Include="PacketDefine.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkCore.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CQueue.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CRingBuffer.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="PacketProcess.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CPacket.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CCameraObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="TCP_Fighter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CFrameSkip.cpp">
+      <Filter>GameSystemClasses</Filter>
+    </ClCompile>
+    <ClCompile Include="CScreenDib.cpp">
+      <Filter>GameSystemClasses</Filter>
+    </ClCompile>
+    <ClCompile Include="CSpriteDib.cpp">
+      <Filter>GameSystemClasses</Filter>
+    </ClCompile>
+    <ClCompile Include="CBaseObject.cpp">
+      <Filter>GameObjectClasses</Filter>
+    </ClCompile>
+    <ClCompile Include="CPlayerObject.cpp">
+      <Filter>GameObjectClasses</Filter>
+    </ClCompile>
+    <ClCompile Include="CEffectObject.cpp">
+      <Filter>GameObjectClasses</Filter>
+    </ClCompile>
+    <ClCompile Include="CFramework.cpp">
+      <Filter>GameSystemClasses</Filter>
+    </ClCompile>
+    <ClCompile Include="CCalcFPS.cpp">
+      <Filter>GameSystemClasses</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkCore.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CRingBuffer.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="PacketProcess.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CPacket.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CCameraObject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="TCP_Fighter.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="small.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="TCP_Fighter.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

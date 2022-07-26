@@ -1,0 +1,62 @@
+--- 자료 구조체 ---
+
+// 네트워크 접속 정보
+
+st_SESSION
+{
+	int SessionID;
+}
+
+
+// 네트워크 접속 후 컨텐츠 부분의 플레이어 정보
+
+st_PLAYER
+{
+	int SessionID;	
+	int Content[3];
+}
+
+
+
+
+// 가상의 패킷 및 Connect 를 표현한 DATA.
+
+- AcceptPacketList 		// Accept 요청을 표현.
+- ActionPacketList		// Packet Recv 큐를 표현.
+- DisconnectPacketList 		// Disconnect 요청을 표현.
+
+위에 들어가는 모든 값은 SessionID 값이 들어가며
+SessionID 값은 0~4999 의 범위 이다.	
+
+
+AcceptPacketList - 새로운 SessionID -> 해당 SessionID 의 새로운 Session 생성,Palyer 생성
+ActionPacketList - 동작할 SessionID -> 해당 SessionID 의 Player 에 Content 배열들 + 1
+DisconnectPacketList - 접속 끊을 SessionID -> 해당 SessionID 의 모든 정보(Session,Player) 삭제.
+
+
+단, AcceptPacketList 에는 중복된 (이미 접속중인) SessionID 가 올 수 있으며 중복된 경우 무시해야 함.
+단, ActionPacketList, DisconectPacketList 에는 존재하지 않는 SessionID 가 올 수 있으며 이 경우 무시 해야 함.
+
+
+
+- SessionList		// 접속자 SessionID 관리
+- PlayerList		// 접속자 Player 데이터 관리
+
+
+
+
+# 각 스레드 별 업무
+
+main - 컨트롤 작업 
+
+IOThread - 일정 간격으로 접속요청 / 액션요청 / 끊기요청을 함. (각 List 에 push)
+
+AcceptThread - AcceptPacktList, DisconnectpacketList 를 확인하며 해당 작업을 함
+
+UpdateThread - ActionPacketList 를 확인하며 SessionID 에 해당하는 Player 를 찾아서 Content 배열을 모두 + 1 함.
+
+
+
+Q 키를 누르면 모든 스레드가 정지되고 모든 데이터 릴리즈 후 정상종료
+
+

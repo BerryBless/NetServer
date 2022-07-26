@@ -171,7 +171,6 @@
     <ClInclude Include="CParser.h" />
     <ClInclude Include="HardWareMoniter.h" />
     <ClInclude Include="JobMessage.h" />
-    <ClInclude Include="MoniteringProtocol.h" />
     <ClInclude Include="ProcessMoniter.h" />
     <ClInclude Include="Profiler.h" />
     <ClInclude Include="Queue.hpp" />
@@ -181,7 +180,6 @@
     <ClInclude Include="LFQueue.hpp" />
     <ClInclude Include="LFStack.hpp" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="Types.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CCrashDump.cpp" />

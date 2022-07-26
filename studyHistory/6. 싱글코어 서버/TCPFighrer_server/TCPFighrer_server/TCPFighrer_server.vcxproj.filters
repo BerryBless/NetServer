@@ -1,0 +1,135 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Util">
+      <UniqueIdentifier>{3dc84444-0fef-488b-836e-0dd10ffbdb57}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Network Content">
+      <UniqueIdentifier>{218a31f4-6994-49f4-b326-275dc8917969}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Managers">
+      <UniqueIdentifier>{4eeeb03c-dddd-48a2-a3c1-4d4f0dfe8674}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Network">
+      <UniqueIdentifier>{578c6fe5-85bb-4305-8380-953384c58dc2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Network\Network Core">
+      <UniqueIdentifier>{26dc6dd4-155d-4f46-b6d0-d4c54b5db206}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Content">
+      <UniqueIdentifier>{4039b1ce-5437-4070-b472-da2a5a5779fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Content\Object">
+      <UniqueIdentifier>{17a586d8-6016-4cce-9266-a18daefd4d9a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Network\Object">
+      <UniqueIdentifier>{e8f97b66-be72-4681-91ff-1b51d9b275ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Content\Content Core">
+      <UniqueIdentifier>{c1cfe0a1-2098-400f-afed-8979796b09c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Util\Class">
+      <UniqueIdentifier>{8262dd25-9afb-4b7c-92a4-70f5f9de113b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="ContentCore.cpp">
+      <Filter>Content\Content Core</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkCore.cpp">
+      <Filter>Network\Network Core</Filter>
+    </ClCompile>
+    <ClCompile Include="PacketProcess.cpp">
+      <Filter>Network Content</Filter>
+    </ClCompile>
+    <ClCompile Include="Logger.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Session.cpp">
+      <Filter>Network\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="Character.cpp">
+      <Filter>Content\Object</Filter>
+    </ClCompile>
+    <ClCompile Include="CCalcFPSModule.cpp">
+      <Filter>Util\Class</Filter>
+    </ClCompile>
+    <ClCompile Include="CPacket.cpp">
+      <Filter>Util\Class</Filter>
+    </ClCompile>
+    <ClCompile Include="CRingBuffer.cpp">
+      <Filter>Util\Class</Filter>
+    </ClCompile>
+    <ClCompile Include="Sector.cpp">
+      <Filter>Network Content</Filter>
+    </ClCompile>
+    <ClCompile Include="CFrameSkip.cpp">
+      <Filter>Util\Class</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Protocol.h">
+      <Filter>Network\Network Core</Filter>
+    </ClInclude>
+    <ClInclude Include="GDefine.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="ContentCore.h">
+      <Filter>Content\Content Core</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkCore.h">
+      <Filter>Network\Network Core</Filter>
+    </ClInclude>
+    <ClInclude Include="PacketProcess.h">
+      <Filter>Network Content</Filter>
+    </ClInclude>
+    <ClInclude Include="Logger.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Session.h">
+      <Filter>Network\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Character.h">
+      <Filter>Content\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="CCalcFPSModule.h">
+      <Filter>Util\Class</Filter>
+    </ClInclude>
+    <ClInclude Include="CPacket.h">
+      <Filter>Util\Class</Filter>
+    </ClInclude>
+    <ClInclude Include="CRingBuffer.h">
+      <Filter>Util\Class</Filter>
+    </ClInclude>
+    <ClInclude Include="CObjectPool.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Sector.h">
+      <Filter>Network Content</Filter>
+    </ClInclude>
+    <ClInclude Include="CFrameSkip.h">
+      <Filter>Util\Class</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

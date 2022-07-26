@@ -21,9 +21,6 @@
     <ClInclude Include="pch.h">
       <Filter>Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Types.h">
-      <Filter>Utils</Filter>
-    </ClInclude>
     <ClInclude Include="CCrashDump.h">
       <Filter>Utils</Filter>
     </ClInclude>
@@ -85,9 +82,6 @@
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="CommonProtocol.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="MoniteringProtocol.h">
       <Filter>Network</Filter>
     </ClInclude>
     <ClInclude Include="CNetClient.h">

@@ -1,0 +1,127 @@
+#include "CPriorityQueue.h"
+
+CPriorityQueue::CPriorityQueue() {
+	_lastIndex = 0;
+}
+
+void CPriorityQueue::clear() {
+	_lastIndex = 0;
+}
+
+void CPriorityQueue::Push(stPQNODE data) {
+	int now;
+	int next;
+
+	//_heap.push_back(data); // 맨뒤에 넣기
+	//now = _heap.size() - 1; // 0부터 시작
+
+	_heap[_lastIndex] = data;
+	now = _lastIndex;
+	++_lastIndex;
+
+	while (now > 0) { // now가 루트가 될때까지
+		next = (now - 1) / 2; // 부모 위치
+
+		if (_heap[now].CompareTo(_heap[next]) < 0)
+			break;
+
+		// swap
+		stPQNODE temp;
+		// temp = _heap[now];
+		temp.F = _heap[now].F;
+		temp.G = _heap[now].G;
+		temp.X = _heap[now].X;
+		temp.Y = _heap[now].Y;
+		temp.dir = _heap[now].dir;
+		//_heap[now] = _heap[next];
+		_heap[now].F = _heap[next].F;
+		_heap[now].G = _heap[next].G;
+		_heap[now].X = _heap[next].X;
+		_heap[now].Y = _heap[next].Y;
+		_heap[now].dir = _heap[next].dir;
+
+		//_heap[next] = temp;
+		_heap[next].F = temp.F;
+		_heap[next].G = temp.G;
+		_heap[next].X = temp.X;
+		_heap[next].Y = temp.Y;
+		_heap[next].dir = temp.dir;
+
+		// 다음위치로
+		now = next;
+	}
+
+}
+
+stPQNODE CPriorityQueue::Pop() {
+	stPQNODE ret = _heap[0];				// 루트를 리턴
+
+	int now = 0;	// 현재 비교하는 위치
+	int left;		// 왼쪽 자식
+	int right;		// 오른쪽 자식
+	int next;		// now의 다음위치
+
+	// 제일 마지막 노드를 루트에 가져오기
+	//_heap[0] = _heap[lastIndex];
+	//_heap.pop_back();
+	//lastIndex--;
+
+	--_lastIndex;
+	_heap[0] = _heap[_lastIndex];
+
+	// 루트에서 내려가기
+	while (true) {
+		left = now * 2 + 1;
+		right = now * 2 + 2;
+
+		next = now;
+
+		// 왼쪽값이 현재보다 크면(작으면) 왼쪽으로 이동
+		if (left <= _lastIndex &&
+			_heap[next].CompareTo(_heap[left]) < 0)
+			next = left;
+
+		// 오른쪽값이 현재보다 크면(작으면) 오른쪽으로 이동
+		if (right <= _lastIndex &&
+			_heap[next].CompareTo(_heap[right]) < 0)
+			next = right;
+
+		// 이동을 하지 않았다
+		if (next == now)
+			break;
+
+		// swap
+		stPQNODE temp;
+		// temp = _heap[now];
+		temp.F = _heap[now].F;
+		temp.G = _heap[now].G;
+		temp.X = _heap[now].X;
+		temp.Y = _heap[now].Y;
+		temp.dir = _heap[now].dir;
+		//_heap[now] = _heap[next];
+		_heap[now].F = _heap[next].F;
+		_heap[now].G = _heap[next].G;
+		_heap[now].X = _heap[next].X;
+		_heap[now].Y = _heap[next].Y;
+		_heap[now].dir = _heap[next].dir;
+
+		//_heap[next] = temp;
+		_heap[next].F = temp.F;
+		_heap[next].G = temp.G;
+		_heap[next].X = temp.X;
+		_heap[next].Y = temp.Y;
+		_heap[next].dir = temp.dir;
+
+
+		// 다음위치로
+		now = next;
+	}
+
+	return ret;
+}
+
+stPQNODE CPriorityQueue::Peek() {
+	if (_lastIndex <= 0)
+		return stPQNODE();
+	return _heap[0];
+}
