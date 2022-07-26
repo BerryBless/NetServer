@@ -25,7 +25,7 @@
 // 0은 사용이 되지않는 ID
 // ----------------------------------------------
 
-class CNetServer {
+class CLanServer {
 public:
 	typedef u_int64 SESSION_ID;
 	struct SESSION {
@@ -63,8 +63,8 @@ public:
 		}
 	};
 public:
-	CNetServer();
-	~CNetServer();
+	CLanServer();
+	~CLanServer();
 protected:
 	// ==============================================
 	// Server Interface
@@ -117,7 +117,7 @@ private:
 	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic);
 	SESSION *GetSessionAddIORef(SESSION_ID sessionID, DWORD logic);
 
-	void SessionSubIORef(SESSION *pSession, DWORD logic);
+	void SessionSubIORef(SESSION * pSession, DWORD logic);
 	bool ReleaseSession(SESSION *pSession, int logic);
 
 private:
@@ -131,7 +131,7 @@ private:
 	SESSION *FindSession(SESSION_ID sessionID);
 	void InitializeIndex();
 
-
+	
 private:
 	// ==============================================
 	// LOCK
