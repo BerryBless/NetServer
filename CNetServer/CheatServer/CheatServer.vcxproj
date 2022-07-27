@@ -73,26 +73,30 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)Binary\$(Configuration)\</OutDir>
-    <ExecutablePath>$(SolutionDir)ServerCore;$(ExecutablePath)</ExecutablePath>
+    <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LibraryPath>$(SolutionDir)Libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)ServerCore;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)Binary\$(Configuration)\</OutDir>
-    <ExecutablePath>$(SolutionDir)ServerCore;$(ExecutablePath)</ExecutablePath>
+    <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LibraryPath>$(SolutionDir)Libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)ServerCore;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)Binary\$(Configuration)\</OutDir>
-    <ExecutablePath>$(SolutionDir)ServerCore;$(ExecutablePath)</ExecutablePath>
+    <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LibraryPath>$(SolutionDir)Libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)ServerCore;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)Binary\$(Configuration)\</OutDir>
-    <ExecutablePath>$(SolutionDir)ServerCore;$(ExecutablePath)</ExecutablePath>
+    <ExecutablePath>$(ExecutablePath)</ExecutablePath>
     <LibraryPath>$(SolutionDir)Libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)ServerCore;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -161,9 +165,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CChatServer.h" />
+    <ClInclude Include="ChatServerProtocol.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Player.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CChatServer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">pch.h</PrecompiledHeaderFile>

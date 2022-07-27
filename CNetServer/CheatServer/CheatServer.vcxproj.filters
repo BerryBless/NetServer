@@ -7,6 +7,9 @@
     <Filter Include="Main">
       <UniqueIdentifier>{57bb9a10-ca99-4542-9fd6-b624a76b4b8b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Network">
+      <UniqueIdentifier>{33491e9b-639a-4d17-89a3-141df081ff24}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -15,10 +18,22 @@
     <ClCompile Include="main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
+    <ClCompile Include="CChatServer.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
       <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CChatServer.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="ChatServerProtocol.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
