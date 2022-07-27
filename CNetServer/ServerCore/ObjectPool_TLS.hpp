@@ -1,5 +1,5 @@
 #pragma once
-#include "CObjectPool.hpp"
+#include "ObjectPool.hpp"
 #include <wtypes.h>
 
 #define CHUNK_CHECKSUM 0xBBBBBBBB
@@ -53,7 +53,7 @@ public:
 	int		GetCapacity(void);
 	DWORD	GetSize(void);
 private:
-	CObjectPool<CChunk> *_pObjectPool;
+	ObjectPool<CChunk> *_pObjectPool;
 
 	DWORD			_Size;
 	DWORD			_tlsIdx;
@@ -65,9 +65,9 @@ template<typename DATA>
 inline ObjectPool_TLS<DATA>::ObjectPool_TLS(bool bPlacementNew, bool sizeCheck) {
 	_Size = 0;
 	_bPlacementNew = bPlacementNew;
-	//_pObjectPool = new CObjectPool<CChunk>(0, bPlacementNew);
-	_pObjectPool = (CObjectPool<CChunk>*)_aligned_malloc(sizeof(CObjectPool<CChunk>), 64);
-	new (_pObjectPool) CObjectPool<CChunk>;
+	//_pObjectPool = new ObjectPool<CChunk>(0, bPlacementNew);
+	_pObjectPool = (ObjectPool<CChunk>*)_aligned_malloc(sizeof(ObjectPool<CChunk>), 64);
+	new (_pObjectPool) ObjectPool<CChunk>;
 	_tlsIdx = TlsAlloc();
 }
 

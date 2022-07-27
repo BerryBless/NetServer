@@ -269,7 +269,7 @@ inline bool CLF_ObjectPool<DATA>::Free(DATA *pData) {
 
 
 template <class DATA>
-class CObjectPool {
+class ObjectPool {
 	//////////////////////////////////////////////////////////////////////////
 	// 체크섬
 	// 유저영역을 가르키는 포인터의 앞 21비트를 안쓴다는것을 응용
@@ -314,9 +314,9 @@ public:
 	//				(bool) Alloc 시 생성자 / Free 시 파괴자 호출 여부
 	// Return:
 	//////////////////////////////////////////////////////////////////////////
-	CObjectPool(int size = 0, bool isPlacementNew = false);
+	ObjectPool(int size = 0, bool isPlacementNew = false);
 
-	virtual	~CObjectPool();
+	virtual	~ObjectPool();
 
 
 	//////////////////////////////////////////////////////////////////////////
@@ -356,7 +356,7 @@ public:
 };
 
 template<class DATA>
-inline void CObjectPool<DATA>::AllocMemory(int size) {
+inline void ObjectPool<DATA>::AllocMemory(int size) {
 	// push
 	BLOCK_NODE *pNode;
 
@@ -376,7 +376,7 @@ inline void CObjectPool<DATA>::AllocMemory(int size) {
 }
 
 template<class DATA>
-inline CObjectPool<DATA>::CObjectPool(int size, bool isPlacementNew) {
+inline ObjectPool<DATA>::ObjectPool(int size, bool isPlacementNew) {
 	InitializeSRWLock(&_lock);
 
 	_useCount = 0;
@@ -387,7 +387,7 @@ inline CObjectPool<DATA>::CObjectPool(int size, bool isPlacementNew) {
 }
 
 template<class DATA>
-inline CObjectPool<DATA>::~CObjectPool() {
+inline ObjectPool<DATA>::~ObjectPool() {
 	// 소멸자..
 	BLOCK_NODE *pNode = _top;
 	BLOCK_NODE *pNext;
@@ -399,7 +399,7 @@ inline CObjectPool<DATA>::~CObjectPool() {
 }
 
 template<class DATA>
-inline DATA *CObjectPool<DATA>::Alloc(void) {
+inline DATA *ObjectPool<DATA>::Alloc(void) {
 	AcquireSRWLockExclusive(&_lock);
 	// pop()
 	DATA *pRet = nullptr;
@@ -428,7 +428,7 @@ inline DATA *CObjectPool<DATA>::Alloc(void) {
 }
 
 template<class DATA>
-inline bool CObjectPool<DATA>::Free(DATA *pData) {
+inline bool ObjectPool<DATA>::Free(DATA *pData) {
 	AcquireSRWLockExclusive(&_lock);
 	// push()
 	BLOCK_NODE *pNode = (BLOCK_NODE *) pData;

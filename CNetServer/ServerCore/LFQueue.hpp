@@ -1,5 +1,5 @@
 #pragma once
-#include "CObjectPool.hpp"
+#include "ObjectPool.hpp"
 #define dfLOGGING_COUNT 100000
 
 #define LOGIC_ENQ 0xAA
@@ -34,7 +34,7 @@ private:
 	alignas(16) D_TOP _tail;        // 마지막노드를 포인트한다.
 	long _size;         // 큐 노드 카운트
 
-	CObjectPool<Node> _nodePool;
+	ObjectPool<Node> _nodePool;
 
 	long _logcnt = 0;
 	LOG_DATA _log[dfLOGGING_COUNT];

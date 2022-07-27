@@ -36,10 +36,10 @@
     <ClInclude Include="CorePch.h">
       <Filter>Main</Filter>
     </ClInclude>
-    <ClInclude Include="CObjectPool.hpp">
+    <ClInclude Include="ObjectPool.hpp">
       <Filter>Utils</Filter>
     </ClInclude>
-    <ClInclude Include="CObjectPool_TLS.hpp">
+    <ClInclude Include="ObjectPool_TLS.hpp">
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="LFQueue.hpp">
@@ -86,6 +86,9 @@
     </ClInclude>
     <ClInclude Include="CNetClient.h">
       <Filter>Main\Net</Filter>
+    </ClInclude>
+    <ClInclude Include="Types.h">
+      <Filter>Utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

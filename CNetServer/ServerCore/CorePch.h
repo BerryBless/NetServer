@@ -17,13 +17,14 @@
 #include <timeapi.h>
 #include "CRingBuffer.h"
 #include "CLogger.h"
-#include "CObjectPool.hpp"
+#include "ObjectPool.hpp"
 #include "CCrashDump.h"
 #include "Stack.hpp"
 #include "Queue.hpp"
 #include "HardWareMoniter.h"
 #include "ProcessMoniter.h"
 #include "CPacket.h"
+#include "Types.h"
 using namespace std;
 
 

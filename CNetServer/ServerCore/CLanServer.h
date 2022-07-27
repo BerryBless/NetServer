@@ -3,7 +3,7 @@
 #include "CRingBuffer.h"
 #include "CPacket.h"
 #include "CLogger.h"
-#include "CObjectPool.hpp"
+#include "ObjectPool.hpp"
 #include "CCrashDump.h"
 #include "Stack.hpp"
 #include "Queue.hpp"
@@ -27,7 +27,6 @@
 
 class CLanServer {
 public:
-	typedef u_int64 SESSION_ID;
 	struct SESSION {
 		SESSION_ID _ID;
 
@@ -41,6 +40,7 @@ public:
 		SOCKET _sock;
 		ULONG _IP;
 		USHORT _port;
+		WCHAR _IPStr[20];
 
 		// session lock
 		SRWLOCK _lock;
@@ -131,6 +131,9 @@ private:
 	SESSION *FindSession(SESSION_ID sessionID);
 	void InitializeIndex();
 
+	inline void GetStringIP(WCHAR *str, sockaddr_in &addr) {
+		wsprintf(str, L"%d.%d.%d.%d", addr.sin_addr.S_un.S_un_b.s_b1, addr.sin_addr.S_un.S_un_b.s_b2, addr.sin_addr.S_un.S_un_b.s_b3, addr.sin_addr.S_un.S_un_b.s_b4);
+	}
 	
 private:
 	// ==============================================

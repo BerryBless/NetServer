@@ -602,7 +602,9 @@ bool CNetServer::AcceptProc() {
 	//---------------------------
 	// 컨텐츠에서 처리할것 블랙,화이트 리스트, 지역차단 등등
 	//---------------------------
-	if (OnConnectionRequest(clientaddr.sin_addr.S_un.S_addr, clientaddr.sin_port) == false) {
+	WCHAR IPStr[20];
+	GetStringIP(IPStr, clientaddr);
+	if (OnConnectionRequest(IPStr,clientaddr.sin_addr.S_un.S_addr, clientaddr.sin_port) == false) {
 		//---------------------------
 		// 컨탠츠에서 차단한 접속처리
 		//---------------------------
@@ -1058,6 +1060,7 @@ CNetServer::SESSION *CNetServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
 	//---------------------------
 	pSession->_ID = id;
 	pSession->_sock = sock;
+	GetStringIP(pSession->_IPStr, addr);
 	pSession->_IP = addr.sin_addr.S_un.S_addr;
 	pSession->_port = addr.sin_port;
 	pSession->_lastRecvdTime = timeGetTime();
@@ -1077,7 +1080,7 @@ CNetServer::SESSION *CNetServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
 	return pSession;
 }
 
-CNetServer::SESSION_ID CNetServer::GenerateSessionID() {
+SESSION_ID CNetServer::GenerateSessionID() {
 	//---------------------------
 	// 	   Session ID 생성
 	//---------------------------

@@ -2,7 +2,7 @@
 #include "CRingBuffer.h"
 #include "CPacket.h"
 #include "CLogger.h"
-#include "CObjectPool.hpp"
+#include "ObjectPool.hpp"
 #include "CCrashDump.h"
 #include "Stack.hpp"
 #include "Queue.hpp"

@@ -1068,6 +1068,7 @@ CLanServer::SESSION *CLanServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
 	//---------------------------
 	pSession->_ID = id;
 	pSession->_sock = sock;
+	GetStringIP(pSession->_IPStr, addr);
 	pSession->_IP = addr.sin_addr.S_un.S_addr;
 	pSession->_port = addr.sin_port;
 	pSession->_lastRecvdTime = timeGetTime();
@@ -1087,7 +1088,7 @@ CLanServer::SESSION *CLanServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
 	return pSession;
 }
 
-CLanServer::SESSION_ID CLanServer::GenerateSessionID() {
+SESSION_ID CLanServer::GenerateSessionID() {
 	//---------------------------
 	// 	   Session ID 생성
 	//---------------------------

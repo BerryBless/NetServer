@@ -163,8 +163,8 @@
     <ClInclude Include="CLogger.h" />
     <ClInclude Include="CNetClient.h" />
     <ClInclude Include="CNetServer.h" />
-    <ClInclude Include="CObjectPool.hpp" />
-    <ClInclude Include="CObjectPool_TLS.hpp" />
+    <ClInclude Include="ObjectPool.hpp" />
+    <ClInclude Include="ObjectPool_TLS.hpp" />
     <ClInclude Include="CommonProtocol.h" />
     <ClInclude Include="CorePch.h" />
     <ClInclude Include="CPacket.h" />
@@ -180,6 +180,7 @@
     <ClInclude Include="LFQueue.hpp" />
     <ClInclude Include="LFStack.hpp" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Types.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CCrashDump.cpp" />

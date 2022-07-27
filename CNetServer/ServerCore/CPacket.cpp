@@ -3,7 +3,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <Windows.h>
-#include "CObjectPool_TLS.hpp"
+#include "ObjectPool_TLS.hpp"
 #ifndef CRASH
 #define CRASH() do{\
 	CLogger::_Log(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
@@ -12,7 +12,7 @@
 #endif // !CRASH
 
 ObjectPool_TLS<CPacket> CPacket::_packetPool(true);
-//CObjectPool<CPacket> CPacket::_packetPool(0,true);
+//ObjectPool<CPacket> CPacket::_packetPool(0,true);
 
 CPacket::CPacket() {
 	// 기본 사이즈만큼 할당

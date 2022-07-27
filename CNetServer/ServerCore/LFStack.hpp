@@ -1,7 +1,7 @@
 #pragma once
 #include <Windows.h>
 #include <winnt.h>
-#include "CObjectPool.hpp"
+#include "ObjectPool.hpp"
 
 //#define dfMAX_LOGING_COUNT 10000 // 최대 로깅카운트
 #ifdef dfMAX_LOGING_COUNT
@@ -67,7 +67,7 @@ private:
 	alignas(16) D_TOP _top;
 	alignas(16) long _size;
 
-	CObjectPool <NODE> _nodePool;
+	ObjectPool <NODE> _nodePool;
 
 	// DEBUG
 #ifdef dfMAX_LOGING_COUNT

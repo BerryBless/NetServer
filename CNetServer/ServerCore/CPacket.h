@@ -1,6 +1,6 @@
 #ifndef  __PACKET__
 #define  __PACKET__
-#include "CObjectPool_TLS.hpp"
+#include "ObjectPool_TLS.hpp"
 
 #define PACKET_NET_HEADER		CPacket::NET_HEADER
 #define PACKET_NET_HEADER_SIZE	sizeof(PACKET_NET_HEADER)
@@ -181,7 +181,7 @@ public:
 
 
 	static ObjectPool_TLS<CPacket> _packetPool;
-	//static CObjectPool<CPacket> _packetPool;
+	//static ObjectPool<CPacket> _packetPool;
 
 protected:
 	//------------------------------------------------------------
