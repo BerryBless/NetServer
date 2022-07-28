@@ -37,6 +37,12 @@ public:
 
 	void CommandWait();
 private:
+	// Thtread
+	// TODO 스레드 분리 (jobQ)
+	// static unsigned int __stdcall UpdateThread(LPVOID arg);
+	// bool UpdateProc();
+
+private:
 	// virtual
 	virtual bool OnConnectionRequest(WCHAR *IPStr, u_long IP, u_short Port); //< accept 직후
 	virtual void OnClientJoin(SESSION_ID SessionID); //< Accept 후 접속처리 완료 후 호출.
@@ -67,18 +73,22 @@ private:
 	inline void SectorUnlock(WORD x, WORD y) { ReleaseSRWLockExclusive(&this->_sector[y][x]._lock); }
 
 private:
+	void PrintMonitor(FILE *fp);
+	void PrintFileMonitor();
+
+private:
 	DWORD									_isRunning;
 	
 	
 	HANDLE									_updateThread;
-	HANDLE									_monitorThread;
+	//HANDLE									_monitorThread;
 
 	/*Queue <JobMessage>						_jobQueue;
 	HANDLE									_jobDeqEvent;
 	ObjectPool_TLS <JobMessage>				_jobMsgPool;*/
 
 
-	SECTOR **_sector;
+	SECTOR **								_sector;
 	unordered_map<ULONGLONG, Player *>		_playerMap;
 	SRWLOCK									_playerMapLock;
 	ObjectPool<Player>						_playerPool;
@@ -92,9 +102,11 @@ private:
 	HardWareMoniter							_hardMoniter;
 	ProcessMoniter							_procMonitor;
 
-	CLogger									_ChatServerLog;
+	ULONGLONG								_SectorMoveCalc;
 	ULONGLONG								_SectorMoveTPS;
+	ULONGLONG								_ChatCalc;
 	ULONGLONG								_ChatTPS;
+	ULONGLONG								_LoginCalc;
 	ULONGLONG								_LoginTPS;
 
 };

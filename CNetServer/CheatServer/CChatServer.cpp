@@ -1,7 +1,10 @@
 #include "pch.h"
 #include "CChatServer.h"
 #include "ChatServerProtocol.h"
-
+#include "Profiler.h"
+#include <conio.h>
+#include <time.h>
+#include <stdio.h>
 #define __PLAYER_MAP_LOCK()		this->PlayerMapLock()
 #define __PLAYER_MAP_UNLOCK()	this->PlayerMapUnlock()
 #define __SECTOR_LOCK(x, y)		this->SectorLock(x, y)
@@ -12,6 +15,26 @@ CChatServer::CChatServer() {
 	CLogger::SetDirectory(L"serverlog");
 	CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);
 	_isRunning = false;
+
+	// TODO 스레드 분리 (jobQ)
+	//_updateThread = INVALID_HANDLE_VALUE;
+	//_monitorThread = INVALID_HANDLE_VALUE;
+
+	// Sector 할당
+	_sector = new SECTOR * [SECTOR_Y_SIZE];
+	for (int i = 0; i < SECTOR_Y_SIZE; i++) {
+		_sector[i] = new SECTOR[SECTOR_X_SIZE];
+	}
+
+	_SectorMoveCalc = 0;
+	_SectorMoveTPS = 0;
+	_ChatCalc = 0;
+	_ChatTPS = 0;
+	_LoginCalc = 0;
+	_LoginTPS = 0;
+
+	InitializeSRWLock(&_playerMapLock);
+
 }
 
 CChatServer::~CChatServer() {
@@ -32,6 +55,49 @@ void CChatServer::CloseServer() {
 
 
 void CChatServer::CommandWait() {
+	int printTick = 0;
+
+	for (;;) {
+		if (_kbhit()) {
+			char cmd = _getch();
+			if (cmd == 'Q' || cmd == 'q') {
+
+				Quit();
+				break;
+			}
+			if (cmd == 'P' || cmd == 'p') {
+				PRO_PRINT(L"CLanserver_PROFILE.log");
+				PrintFileMonitor();
+			}
+			if (cmd == 'C' || cmd == 'c') {
+				CRASH();
+			}
+			if (cmd == '1') {
+				wprintf_s(L"CHANGE LOG LEVEL :: DEBUG\n");
+				CLogger::SetLogLevel(dfLOG_LEVEL_DEBUG);
+			}
+			if (cmd == '2') {
+				wprintf_s(L"CHANGE LOG LEVEL :: ERROR\n");
+				CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);
+			}
+			if (cmd == '3') {
+				wprintf_s(L"CHANGE LOG LEVEL :: NOTICE\n");
+				CLogger::SetLogLevel(dfLOG_LEVEL_NOTICE);
+			}
+		}
+		// Monitor
+		Sleep(1000);
+		_hardMoniter.UpdateHardWareTime();
+		_procMonitor.UpdateProcessTime();
+		// profile
+		if (printTick >= 300) {
+			PrintFileMonitor();
+			printTick = 0;
+		} else
+			PrintMonitor(stdout);
+		printTick++;
+	}
+
 }
 
 bool CChatServer::OnConnectionRequest(WCHAR *IPStr, u_long IP, u_short Port) {
@@ -45,13 +111,13 @@ void CChatServer::OnClientJoin(SESSION_ID SessionID) {
 
 void CChatServer::OnClientLeave(SESSION_ID SessionID) {
 	PacketProc(nullptr, SessionID, CHAT_PACKET_TYPE::ON_CLIENT_LEAVE);
-}       
+}
 
 
 void CChatServer::OnRecv(SESSION_ID SessionID, CPacket *pPacket) {
 	pPacket->AddRef();
 	// TODO jobQueue
-
+	// TEMP 워커스레드에서 작업
 	WORD type;
 	(*pPacket) >> type;
 	PacketProc(pPacket, SessionID, type);
@@ -60,6 +126,7 @@ void CChatServer::OnRecv(SESSION_ID SessionID, CPacket *pPacket) {
 }
 
 void CChatServer::OnError(int errorcode, const WCHAR *log) {
+
 }
 
 void CChatServer::OnTimeout(SESSION_ID SessionID) {
@@ -103,10 +170,49 @@ void CChatServer::PacketProc(CPacket *pPacket, SESSION_ID SessionID, WORD type) 
 
 void CChatServer::PacketProcRequestLogin(CPacket *pPacket, SESSION_ID SessionID) {
 	pPacket->AddRef();
+	BYTE status = FALSE;
+	ACCOUNT_NO acno;
 
+	if (pPacket->GetDataSize() < sizeof(ACCOUNT_NO)) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() < sizeof(ACCOUNT_NO)"); // TODO ERROR MSG
+		Disconnect(SessionID);
+	}
+	(*pPacket).GetData((char *) &acno, sizeof(ACCOUNT_NO));
 
+	if (pPacket->GetDataSize() != ID_MAX_SIZE + NICK_NAME_MAX_SIZE + TOKEN_KEY_SIZE) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() != ID_MAX_SIZE + NICK_NAME_MAX_SIZE + TOKEN_KEY_SIZE"); // TODO ERROR MSG
+		Disconnect(SessionID);
+	}
+	Player *pPlayer = FindPlayer(SessionID);
+	if (pPlayer == nullptr) {
+		// new Player
+		pPlayer = _playerPool.Alloc();
+		
+		pPacket->GetData((char *) pPlayer->_ID, ID_MAX_SIZE);
+		pPacket->GetData((char *) pPlayer->_NickName, NICK_NAME_MAX_SIZE);
+		pPacket->GetData((char *) pPlayer->_TokenKey, TOKEN_KEY_SIZE);
+
+		pPlayer->_AccountNo = acno;
+		pPlayer->_SectorX = -1;
+		pPlayer->_SectorY = -1;
+		pPlayer->_SessionID = SessionID;
+
+		InsertPlayer(SessionID, pPlayer);
+		pPlayer->_isAlive = TRUE;
+		status = TRUE;
+	}
 
 	pPacket->SubRef();
+
+	CPacket *pResLoginPacket = CPacket::AllocAddRef();
+	MakePacketResponseLogin(pResLoginPacket, pPlayer->_AccountNo, status);
+	SendPacket(pPlayer->_SessionID, pResLoginPacket);
+	if (status == FALSE) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"status == FALSE"); // TODO ERROR MSG
+		Disconnect(SessionID);
+	}
+
+	InterlockedIncrement(&_LoginCalc);
 }
 
 
@@ -169,7 +275,7 @@ void CChatServer::RemovePlayer(ULONGLONG SessionID) {
 
 
 	pPlayer->_isAlive = false;
-	
+
 	constexpr WORD comp = -1;
 	WORD sx = pPlayer->_SectorX;
 	WORD sy = pPlayer->_SectorY;
@@ -179,7 +285,7 @@ void CChatServer::RemovePlayer(ULONGLONG SessionID) {
 		_playerPool.Free(pPlayer);
 		return;
 	}
-	
+
 	__SECTOR_LOCK(sx, sy);
 	for (auto iter = _sector[sy][sx]._playerSet.begin(); iter != _sector[sy][sx]._playerSet.end(); ++iter) {
 		if ((*iter)->_SessionID == SessionID) {
@@ -201,4 +307,10 @@ Player *CChatServer::FindPlayer(ULONGLONG SessionID) {
 	}
 	__PLAYER_MAP_UNLOCK();
 	return iter->second;
+}
+
+void CChatServer::PrintMonitor(FILE *fp) {
+}
+
+void CChatServer::PrintFileMonitor() {
 }
