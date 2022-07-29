@@ -140,14 +140,18 @@ bool CNetServer::Disconnect(SESSION_ID SessionID) {
 	//---------------------------
 	// 세션 끊기
 	//---------------------------
-	bool ret;
+	bool ret = false;
 	SESSION *pSession = GetSessionAddIORef(SessionID, dfLOGIC_DISCONNECT);
 	if (pSession == NULL) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"//Disconnect ERROR :: can not find session..");
 		OnError(dfLOGIC_DISCONNECT, L"Disconnect ERROR :: can not find session..");
 		return false;
 	}
+	CLogger::_Log(dfLOG_LEVEL_ERROR, L"//Disconnect id[%d]",SessionID);
+	InterlockedExchange(&pSession->_isAlive, FALSE);
+
 	ret = CancelIoEx((HANDLE) pSession->_sock, nullptr);
+	//closesocket(pSession->_sock);
 	SessionSubIORef(pSession, dfLOGIC_DISCONNECT);
 	return ret;
 }
@@ -389,6 +393,8 @@ bool CNetServer::OnGQCS() {
 		DWORD err = WSAGetLastError();
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"overlapped is NULL ERROR CODE [%d]", err);
 		OnError(err, L"IOCP ERROR :: overlapped is NULL");
+		return true;
+	} else if (pOverlapped == (OVERLAPPED *) 0xffffffff) {
 		return true;
 	}
 
@@ -705,6 +711,9 @@ bool CNetServer::SendPost(SESSION *pSession, int logic) {
 	if (pSession == NULL) {
 		CRASH();
 	}
+	if (InterlockedOr((long *) &pSession->_isAlive, FALSE) == FALSE) {
+		return false;
+	}
 	if (pSession->_ID == 0) {
 		return false;
 	}
@@ -777,6 +786,9 @@ bool CNetServer::SendPost(SESSION *pSession, int logic) {
 bool CNetServer::RecvPost(SESSION *pSession, int logic, bool isAccept) {
 	if (pSession == NULL) {
 		CRASH();
+	}
+	if (InterlockedOr((long *) &pSession->_isAlive, FALSE) == FALSE) {
+		return false;
 	}
 	/*if (pSession->_ID == 0) {
 		return false;
@@ -987,6 +999,8 @@ bool CNetServer::ReleaseSession(SESSION *pSession, int logic) {
 	if (ID != pSession->_ID) {
 		return false;
 	}
+	InterlockedExchange(&pSession->_isAlive, FALSE);
+
 	OnClientLeave(pSession->_ID);
 	closesocket(pSession->_sock);
 	//---------------------------
@@ -1047,6 +1061,7 @@ CNetServer::SESSION *CNetServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
 	InterlockedIncrement(&pSession->_IOcount);
 	InterlockedAnd((long *) &pSession->_IOcount, 0x7fffffff);
 
+	InterlockedExchange(&pSession->_isAlive, TRUE);
 	InterlockedExchange(&pSession->_IOFlag, FALSE);
 	InterlockedExchange(&pSession->_sendPacketCnt, 0);
 

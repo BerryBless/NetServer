@@ -50,6 +50,7 @@ public:
 		alignas(64) DWORD _IOcount;
 		alignas(64) DWORD _IOFlag;
 		alignas(64) DWORD _sendPacketCnt;
+		alignas(64) DWORD _isAlive;
 		SESSION() {
 			_ID = 0;
 			_IOcount = 0;
@@ -58,6 +59,7 @@ public:
 			_sock = 0;
 			_IP = 0;
 			_port = 0;
+			_isAlive = 0;
 			ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
 			ZeroMemory(&_sendOverlapped, sizeof(WSAOVERLAPPED));
 		}
