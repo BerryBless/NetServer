@@ -26,10 +26,21 @@ void CChatClient::Login() {
 	pPacket->SubRef();
 }
 
+void CChatClient::TryMoveSector(WORD sx, WORD sy) {
+	CPacket *pPacket = CPacket::AllocAddRef();
+
+	MakePacketRequestSectorMove(pPacket, _player._AccountNo, sx, sy);
+	SendPacket(pPacket);
+
+	pPacket->SubRef();
+}
+
+
 void CChatClient::OnEnterJoinServer() {
 }
 
 void CChatClient::OnLeaveServer() {
+	printf_s("OnLeaveServer()\n");
 }
 
 void CChatClient::OnRecv(CPacket *pPacket) {
@@ -67,6 +78,7 @@ void CChatClient::PacketProc(CPacket *pPacket, WORD type) {
 	pPacket->SubRef();
 }
 
+//PACKET_SC_CHAT_RES_LOGIN
 void CChatClient::PacketProcResponseLogin(CPacket *pPacket) {
 	pPacket->AddRef();
 	BYTE status = FALSE;
@@ -89,12 +101,36 @@ void CChatClient::PacketProcResponseLogin(CPacket *pPacket) {
 	printf_s("No[%lld] : [%d]", acno, status);
 }
 
+//PACKET_SC_CHAT_RES_SECTOR_MOVE
 void CChatClient::PacketProcResponseSectorMove(CPacket *pPacket) {
+	ACCOUNT_NO no;
+	WORD sx;
+	WORD sy;
+	pPacket->AddRef();
+	if (pPacket->GetDataSize() < (sizeof(no) + sizeof(sx) + sizeof(sy))) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() < (sizeof(no) + sizeof(sx) + sizeof(sy))"); // TODO ERROR MSG
+		Disconnect();
+	}
+
+	pPacket->GetData((char *) &no, sizeof(ACCOUNT_NO));
+	(*pPacket) >> sx >> sy;
+	pPacket->SubRef();
+
+	printf_s("\n PACKET_SC_CHAT_RES_SECTOR_MOVE:: %lld (%d, %d)\n", no, sx, sy);
+	if (_player._AccountNo != no) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"_player._AccountNo != no"); // TODO ERROR MSG
+		Disconnect();
+	}
+
+	_player._SectorX = sx;
+	_player._SectorX = sy;
 }
 
+//PACKET_SC_CHAT_RES_MESSAGE
 void CChatClient::PacketProcResponseMessage(CPacket *pPacket) {
 }
 
+//PACKET_CS_CHAT_REQ_LOGIN
 void CChatClient::MakePacketRequestLogin(CPacket *pPacket, ACCOUNT_NO no, WCHAR *ID, WCHAR *nick, char *token) {
 	pPacket->AddRef();
 	CHAT_PACKET_TYPE type = CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_LOGIN;
@@ -107,6 +143,7 @@ void CChatClient::MakePacketRequestLogin(CPacket *pPacket, ACCOUNT_NO no, WCHAR 
 	pPacket->SubRef();
 }
 
+//PACKET_CS_CHAT_REQ_SECTOR_MOVE
 void CChatClient::MakePacketRequestSectorMove(CPacket *pPacket, ACCOUNT_NO no, WORD sectorX, WORD sectorY) {
 	pPacket->AddRef();
 	CHAT_PACKET_TYPE type = CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_SECTOR_MOVE;
@@ -116,6 +153,7 @@ void CChatClient::MakePacketRequestSectorMove(CPacket *pPacket, ACCOUNT_NO no, W
 	pPacket->SubRef();
 }
 
+//PACKET_CS_CHAT_REQ_MESSAGE
 void CChatClient::MakePacketRequestMessage(CPacket *pPacket, ACCOUNT_NO no, WORD msgLen, const WCHAR *message) {
 	pPacket->AddRef();
 	CHAT_PACKET_TYPE type = CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_MESSAGE;

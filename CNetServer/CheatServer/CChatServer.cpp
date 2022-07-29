@@ -110,7 +110,8 @@ void CChatServer::OnClientJoin(SESSION_ID SessionID) {
 }
 
 void CChatServer::OnClientLeave(SESSION_ID SessionID) {
-	PacketProc(nullptr, SessionID, CHAT_PACKET_TYPE::ON_CLIENT_LEAVE);
+	//PacketProc(nullptr, SessionID, CHAT_PACKET_TYPE::ON_CLIENT_LEAVE);
+	Disconnect(SessionID);
 }
 
 
@@ -130,7 +131,9 @@ void CChatServer::OnError(int errorcode, const WCHAR *log) {
 }
 
 void CChatServer::OnTimeout(SESSION_ID SessionID) {
-	PacketProc(nullptr, SessionID, CHAT_PACKET_TYPE::ON_TIME_OUT);
+	CLogger::_Log(dfLOG_LEVEL_ERROR, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
+	Disconnect(SessionID);
+	//PacketProc(nullptr, SessionID, CHAT_PACKET_TYPE::ON_TIME_OUT);
 }
 
 void CChatServer::PacketProc(CPacket *pPacket, SESSION_ID SessionID, WORD type) {
@@ -167,6 +170,7 @@ void CChatServer::PacketProc(CPacket *pPacket, SESSION_ID SessionID, WORD type) 
 	pPacket->SubRef();
 }
 
+// PACKET_CS_CHAT_REQ_LOGIN
 void CChatServer::PacketProcRequestLogin(CPacket *pPacket, SESSION_ID SessionID) {
 	pPacket->AddRef();
 	BYTE status = FALSE;
@@ -197,7 +201,7 @@ void CChatServer::PacketProcRequestLogin(CPacket *pPacket, SESSION_ID SessionID)
 		pPlayer->_SessionID = SessionID;
 
 		InsertPlayer(SessionID, pPlayer);
-		pPlayer->_isAlive = TRUE;
+		pPlayer->_isLogin = TRUE;
 		status = TRUE;
 	}
 
@@ -214,15 +218,65 @@ void CChatServer::PacketProcRequestLogin(CPacket *pPacket, SESSION_ID SessionID)
 	InterlockedIncrement(&_LoginCalc);
 }
 
-
+// PACKET_CS_CHAT_REQ_SECTOR_MOVE
 void CChatServer::PacketProcMoveSector(CPacket *pPacket, SESSION_ID SessionID) {
+	ACCOUNT_NO no;
+	WORD sx;
+	WORD sy;
+
+	// 패킷 꺼내기
 	pPacket->AddRef();
-
-
-
+	if (pPacket->GetDataSize() != (sizeof(no) + sizeof(sx) + sizeof(sy))) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() != (sizeof(no) + sizeof(sx) + sizeof(sy))"); // TODO ERROR MSG
+		Disconnect(SessionID);
+		pPacket->SubRef();
+		return;
+	}
+	pPacket->GetData((char *) &no, sizeof(ACCOUNT_NO));
+	(*pPacket) >> sx >> sy;
 	pPacket->SubRef();
+
+	// 플레이어 무결성
+	Player *pPlayer = FindPlayer(SessionID);
+	if (pPlayer == nullptr) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  pPlayer == nullptr", SessionID); // TODO ERROR MSG
+		Disconnect(SessionID);
+		return;
+	}if (pPlayer->_isLogin == false) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  pPlayer->_isLogin == false", SessionID); // TODO ERROR MSG
+		Disconnect(SessionID);
+		return;
+	}
+
+	// 섹터 범위 초과
+	if (sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE", SessionID); // TODO ERROR MSG
+		Disconnect(SessionID);
+		return;
+	}
+
+	// 기존에 있던 섹터가 있는지
+	constexpr WORD comp = -1;
+	if (pPlayer->_SectorX != comp && pPlayer->_SectorY != comp) {
+		// 기존섹터 삭제
+		auto iter = _sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.find(pPlayer);
+		if (iter != _sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.end()) {
+			_sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.erase(iter);
+		}
+	}
+	// 이동
+	pPlayer->_SectorX = sx;
+	pPlayer->_SectorY = sy;
+	_sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.emplace(pPlayer);
+
+	// Send RES_SECTOR_MOVE Msg
+	CPacket *pResPacket = CPacket::AllocAddRef();
+	MakePacketResponseSectorMove(pResPacket, pPlayer->_AccountNo, pPlayer->_SectorX, pPlayer->_SectorY);
+	SendPacket(pPlayer->_SessionID, pResPacket);
+	pResPacket->SubRef();
 }
 
+// PACKET_CS_CHAT_REQ_MESSAGE
 void CChatServer::PacketProcChatRequire(CPacket *pPacket, SESSION_ID SessionID) {
 	pPacket->AddRef();
 
@@ -268,7 +322,11 @@ void CChatServer::MakePacketResponseMessage(CPacket *pPacket, ACCOUNT_NO account
 void CChatServer::SendSector(CPacket *pPacket, WORD sectorX, WORD sectorY) {
 	pPacket->AddRef();
 
+	SECTOR *pSector = &_sector[sectorY][sectorX];
 
+	for (auto iter = pSector->_playerSet.begin(); iter != pSector->_playerSet.end(); ++iter) {
+		SendPacket((*iter)->_SessionID, pPacket);
+	}
 
 	pPacket->SubRef();
 }
@@ -290,7 +348,7 @@ void CChatServer::RemovePlayer(ULONGLONG SessionID) {
 	__PLAYER_MAP_UNLOCK();
 
 
-	pPlayer->_isAlive = false;
+	pPlayer->_isLogin = false;
 
 	constexpr WORD comp = -1;
 	WORD sx = pPlayer->_SectorX;

@@ -8,7 +8,7 @@ struct Player {
 	Player() : _ID{ 0 }, _NickName{ 0 }, _TokenKey{0} {
 		_SessionID = 0;
 
-		_isAlive =0;
+		_isLogin =0;
 		_AccountNo =0;
 		_SectorX = -1;
 		_SectorY  =-1;
@@ -16,7 +16,7 @@ struct Player {
 	Player(SESSION_ID sessionID, INT64 accountNo, WORD sectorX, WORD sectorY, const WCHAR *ID, const WCHAR *nickname) : _TokenKey{ 0 } {
 		_SessionID = sessionID;
 
-		_isAlive = 0;
+		_isLogin = 0;
 		_AccountNo = accountNo;
 		_SectorX = sectorX;
 		_SectorY = sectorY;
@@ -28,7 +28,7 @@ struct Player {
 
 	SESSION_ID	_SessionID;
 
-	DWORD		_isAlive;
+	DWORD		_isLogin;
 	ACCOUNT_NO	_AccountNo;
 	WORD		_SectorX;
 	WORD		_SectorY;

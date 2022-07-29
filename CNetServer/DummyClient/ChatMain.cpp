@@ -10,7 +10,10 @@ int main() {
 	client.Connect(SERVER_IP, SERVER_PORT);
 
 	client.Login();
-	client.Login();
+	//client.Login();
+	client.TryMoveSector(12,13);
+	client.TryMoveSector(1,2);
+	client.TryMoveSector(99,2);
 
 	while (true);
 

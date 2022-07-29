@@ -17,7 +17,7 @@ public:
 
 	
 	void Login();
-	
+	void TryMoveSector(WORD sx, WORD sy);
 
 private:
 	virtual void OnEnterJoinServer() ; //< 서버와의 연결 성공 후
