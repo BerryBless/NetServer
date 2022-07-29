@@ -693,11 +693,11 @@ bool CNetServer::TimeOutProc() {
 	while (_isRunning) {
 		timeoutTime = timeGetTime();
 		Sleep(_timeoutMillisec);
-		for (int i = 1; i <= this->_maxConnection; ++i) {
+		/*for (int i = 1; i <= this->_maxConnection; ++i) {
 			if (_sessionContainer[i]._ID == 0) continue;
 			if (_sessionContainer[i]._lastRecvdTime >= timeoutTime) continue;
 			this->OnTimeout(_sessionContainer[i]._ID);
-		}
+		}*/
 	}
 	return false;
 }

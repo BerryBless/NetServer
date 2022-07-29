@@ -272,7 +272,7 @@ bool CNetClient::OnGQCS() {
 }
 
 bool CNetClient::SendProc(DWORD transferredSize) {
-	OnSend(transferredSize);
+	//OnSend(transferredSize);
 	//---------------------------
 	// 완료통지 온 패킷 지우기
 	//---------------------------

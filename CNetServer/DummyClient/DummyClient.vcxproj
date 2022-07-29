@@ -163,7 +163,9 @@
   <ItemGroup>
     <ClInclude Include="CChatClient.h" />
     <ClInclude Include="CEchoClient.h" />
+    <ClInclude Include="ChatServerProtocol.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="ChatPlayer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CChatClient.cpp" />

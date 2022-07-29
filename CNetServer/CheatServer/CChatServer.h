@@ -60,7 +60,12 @@ private:
 
 	void MakePacketResponseLogin(CPacket *pPacket, ACCOUNT_NO account_no, BYTE status);
 	void MakePacketResponseSectorMove(CPacket *pPacket, ACCOUNT_NO account_no, WORD sectorX, WORD sectorY);
-	void MakePacketResponseMessage(CPacket *pPacket, ACCOUNT_NO account_no, const WCHAR *ID, const WCHAR *nickName, const WCHAR *message,WORD msgLen);
+	void MakePacketResponseMessage(CPacket *pPacket, ACCOUNT_NO account_no, const WCHAR *ID, const WCHAR *nickName, WORD msgLen, const WCHAR *message);
+
+private:
+	void SendSector(CPacket *pPacket, WORD sectorX, WORD sectorY);
+	//void SendSectorAround(CPacket *pPacket, WORD sectorX, WORD sectorY);
+
 
 private:
 	void InsertPlayer(ULONGLONG sessionID, Player *pPlayer);

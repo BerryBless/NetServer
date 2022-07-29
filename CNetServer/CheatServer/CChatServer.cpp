@@ -147,7 +147,6 @@ void CChatServer::PacketProc(CPacket *pPacket, SESSION_ID SessionID, WORD type) 
 	case CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_MESSAGE:
 		PacketProcChatRequire(pPacket, SessionID);
 		break;
-		break;
 	case CHAT_PACKET_TYPE::ON_CLIENT_LEAVE:
 		RemovePlayer(SessionID);
 		break;
@@ -187,7 +186,7 @@ void CChatServer::PacketProcRequestLogin(CPacket *pPacket, SESSION_ID SessionID)
 	if (pPlayer == nullptr) {
 		// new Player
 		pPlayer = _playerPool.Alloc();
-		
+
 		pPacket->GetData((char *) pPlayer->_ID, ID_MAX_SIZE);
 		pPacket->GetData((char *) pPlayer->_NickName, NICK_NAME_MAX_SIZE);
 		pPacket->GetData((char *) pPlayer->_TokenKey, TOKEN_KEY_SIZE);
@@ -235,26 +234,43 @@ void CChatServer::PacketProcChatRequire(CPacket *pPacket, SESSION_ID SessionID) 
 
 // PACKET_SC_CHAT_RES_LOGIN
 void CChatServer::MakePacketResponseLogin(CPacket *pPacket, ACCOUNT_NO account_no, BYTE status) {
+	pPacket->AddRef();
 	CHAT_PACKET_TYPE type = CHAT_PACKET_TYPE::PACKET_SC_CHAT_RES_LOGIN;
-	(*pPacket) << type << status << (__int64) account_no;
+	(*pPacket) << ((WORD) type) << status << (__int64) account_no;
+	pPacket->SubRef();
 }
 
 //PACKET_SC_CHAT_RES_SECTOR_MOVE
 void CChatServer::MakePacketResponseSectorMove(CPacket *pPacket, ACCOUNT_NO account_no, WORD sectorX, WORD sectorY) {
+	pPacket->AddRef();
 	CHAT_PACKET_TYPE type = CHAT_PACKET_TYPE::PACKET_SC_CHAT_RES_SECTOR_MOVE;
-	(*pPacket) << type << (__int64) account_no << sectorX << sectorY;
+	(*pPacket) << ((WORD) type);
+	pPacket->PutData((char *) &account_no, sizeof(ACCOUNT_NO));
+	(*pPacket) << sectorX << sectorY;
+	pPacket->SubRef();
 
 }
 
 //PACKET_SC_CHAT_RES_MESSAGE
-void CChatServer::MakePacketResponseMessage(CPacket *pPacket, ACCOUNT_NO account_no, const WCHAR *ID, const WCHAR *nickName, const WCHAR *message, WORD msgLen) {
+void CChatServer::MakePacketResponseMessage(CPacket *pPacket, ACCOUNT_NO account_no, const WCHAR *ID, const WCHAR *nickName, WORD msgLen, const WCHAR *message) {
+	pPacket->AddRef();
 	CHAT_PACKET_TYPE type = CHAT_PACKET_TYPE::PACKET_SC_CHAT_RES_MESSAGE;
-	(*pPacket) << type << (__int64) account_no;
+	(*pPacket) << ((WORD) type);
+	pPacket->PutData((char *) &account_no, sizeof(ACCOUNT_NO));
 	pPacket->PutData((char *) ID, ID_MAX_SIZE);
 	pPacket->PutData((char *) nickName, NICK_NAME_MAX_SIZE);
 	(*pPacket) << msgLen;
 	pPacket->PutData((char *) message, msgLen);
+	pPacket->SubRef();
 
+}
+
+void CChatServer::SendSector(CPacket *pPacket, WORD sectorX, WORD sectorY) {
+	pPacket->AddRef();
+
+
+
+	pPacket->SubRef();
 }
 
 void CChatServer::InsertPlayer(ULONGLONG SessionID, Player *pPlayer) {

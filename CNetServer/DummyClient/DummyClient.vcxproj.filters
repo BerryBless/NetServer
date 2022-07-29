@@ -21,6 +21,12 @@
     <ClInclude Include="CChatClient.h">
       <Filter>Cheat</Filter>
     </ClInclude>
+    <ClInclude Include="ChatServerProtocol.h">
+      <Filter>Cheat</Filter>
+    </ClInclude>
+    <ClInclude Include="ChatPlayer.h">
+      <Filter>Cheat</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EchoMain.cpp">

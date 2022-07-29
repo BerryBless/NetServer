@@ -3,7 +3,7 @@
 
 #define dfWORKERTHREAD 8
 #define dfRUNTHREAD 4
-#define dfPORT 6000
+#define dfPORT 7897
 #define MAX_SESSION_COUNT 20000
 
 
