@@ -35,6 +35,16 @@ void CChatClient::TryMoveSector(WORD sx, WORD sy) {
 	pPacket->SubRef();
 }
 
+void CChatClient::SendChatMessage(const WCHAR *msg) {
+	WORD len = wcslen(msg);
+	CPacket *pPacket = CPacket::AllocAddRef();
+
+	MakePacketRequestMessage(pPacket, _player._AccountNo, len, msg);
+	SendPacket(pPacket);
+
+	pPacket->SubRef();
+}
+
 
 void CChatClient::OnEnterJoinServer() {
 }
@@ -128,6 +138,20 @@ void CChatClient::PacketProcResponseSectorMove(CPacket *pPacket) {
 
 //PACKET_SC_CHAT_RES_MESSAGE
 void CChatClient::PacketProcResponseMessage(CPacket *pPacket) {
+	Player sender;
+	WORD msgLen;
+	WCHAR message[MASSAGE_MAX_SIZE];
+	pPacket->AddRef();
+
+	pPacket->GetData((char *) &sender._AccountNo, sizeof(ACCOUNT_NO));
+	pPacket->GetData((char *) sender._ID, ID_MAX_SIZE);
+	pPacket->GetData((char *) sender._NickName, NICK_NAME_MAX_SIZE);
+	(*pPacket) >> msgLen;
+	pPacket->GetData((char *) message, msgLen * sizeof(WCHAR));
+	message[msgLen] = '\0';
+	pPacket->SubRef();
+
+	wprintf_s(L"ID [%s]_ Nick[%s] :: [%s]", sender._ID, sender._NickName, message);
 }
 
 //PACKET_CS_CHAT_REQ_LOGIN
@@ -160,6 +184,6 @@ void CChatClient::MakePacketRequestMessage(CPacket *pPacket, ACCOUNT_NO no, WORD
 	(*pPacket) << ((WORD) type);
 	pPacket->PutData((char *) &no, sizeof(ACCOUNT_NO));
 	(*pPacket) << msgLen;
-	pPacket->PutData((char *) message, msgLen);
+	pPacket->PutData((char *) message, msgLen * sizeof(WCHAR));
 	pPacket->SubRef();
 }

@@ -3,11 +3,15 @@
 #include "ChatPlayer.h"
 
 #define INVALID_PLAYER_SECTOR	51
+#define SECTOR_X_SIZE			50
+#define SECTOR_Y_SIZE			50
 #define ID_MAX_LEN				20
 #define ID_MAX_SIZE				40
 #define NICK_NAME_MAX_LEN		20
 #define NICK_NAME_MAX_SIZE		40
 #define TOKEN_KEY_SIZE			64
+#define MASSAGE_MAX_LEN			512
+#define MASSAGE_MAX_SIZE		1024
 
 class CChatClient : public CNetClient{
 
@@ -18,6 +22,7 @@ public:
 	
 	void Login();
 	void TryMoveSector(WORD sx, WORD sy);
+	void SendChatMessage(const WCHAR *msg);
 
 private:
 	virtual void OnEnterJoinServer() ; //< 서버와의 연결 성공 후

@@ -11,6 +11,8 @@
 #define NICK_NAME_MAX_LEN		20
 #define NICK_NAME_MAX_SIZE		40
 #define TOKEN_KEY_SIZE			64
+#define MASSAGE_MAX_LEN			512
+#define MASSAGE_MAX_SIZE		1024
 
 
 class CChatServer : public CNetServer {
@@ -63,8 +65,8 @@ private:
 	void MakePacketResponseMessage(CPacket *pPacket, ACCOUNT_NO account_no, const WCHAR *ID, const WCHAR *nickName, WORD msgLen, const WCHAR *message);
 
 private:
-	void SendSector(CPacket *pPacket, WORD sectorX, WORD sectorY);
-	//void SendSectorAround(CPacket *pPacket, WORD sectorX, WORD sectorY);
+	void BroadcastSector(CPacket *pPacket, WORD sectorX, WORD sectorY, Player *ex );
+	void BroadcastSectorAround(CPacket *pPacket, WORD sectorX, WORD sectorY, Player *ex );
 
 
 private:
@@ -83,8 +85,8 @@ private:
 
 private:
 	DWORD									_isRunning;
-	
-	
+
+
 	HANDLE									_updateThread;
 	//HANDLE									_monitorThread;
 
@@ -93,7 +95,7 @@ private:
 	ObjectPool_TLS <JobMessage>				_jobMsgPool;*/
 
 
-	SECTOR **								_sector;
+	SECTOR **_sector;
 	unordered_map<ULONGLONG, Player *>		_playerMap;
 	SRWLOCK									_playerMapLock;
 	ObjectPool<Player>						_playerPool;

@@ -278,11 +278,30 @@ void CChatServer::PacketProcMoveSector(CPacket *pPacket, SESSION_ID SessionID) {
 
 // PACKET_CS_CHAT_REQ_MESSAGE
 void CChatServer::PacketProcChatRequire(CPacket *pPacket, SESSION_ID SessionID) {
+	ACCOUNT_NO no;
+	WORD msgLen;
+	WCHAR message[MASSAGE_MAX_SIZE];
 	pPacket->AddRef();
 
 
+	pPacket->GetData((char *) &no, sizeof(ACCOUNT_NO));
+	(*pPacket) >> msgLen;
+	pPacket->GetData((char *) message, msgLen * sizeof(WCHAR));
+	message[msgLen] = '\0';
+
 
 	pPacket->SubRef();
+	Player *pSender = FindPlayer (SessionID);
+	if (no != pSender->_AccountNo) {
+		//TODO ERROR
+	}
+
+	CPacket *pResPacket = CPacket::AllocAddRef();
+
+	MakePacketResponseMessage(pResPacket, pSender->_AccountNo, pSender->_ID, pSender->_NickName, msgLen, message);
+	BroadcastSectorAround(pResPacket, pSender->_SectorX, pSender->_SectorY, nullptr);
+
+	pResPacket->SubRef();
 }
 
 
@@ -314,22 +333,42 @@ void CChatServer::MakePacketResponseMessage(CPacket *pPacket, ACCOUNT_NO account
 	pPacket->PutData((char *) ID, ID_MAX_SIZE);
 	pPacket->PutData((char *) nickName, NICK_NAME_MAX_SIZE);
 	(*pPacket) << msgLen;
-	pPacket->PutData((char *) message, msgLen);
+	pPacket->PutData((char *) message, msgLen * sizeof(WCHAR));
 	pPacket->SubRef();
 
 }
 
-void CChatServer::SendSector(CPacket *pPacket, WORD sectorX, WORD sectorY) {
+void CChatServer::BroadcastSector(CPacket *pPacket, WORD sectorX, WORD sectorY, Player *ex = nullptr) {
 	pPacket->AddRef();
 
 	SECTOR *pSector = &_sector[sectorY][sectorX];
-
 	for (auto iter = pSector->_playerSet.begin(); iter != pSector->_playerSet.end(); ++iter) {
-		SendPacket((*iter)->_SessionID, pPacket);
+		Player *pPlayer = (*iter);
+		if (pPlayer == ex) continue;
+		SendPacket(pPlayer->_SessionID, pPacket);
 	}
 
 	pPacket->SubRef();
 }
+
+void CChatServer::BroadcastSectorAround(CPacket *pPacket, WORD sectorX, WORD sectorY, Player *ex = nullptr) {
+	pPacket->AddRef();
+	WORD sx;
+	WORD sy;
+	for (int dy = -1; dy < 2; ++dy) {
+		sy = sectorY + dy;
+		if (sy < 0 || sy >= SECTOR_Y_SIZE) continue;
+		for (int dx = -1; dx < 2; ++dx) {
+			sx = sectorX + dx;
+			if (sx < 0 || sx >= SECTOR_X_SIZE) continue;
+			BroadcastSector(pPacket, sx, sy, ex);
+		}
+	}
+
+
+	pPacket->SubRef();
+}
+
 
 void CChatServer::InsertPlayer(ULONGLONG SessionID, Player *pPlayer) {
 	_playerMap.emplace(::make_pair(SessionID, pPlayer));
