@@ -12,12 +12,12 @@ CChatClient::CChatClient() {
 CChatClient::~CChatClient() {
 }
 
-void CChatClient::Login() {
+void CChatClient::Login(ACCOUNT_NO ano, const WCHAR *ID, const WCHAR *Nick, const char* tokenkey) {
 	CPacket *pPacket = CPacket::AllocAddRef();
-	_player._AccountNo = 12;
-	wsprintf(_player._ID, L"_ID");
-	wsprintf(_player._NickName, L"_NickName");
-	sprintf_s(_player._TokenKey, "_TokenKey");
+	_player._AccountNo = ano;
+	wcscpy_s(_player._ID, ID_MAX_SIZE, ID);
+	wcscpy_s(_player._NickName, NICK_NAME_MAX_SIZE, Nick);
+	strcpy_s(_player._TokenKey, TOKEN_KEY_SIZE, tokenkey);
 
 	MakePacketRequestLogin(pPacket, _player._AccountNo, _player._ID, _player._NickName, _player._TokenKey);
 
@@ -45,8 +45,13 @@ void CChatClient::SendChatMessage(const WCHAR *msg) {
 	pPacket->SubRef();
 }
 
+void CChatClient::Disconnect() {
+	CNetClient::Disconnect();
+}
+
 
 void CChatClient::OnEnterJoinServer() {
+	printf_s("OnEnterJoinServer()\n");
 }
 
 void CChatClient::OnLeaveServer() {

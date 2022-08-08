@@ -645,7 +645,7 @@ bool CNetServer::AcceptProc() {
 	//---------------------------
 	// WSARecv걸어주기
 	//---------------------------
-	RecvPost(pSession, dfLOGIC_ACCEPT, true);
+	RecvPost(pSession, dfLOGIC_ACCEPT);
 
 	//DecrementIOCount(pSession, dfLOGIC_ACCEPT);
 	if (InterlockedDecrement(&pSession->_IOcount) == 0)
@@ -783,7 +783,7 @@ bool CNetServer::SendPost(SESSION *pSession, int logic) {
 	return true;
 }
 
-bool CNetServer::RecvPost(SESSION *pSession, int logic, bool isAccept) {
+bool CNetServer::RecvPost(SESSION *pSession, int logic) {
 	if (pSession == NULL) {
 		CRASH();
 	}
@@ -939,7 +939,7 @@ logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), p
 
 
 
-CNetServer::SESSION *CNetServer::GetSessionAddIORef(SESSION_ID sessionID, DWORD logic) {
+CNetServer::SESSION *CNetServer::GetSessionAddIORef(SESSION_ID sessionID, int logic) {
 	SESSION *pSession = FindSession(sessionID);
 
 	if ((InterlockedIncrement(&pSession->_IOcount) & 0x80000000) != 0) {
@@ -957,7 +957,7 @@ CNetServer::SESSION *CNetServer::GetSessionAddIORef(SESSION_ID sessionID, DWORD 
 	return pSession;
 }
 
-void CNetServer::SessionSubIORef(SESSION *pSession, DWORD logic) {
+void CNetServer::SessionSubIORef(SESSION *pSession, int logic) {
 	if (pSession == NULL) CRASH();
 	//---------------------------
 	// IOCount--

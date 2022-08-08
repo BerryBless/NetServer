@@ -20,10 +20,10 @@ public:
 	~CChatClient();
 
 	
-	void Login();
+	void Login(ACCOUNT_NO ano, const WCHAR *ID, const WCHAR *Nick, const char *tokenkey);
 	void TryMoveSector(WORD sx, WORD sy);
 	void SendChatMessage(const WCHAR *msg);
-
+	void Disconnect();
 private:
 	virtual void OnEnterJoinServer() ; //< 서버와의 연결 성공 후
 	virtual void OnLeaveServer() ; //< 서버와의 연결이 끊어졌을 때

@@ -30,6 +30,7 @@ public:
 		alignas(64) DWORD _IOcount;
 		alignas(64) DWORD _IOFlag;
 		alignas(64) DWORD _sendPacketCnt;
+		alignas(64) DWORD _isAlive;
 
 		// Network
 		SOCKET _sock;
@@ -40,6 +41,7 @@ public:
 			_IOcount = 0x80000000;
 			_IOFlag = 0;
 			_sendPacketCnt = 0;
+			_isAlive = 0;
 			ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
 			ZeroMemory(&_sendOverlapped, sizeof(WSAOVERLAPPED));
 		}

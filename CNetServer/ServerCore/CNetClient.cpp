@@ -27,7 +27,7 @@ bool CNetClient::Connect(const WCHAR *serverIP, USHORT serverPort) {
 		//CRASH();
 	}
 
-		wcscpy_s(_serverIP, _countof(_serverIP), serverIP);
+	wcscpy_s(_serverIP, _countof(_serverIP), serverIP);
 	_serverPort = serverPort;
 
 	//InterlockedIncrement(&_client._IOcount);
@@ -36,6 +36,7 @@ bool CNetClient::Connect(const WCHAR *serverIP, USHORT serverPort) {
 	IncrementIOCount(300);
 	Lock();
 	InterlockedExchange(&_client._IOFlag, FALSE);
+	InterlockedExchange(&_client._isAlive, TRUE);
 	_client._sock = INVALID_SOCKET;
 	_client._sendPacketCnt = 0;
 	_client._recvQueue.ClearBuffer();
@@ -57,8 +58,9 @@ bool CNetClient::Disconnect() {
 	if (InterlockedOr(&_isRunning, FALSE) == FALSE) return false;
 	bool ret = true;
 	IncrementIOCount(33);
+	InterlockedExchange(&_client._isAlive, FALSE);
 	ret = CancelIoEx((HANDLE) _client._sock, nullptr);
-	closesocket( _client._sock);
+	//closesocket( _client._sock);
 	DecrementIOCount(33);
 
 	//Quit();
@@ -89,7 +91,6 @@ bool CNetClient::Start() {
 	if (InterlockedOr(&_isRunning, FALSE) != FALSE)
 		return false;
 	Init();
-	BeginThreads();
 
 	return true;
 }
@@ -426,6 +427,10 @@ bool CNetClient::RegisterIocp() {
 }
 
 bool CNetClient::SendPost() {
+	if (InterlockedOr((long *) &_client._isAlive, FALSE) == FALSE) {
+		return false;
+	}
+
 	//---------------------------
 	// 	   Send중인지 확인
 	//---------------------------
@@ -489,6 +494,9 @@ bool CNetClient::SendPost() {
 }
 
 bool CNetClient::RecvPost(bool isAccept) {
+	if (InterlockedOr((long *) &_client._isAlive, FALSE) == FALSE) {
+		return false;
+	}
 
 	//---------------------------
 	// IOCount ++
@@ -652,6 +660,7 @@ void CNetClient::Init() {
 
 	CreateIOCP();
 
+	BeginThreads();
 
 }
 

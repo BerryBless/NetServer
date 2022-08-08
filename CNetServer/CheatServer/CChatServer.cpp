@@ -13,7 +13,7 @@
 CChatServer::CChatServer() {
 	CLogger::Initialize();
 	CLogger::SetDirectory(L"serverlog");
-	CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);
+	CLogger::SetLogLevel(dfLOG_LEVEL_DEBUG);
 	_isRunning = false;
 
 	// TODO 스레드 분리 (jobQ)
@@ -111,7 +111,7 @@ void CChatServer::OnClientJoin(SESSION_ID SessionID) {
 
 void CChatServer::OnClientLeave(SESSION_ID SessionID) {
 	//PacketProc(nullptr, SessionID, CHAT_PACKET_TYPE::ON_CLIENT_LEAVE);
-	Disconnect(SessionID);
+	//Disconnect(SessionID);
 }
 
 
@@ -140,6 +140,7 @@ void CChatServer::PacketProc(CPacket *pPacket, SESSION_ID SessionID, WORD type) 
 	pPacket->AddRef();
 
 	WCHAR errmsg[512];
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"TYPE : %d", type);
 	switch (type) {
 	case CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_LOGIN:
 		PacketProcRequestLogin(pPacket, SessionID);
@@ -216,6 +217,8 @@ void CChatServer::PacketProcRequestLogin(CPacket *pPacket, SESSION_ID SessionID)
 	}
 
 	InterlockedIncrement(&_LoginCalc);
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"Login OK ANO[%d]", acno); // TODO ERROR MSG
+
 }
 
 // PACKET_CS_CHAT_REQ_SECTOR_MOVE

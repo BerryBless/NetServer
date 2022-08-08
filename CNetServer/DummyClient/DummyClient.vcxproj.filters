@@ -15,9 +15,6 @@
     <ClInclude Include="CEchoClient.h">
       <Filter>Echo</Filter>
     </ClInclude>
-    <ClInclude Include="pch.h">
-      <Filter>Utils</Filter>
-    </ClInclude>
     <ClInclude Include="CChatClient.h">
       <Filter>Cheat</Filter>
     </ClInclude>
@@ -26,6 +23,9 @@
     </ClInclude>
     <ClInclude Include="ChatPlayer.h">
       <Filter>Cheat</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

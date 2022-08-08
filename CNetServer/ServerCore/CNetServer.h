@@ -53,7 +53,7 @@ public:
 		alignas(64) DWORD _isAlive;
 		SESSION() {
 			_ID = 0;
-			_IOcount = 0;
+			_IOcount = 0x80000000;
 			_IOFlag = 0;
 			_sendPacketCnt = 0;
 			_sock = 0;
@@ -115,11 +115,11 @@ private:
 #endif
 
 	bool SendPost(SESSION *pSession, int logic);
-	bool RecvPost(SESSION *pSession, int logic, bool isAccept = false);
+	bool RecvPost(SESSION *pSession, int logic);
 	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic);
-	SESSION *GetSessionAddIORef(SESSION_ID sessionID, DWORD logic);
+	SESSION *GetSessionAddIORef(SESSION_ID sessionID, int logic);
 
-	void SessionSubIORef(SESSION *pSession, DWORD logic);
+	void SessionSubIORef(SESSION *pSession, int logic);
 	bool ReleaseSession(SESSION *pSession, int logic);
 
 private:
