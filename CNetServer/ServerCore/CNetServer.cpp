@@ -178,8 +178,19 @@ bool CNetServer::SendPacket(SESSION_ID SessionID, CPacket *pPacket) {
 	//---------------------------
 	// 페킷 포인터를 센드큐에
 	//---------------------------
+
+	// TEMP
+	printf_s("Send::");
+	pPacket->PrintPacket();
+
+
 	pPacket->SetNetHeader();
 	pPacket->AddRef();
+
+	// TEMP
+	printf_s("Encode::");
+	pPacket->PrintPacket();
+
 
 	pSession->_sendQueue.Enqueue(pPacket);
 	//---------------------------
@@ -546,10 +557,6 @@ bool CNetServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 		}
 		pPacket->Clear();
 
-		//---------------------------
-		// 페이로드 크기를 알았으니 헤더는 제 역할을 다함
-		// 페이로드만 페킷에 넣어주기
-		//---------------------------
 		payloadDeqRet = pSession->_recvQueue.Dequeue(pPacket->GetBufferPtr(), header.len + PACKET_NET_HEADER_SIZE);
 		if (payloadDeqRet != header.len + PACKET_NET_HEADER_SIZE) {
 			CRASH();
@@ -558,10 +565,25 @@ bool CNetServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 		int MoveWritePosRet = pPacket->MoveWritePos(header.len);
 		if (MoveWritePosRet != header.len)
 			CRASH();
+
+
+		// TEMP
+		printf_s("Recv::");
+		pPacket->PrintPacket();
+
+
 		if (pPacket->Decode() == false) {
+			printf_s("Decode::FAIE");
+			pPacket->PrintPacket();
 			CRASH();
 			return false;
 		}
+
+		// TEMP
+		printf_s("Decode::");
+		pPacket->PrintPacket();
+
+
 		OnRecv(pSession->_ID, pPacket);
 
 		msgByte += payloadDeqRet ;

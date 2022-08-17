@@ -220,7 +220,7 @@ protected:
 	alignas(64) ULONGLONG					_recvPacketPerSec;
 	alignas(64) ULONGLONG					_sendPacketCalc;
 	alignas(64) ULONGLONG					_sendPacketPerSec;
-	alignas(64) LONGLONG					_totalProcessedBytes;
+	alignas(64) ULONGLONG					_totalProcessedBytes;
 	alignas(64) ULONGLONG					_acceptCalc;
 	alignas(64) ULONGLONG					_acceptPerSec;
 	alignas(64) ULONGLONG					_totalAcceptSession;

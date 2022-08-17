@@ -143,16 +143,24 @@ void CChatServer::PacketProc(CPacket *pPacket, SESSION_ID SessionID, WORD type) 
 	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"TYPE : %d", type);
 	switch (type) {
 	case CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_LOGIN:
+		printf_s("//// PACKET_CS_CHAT_REQ_LOGIN\n");
 		PacketProcRequestLogin(pPacket, SessionID);
+		printf_s("// PACKET_CS_CHAT_REQ_LOGIN\n");
 		break;
 	case CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_SECTOR_MOVE:
+		printf_s("//// PACKET_CS_CHAT_REQ_SECTOR_MOVE\n");
 		PacketProcMoveSector(pPacket, SessionID);
+		printf_s("// PACKET_CS_CHAT_REQ_SECTOR_MOVE\n");
 		break;
 	case CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_MESSAGE:
+		printf_s("//// PACKET_CS_CHAT_REQ_MESSAGE\n");
 		PacketProcChatRequire(pPacket, SessionID);
+		printf_s("// PACKET_CS_CHAT_REQ_MESSAGE\n");
 		break;
 	case CHAT_PACKET_TYPE::ON_CLIENT_LEAVE:
+		printf_s("//// ON_CLIENT_LEAVE\n");
 		RemovePlayer(SessionID);
+		printf_s("// ON_CLIENT_LEAVE\n");
 		break;
 
 	case CHAT_PACKET_TYPE::ON_TIME_OUT:
@@ -238,6 +246,13 @@ void CChatServer::PacketProcMoveSector(CPacket *pPacket, SESSION_ID SessionID) {
 	pPacket->GetData((char *) &no, sizeof(ACCOUNT_NO));
 	(*pPacket) >> sx >> sy;
 	pPacket->SubRef();
+	// 섹터 범위 초과
+	if (sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE", SessionID); // TODO ERROR MSG
+		Disconnect(SessionID);
+		return;
+	}
+
 
 	// 플레이어 무결성
 	Player *pPlayer = FindPlayer(SessionID);
@@ -249,14 +264,13 @@ void CChatServer::PacketProcMoveSector(CPacket *pPacket, SESSION_ID SessionID) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  pPlayer->_isLogin == false", SessionID); // TODO ERROR MSG
 		Disconnect(SessionID);
 		return;
-	}
-
-	// 섹터 범위 초과
-	if (sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE", SessionID); // TODO ERROR MSG
+	}if (pPlayer->_AccountNo != no) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  _AccountNo == no", SessionID); // TODO ERROR MSG
 		Disconnect(SessionID);
 		return;
 	}
+	
+	
 
 	// 기존에 있던 섹터가 있는지
 	constexpr WORD comp = -1;
@@ -283,22 +297,53 @@ void CChatServer::PacketProcMoveSector(CPacket *pPacket, SESSION_ID SessionID) {
 void CChatServer::PacketProcChatRequire(CPacket *pPacket, SESSION_ID SessionID) {
 	ACCOUNT_NO no;
 	WORD msgLen;
-	WCHAR message[MASSAGE_MAX_SIZE];
+	WCHAR message[MASSAGE_MAX_SIZE] ;
 	pPacket->AddRef();
 
-
+	if (pPacket->GetDataSize() < sizeof(ACCOUNT_NO) + sizeof(msgLen)) {
+		Disconnect(SessionID);
+		pPacket->SubRef();
+		return;
+	}
 	pPacket->GetData((char *) &no, sizeof(ACCOUNT_NO));
 	(*pPacket) >> msgLen;
-	pPacket->GetData((char *) message, msgLen * sizeof(WCHAR));
-	message[msgLen] = '\0';
+
+	if (pPacket->GetDataSize() != msgLen) {
+		Disconnect(SessionID);
+		pPacket->SubRef();
+		return;
+	}
+	pPacket->GetData((char *) message, msgLen );
+	message[msgLen/2] = '\0';
+
+
 
 
 	pPacket->SubRef();
 	Player *pSender = FindPlayer (SessionID);
+	if (pSender == nullptr) {
+		//TODO ERROR
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pSender == nullptr");
+		Disconnect(SessionID);
+		return;
+	}
+	if (pSender->_isLogin == false) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pSender->_isLogin == false");
+		Disconnect(SessionID);
+		return;
+	}
 	if (no != pSender->_AccountNo) {
 		//TODO ERROR
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"no != pSender->_AccountNo");
+		Disconnect(SessionID);
+		return;
 	}
-
+	if (pSender->_SectorX >= 50 || pSender->_SectorY >= 50) {
+		//TODO ERROR
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pSender->_SectorX >= 50 || pSender->_SectorY >= 50");
+		Disconnect(SessionID);
+		return;
+	}
 	CPacket *pResPacket = CPacket::AllocAddRef();
 
 	MakePacketResponseMessage(pResPacket, pSender->_AccountNo, pSender->_ID, pSender->_NickName, msgLen, message);

@@ -61,7 +61,6 @@ public:
 	// Parameters: 없음.
 	// Return: (int)사용중인 데이타 사이즈.
 	//////////////////////////////////////////////////////////////////////////
-	int		GetSize(void) { return _writePos ; }
 	int		GetSendSize(void) { return _writePos - _sendPos; }
 	int		GetDataSize(void) {	return _writePos - _readPos;}
 
@@ -97,8 +96,12 @@ public:
 
 	void Encode();
 	bool Decode();
+	bool VerifyCheckSum();
 
-
+	//////
+	// debug
+	/////
+	void PrintPacket();
 	/* ============================================================================= */
 	// 연산자 오버로딩
 	/* ============================================================================= */
