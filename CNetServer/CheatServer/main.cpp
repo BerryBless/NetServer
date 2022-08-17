@@ -1,8 +1,8 @@
 #include "pch.h"
 #include "CChatServer.h"
 
-#define dfWORKERTHREAD 8
-#define dfRUNTHREAD 4
+#define dfWORKERTHREAD 1
+#define dfRUNTHREAD 1
 #define dfPORT 7897
 #define MAX_SESSION_COUNT 20000
 

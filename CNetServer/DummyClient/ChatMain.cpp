@@ -1,12 +1,12 @@
 #include "pch.h"
 #include "CChatClient.h"
 
-#define DUMMY_MAX 2
+#define DUMMY_MAX 30
 #define SERVER_PORT 7897
 #define SERVER_IP L"127.0.0.1"
 
-int main() {
 	CChatClient client[DUMMY_MAX];
+int main() {
 
 	for (int i = 0; i < DUMMY_MAX; ++i) {
 

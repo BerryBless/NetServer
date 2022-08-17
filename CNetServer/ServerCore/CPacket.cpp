@@ -65,77 +65,71 @@ void CPacket::SetNetHeader() {
 	_isEncode = true;
 	_sendPos = _readPos - sizeof(NET_HEADER);
 
-	NET_HEADER header  { 0 };
+	NET_HEADER header{ 0 };
 	header.code = PACKET_CODE;
 	header.len = GetDataSize();
-
-	int checksum = 0;
-	for(int i = _readPos; i < _writePos; ++i) {
-		unsigned char *temp = (unsigned char*)(_pBuffer + i);
-		checksum += *temp;
-	}
-	header.checksum =  checksum % 256;
-	header.randKey = 0x31;
-	//header.randKey = (unsigned char)rand();
-	memcpy_s(_pBuffer+ _sendPos, sizeof(NET_HEADER), &header, sizeof(NET_HEADER));
-	Encode();
-}
-
-void CPacket::Encode() {
-	unsigned char *temp = _pBuffer + _readPos;
-
-	BYTE P = 0;
-	BYTE E = 0;
-	BYTE D;
-
-	int len = GetDataSize();
-	int randKey = ((NET_HEADER *) _pBuffer)->randKey;
-	for (int i = 1; i <= len; ++i) {
-		D = *temp;
-		P = D ^ (P + randKey + i);
-		E = P ^ (E + FIXED_KEY + i);
-
-		*temp = E;
-		temp++;
-	}
-}
-
-bool CPacket::Decode() {
-	unsigned char *temp = _pBuffer + _readPos;
-	NET_HEADER header = *((NET_HEADER *) _pBuffer);
-
-	BYTE curP;
-	BYTE prevP = 0;
-	BYTE curE;
-	BYTE prevE = 0;
-	BYTE D;
-
-	int len = GetDataSize();
-	int randKey = header.randKey;
-
-	for (int i = 1; i <= len; ++i) {
-		curE = (BYTE) *temp;
-		curP = curE ^ (prevE + FIXED_KEY + i);
-		D = curP ^ (prevP + randKey + i);
-
-		*temp = D;
-		prevE = curE;
-		prevP = curP;
-
-		temp++;
-	}
-
 
 	int checksum = 0;
 	for (int i = _readPos; i < _writePos; ++i) {
 		unsigned char *temp = (unsigned char *) (_pBuffer + i);
 		checksum += *temp;
 	}
-	checksum %= 256;
-	if (checksum != header.checksum)
+	header.checksum = checksum % 256;
+	//header.randKey = 0x31;
+	header.randKey = (unsigned char) rand();
+	memcpy_s(_pBuffer + _sendPos, sizeof(NET_HEADER), &header, sizeof(NET_HEADER));
+	Encode();
+}
+
+void CPacket::Encode() {
+
+	unsigned char *temp = _pBuffer;
+	int bufferSize = GetDataSize();
+
+	unsigned char e = 0;
+	unsigned char p = 0;
+
+	int RandKey = temp[3];
+	for (int i = PACKET_NET_HEADER_SIZE - 1; i < bufferSize + PACKET_NET_HEADER_SIZE; i++) {
+		p = temp[i] ^ (p + RandKey + (unsigned char) (i - PACKET_NET_HEADER_SIZE + 2));
+		temp[i] = e = p ^ (e + FIXED_KEY + (unsigned char) (i - PACKET_NET_HEADER_SIZE + 2));
+	}
+}
+
+bool CPacket::Decode() {
+
+	unsigned char *temp = (unsigned char *) _pBuffer;
+
+	unsigned char RandKey = temp[3];
+
+	int bufferSize = GetDataSize();// GetBufferSize() - PACKET_NET_HEADER_SIZE;
+
+	unsigned char p = temp[4] ^ (this->FIXED_KEY + 1);
+	unsigned char prevP = p;
+	unsigned char prevE = temp[4];
+	temp[4] = p ^ (RandKey + 1);
+
+	for (int i = PACKET_NET_HEADER_SIZE; i < bufferSize + PACKET_NET_HEADER_SIZE; i++) {
+		prevP = p;
+		p = temp[i] ^ (prevE + FIXED_KEY + i - PACKET_NET_HEADER_SIZE + 2);
+		prevE = temp[i];
+		temp[i] = p ^ (prevP + RandKey + i - PACKET_NET_HEADER_SIZE + 2);
+	}
+
+	unsigned char checksum = this->_pBuffer[4];
+	temp = (unsigned char *) this->_pBuffer + 5;
+
+	unsigned int compChecksum = 0;
+	while (temp < (unsigned char *) (this->_pBuffer + this->_writePos)) {
+		compChecksum += *temp;
+		temp++;
+	}
+	compChecksum %= 256;
+
+	if (compChecksum != checksum)
 		return false;
-	_isEncode = false;
 	return true;
+
 }
 
 
