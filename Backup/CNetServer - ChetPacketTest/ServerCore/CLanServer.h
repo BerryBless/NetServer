@@ -3,7 +3,7 @@
 #include "CRingBuffer.h"
 #include "CPacket.h"
 #include "CLogger.h"
-#include "ObjectPool_TLS.hpp"
+#include "ObjectPool.hpp"
 #include "CCrashDump.h"
 #include "Stack.hpp"
 #include "Queue.hpp"
@@ -25,7 +25,7 @@
 // 0은 사용이 되지않는 ID
 // ----------------------------------------------
 
-class CNetServer {
+class CLanServer {
 public:
 	struct SESSION {
 		SESSION_ID _ID;
@@ -50,7 +50,6 @@ public:
 		alignas(64) DWORD _IOcount;
 		alignas(64) DWORD _IOFlag;
 		alignas(64) DWORD _sendPacketCnt;
-		alignas(64) DWORD _isAlive;
 		SESSION() {
 			_ID = 0;
 			_IOcount = 0x80000000;
@@ -59,14 +58,13 @@ public:
 			_sock = 0;
 			_IP = 0;
 			_port = 0;
-			_isAlive = 0;
 			ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
 			ZeroMemory(&_sendOverlapped, sizeof(WSAOVERLAPPED));
 		}
 	};
 public:
-	CNetServer();
-	~CNetServer();
+	CLanServer();
+	~CLanServer();
 protected:
 	// ==============================================
 	// Server Interface
@@ -79,7 +77,7 @@ protected:
 	bool SendPacket(SESSION_ID SessionID, CPacket *pPacket);
 
 
-	virtual bool OnConnectionRequest(WCHAR* IPstr, u_long IP, u_short Port) = 0; // TODO IP주소 string
+	virtual bool OnConnectionRequest(u_long IP, u_short Port) = 0;
 	virtual void OnClientJoin(SESSION_ID SessionID) = 0;
 	virtual void OnClientLeave(SESSION_ID SessionID) = 0;
 	virtual void OnRecv(SESSION_ID SessionID, CPacket *pPacket) = 0;
@@ -115,11 +113,11 @@ private:
 #endif
 
 	bool SendPost(SESSION *pSession, int logic);
-	bool RecvPost(SESSION *pSession, int logic);
+	bool RecvPost(SESSION *pSession, int logic, bool isAccept = false);
 	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic);
-	SESSION *GetSessionAddIORef(SESSION_ID sessionID, int logic);
+	SESSION *GetSessionAddIORef(SESSION_ID sessionID, DWORD logic);
 
-	void SessionSubIORef(SESSION *pSession, int logic);
+	void SessionSubIORef(SESSION * pSession, DWORD logic);
 	bool ReleaseSession(SESSION *pSession, int logic);
 
 private:
@@ -136,6 +134,7 @@ private:
 	inline void GetStringIP(WCHAR *str, sockaddr_in &addr) {
 		wsprintf(str, L"%d.%d.%d.%d", addr.sin_addr.S_un.S_un_b.s_b1, addr.sin_addr.S_un.S_un_b.s_b2, addr.sin_addr.S_un.S_un_b.s_b3, addr.sin_addr.S_un.S_un_b.s_b4);
 	}
+	
 private:
 	// ==============================================
 	// LOCK

@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Utils">
+      <UniqueIdentifier>{4b843896-bd4f-4a27-bef7-4fbe4b51d478}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Echo">
+      <UniqueIdentifier>{ca44d4fa-af40-48d0-b1f8-09e159fa7344}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Cheat">
+      <UniqueIdentifier>{370c0017-c022-4284-819f-8ddc89fd0f72}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CEchoClient.h">
+      <Filter>Echo</Filter>
+    </ClInclude>
+    <ClInclude Include="CChatClient.h">
+      <Filter>Cheat</Filter>
+    </ClInclude>
+    <ClInclude Include="ChatServerProtocol.h">
+      <Filter>Cheat</Filter>
+    </ClInclude>
+    <ClInclude Include="ChatPlayer.h">
+      <Filter>Cheat</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="EchoMain.cpp">
+      <Filter>Echo</Filter>
+    </ClCompile>
+    <ClCompile Include="CEchoClient.cpp">
+      <Filter>Echo</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CChatClient.cpp">
+      <Filter>Cheat</Filter>
+    </ClCompile>
+    <ClCompile Include="ChatMain.cpp">
+      <Filter>Cheat</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
