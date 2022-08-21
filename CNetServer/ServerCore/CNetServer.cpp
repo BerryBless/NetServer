@@ -22,10 +22,7 @@ CNetServer::CNetServer() {
 	setlocale(LC_ALL, "korean");
 	_wsetlocale(LC_ALL, L"korean");
 
-	//---------------------------
-	// 정말 1초로 카운팅
-	//---------------------------
-	timeBeginPeriod(1);
+
 
 	//---------------------------
 	// 세션 컨테이너 락 초기화
@@ -34,10 +31,34 @@ CNetServer::CNetServer() {
 
 	ResetMonitor();
 
+
+	//---------------------------
+	// 변수 초기화
+	//---------------------------
+	_Port = 0;
+	_bindIP = 0;
+	_listensock = INVALID_SOCKET;
+	_maxRunThreadCount = 0;
+	_workerThreadCount = 0;
+	_maxConnection = 0;
+	_isNagle = false;
 	_timeoutMillisec = 10000;
+
+	_isRunning = false;
+	_NumThreads = 0;
+
+	_hIOCP = INVALID_HANDLE_VALUE;
+	_hThreads = nullptr;
+
+	_sessionContainer = nullptr;
+	_emptyIndex.Clear();
+
+	_IDGenerater = 1;
+
 }
 
 CNetServer::~CNetServer() {
+	CloseHandle(_hIOCP);
 	WSACleanup();
 }
 
@@ -50,13 +71,7 @@ bool CNetServer::Start(u_long IP, u_short prot, BYTE workerThreadCount, BYTE max
 		OnError(111, L"Network is already running");
 		return false;
 	}
-	_isRunning = true;
-	//---------------------------
-	// 로거 초기화
-	//---------------------------
-	CLogger::Initialize();
-	CLogger::SetDirectory(L"serverlog");
-	CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);
+
 
 
 	//---------------------------
@@ -71,35 +86,15 @@ bool CNetServer::Start(u_long IP, u_short prot, BYTE workerThreadCount, BYTE max
 
 
 
-	//---------------------------
-	// 세팅된 정보로 리슨 만들기
-	//---------------------------
-	if (CreateListenSocket() == false) {
-		//---------------------------
-		// 리슨 소켓 생성 실패
-		//---------------------------
-		return false;
-	}
-
-	//---------------------------
-	// 세션 컨테이너 생성
-	//---------------------------
-	_sessionContainer = new SESSION[_maxConnection + 1];
-
-	InitializeIndex();
-	//---------------------------
-	// 스레드 핸들 배열 생성
-	// _workerThreadCount + acceptThread + monitorThread
-	//---------------------------
-	_NumThreads = _workerThreadCount + 4;
-	_hThreads = new HANDLE[(long long) _NumThreads];
-
-	//---------------------------
-	// 스레드 실행
-	//---------------------------
-	BeginThreads();
 
 
+	Startup();
+
+
+
+
+
+	_isRunning = true;
 
 	return _isRunning;
 }
@@ -141,18 +136,19 @@ bool CNetServer::Disconnect(SESSION_ID SessionID) {
 	// 세션 끊기
 	//---------------------------
 	bool ret = false;
-	SESSION *pSession = GetSessionAddIORef(SessionID, dfLOGIC_DISCONNECT);
+	SESSION *pSession = AcquireSession(SessionID, dfLOGIC_DISCONNECT);
 	if (pSession == NULL) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"//Disconnect ERROR :: can not find session..");
+		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//Disconnect ERROR :: can not find session..");
 		OnError(dfLOGIC_DISCONNECT, L"Disconnect ERROR :: can not find session..");
 		return false;
 	}
-	CLogger::_Log(dfLOG_LEVEL_ERROR, L"//Disconnect id[%d]",SessionID);
-	InterlockedExchange(&pSession->_isAlive, FALSE);
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//Disconnect id[%d]", SessionID);
 
+	InterlockedExchange(&pSession->_isAlive, FALSE);
 	ret = CancelIoEx((HANDLE) pSession->_sock, nullptr);
+
 	//closesocket(pSession->_sock);
-	SessionSubIORef(pSession, dfLOGIC_DISCONNECT);
+	ReturnSession(pSession, dfLOGIC_DISCONNECT);
 	return ret;
 }
 
@@ -160,9 +156,9 @@ bool CNetServer::SendPacket(SESSION_ID SessionID, CPacket *pPacket) {
 	//---------------------------
 	// 세션찾기
 	//---------------------------
-	SESSION *pSession = FindSession(SessionID);
+	SESSION *pSession = AcquireSession(SessionID, 664466);
 	if (pSession == NULL) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"//SendPacket ERROR :: can not find session..");
+		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: can not find session..");
 		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: can not find session..");
 		return false;
 	}
@@ -170,7 +166,8 @@ bool CNetServer::SendPacket(SESSION_ID SessionID, CPacket *pPacket) {
 	// 지워진(끊어진) 세션
 	//---------------------------
 	if (pSession->_ID == 0) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"//SendPacket ERROR :: Session is colsed..");
+		CRASH();
+		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: Session is colsed..");
 		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: Session is colsed..");
 		return false;
 	}
@@ -191,7 +188,7 @@ bool CNetServer::SendPacket(SESSION_ID SessionID, CPacket *pPacket) {
 #ifndef df_SENDTHREAD
 	SendPost(pSession, dfLOGIC_SEND_PACKET);
 #endif // !df_SENDTHREAD
-
+	ReturnSession(pSession, 446644);
 	PRO_END(L"SendPacket");
 	return true;
 }
@@ -210,6 +207,65 @@ BOOL CNetServer::DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr) {
 
 	FreeAddrInfo(pAddrInfo); // pAddrInfo 리스트 할당 해재!!!!!!
 	return TRUE;
+}
+
+void CNetServer::Startup() {
+	if (_isRunning == true) {
+		CLogger::_Log(dfLOG_LEVEL_NOTICE, L"///// Server Already Running");
+		return;
+	}
+	int _ = _wmkdir(L"ServerLog");
+	_ = _wmkdir(L"ServerLog\\LibraryLog");
+	//_ = _wmkdir(L"ServerLog\\MonitorLog");
+
+	//---------------------------
+	// 정말 1초로 카운팅
+	//---------------------------
+	timeBeginPeriod(1);
+
+	//---------------------------
+	// 로거 초기화
+	//---------------------------
+	CLogger::Initialize();
+	CLogger::SetDirectory(L"ServerLog\\LibraryLog");
+	CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);
+
+
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"==============================START SERVER==============================");
+
+
+	//---------------------------
+	// 세팅된 정보로 리슨 만들기
+	//---------------------------
+	if (CreateListenSocket() == false) {
+		//---------------------------
+		// 리슨 소켓 생성 실패
+		//---------------------------
+		CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Failed Create Listen Socket");
+		return;
+	}
+
+
+	//---------------------------
+	// 세션 컨테이너 생성
+	//---------------------------
+	_sessionContainer = new SESSION[_maxConnection + (u_short) 1];
+
+	InitializeIndex();
+
+
+	//---------------------------
+	// 스레드 핸들 배열 생성
+	// _workerThreadCount + acceptThread + monitorThread + SendThread
+	//---------------------------
+	_NumThreads = _workerThreadCount + 4;
+	_hThreads = new HANDLE[(long long) _NumThreads];
+
+
+	//---------------------------
+	// 스레드 실행
+	//---------------------------
+	BeginThreads();
 }
 
 bool CNetServer::CreateListenSocket() {
@@ -408,13 +464,13 @@ bool CNetServer::OnGQCS() {
 		return true;
 	}
 
-	SESSION_LOCK(pSession);
+	//SESSION_LOCK(pSession);
 	do {
 		if (InterlockedOr64((LONG64 *) &pSession->_ID, 0) == 0) {
 			//---------------------------
 			// 이미 지워진 세션
 			//---------------------------
-			CLogger::_Log(dfLOG_LEVEL_ERROR, L"OnGQCS :: Deleted Session\n");
+			CLogger::_Log(dfLOG_LEVEL_DEBUG, L"OnGQCS :: Deleted Session\n");
 			break;
 		}
 		if (transferredSize > 0 && GQCSRet == TRUE) {
@@ -432,13 +488,13 @@ bool CNetServer::OnGQCS() {
 			}
 		}
 	} while (0);
-	SESSION_UNLOCK(pSession);
+	//SESSION_UNLOCK(pSession);
 	//---------------------------
 	// 	   IOCount --
 	//---------------------------
-	//DecrementIOCount(pSession, dfLOGIC_WORKER + dfLOGIC_DECREMENT_IO);
-	if (InterlockedDecrement(&pSession->_IOcount) == 0)
-		ReleaseSession(pSession, dfLOGIC_WORKER + dfLOGIC_DECREMENT_IO);
+	DecrementIOCount(pSession, dfLOGIC_WORKER + dfLOGIC_DECREMENT_IO);
+	//if (InterlockedDecrement(&pSession->_IOcount) == 0)
+	//	ReleaseSession(pSession, dfLOGIC_WORKER + dfLOGIC_DECREMENT_IO);
 
 	return true;
 }
@@ -566,7 +622,7 @@ bool CNetServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 
 		OnRecv(pSession->_ID, pPacket);
 
-		msgByte += payloadDeqRet ;
+		msgByte += payloadDeqRet;
 
 		//---------------------------
 		// 참조카운트 하나감소
@@ -581,38 +637,52 @@ bool CNetServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 	return RecvPost(pSession, dfLOGIC_CPMPLETE_RECV);
 }
 
+bool CNetServer::TryAccept(SOCKET &clientSocket, sockaddr_in &clientAddr) {
+	int addrlen = sizeof(clientAddr);
+	SOCKET sock = accept(_listensock, (SOCKADDR *) &clientAddr, &addrlen);;
+	if (sock == INVALID_SOCKET) {
+		int err = WSAGetLastError();
+		if (err == WSAEINTR || err == WSAENOTSOCK || err == WSAEINVAL) {
+			//---------------------------
+			// 리슨소켓 닫음
+			// 어셉트 스레드 종료
+			//---------------------------
+			PostQueuedCompletionStatus(_hIOCP, dfEXIT_CODE, dfEXIT_CODE, NULL);
+			return false;
+		}
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"TryAccept [Error: %d]", err);
+		OnError(err, L"Socket Accept");
+	}
+
+	clientSocket = sock;
+	if (_emptyIndex.GetSize() == 0) {
+		closesocket(sock);
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"TryAccept _emptyIndex.GetSize() == 0");
+		OnError(001, L"Socket Accept _emptyIndex.GetSize() == 0"); // TODO errorcode
+	}
+	return true;
+}
+
 bool CNetServer::AcceptProc() {
 	//---------------------------
 	// Accept처리
 	//---------------------------
 	SOCKADDR_IN clientaddr;
-	int addrlen = sizeof(clientaddr);
 	SOCKET clientsock;
 
 	//---------------------------
 	// 동기 accept()
 	//---------------------------
-	clientsock = accept(_listensock, (SOCKADDR *) &clientaddr, &addrlen);
-	PRO_BEGIN(L"acceptProc");
-	if (clientsock == INVALID_SOCKET) {
-		int err = WSAGetLastError();
-		if (err == WSAENOTSOCK || err == WSAEINTR) {
-			//---------------------------
-			// 리슨소켓 닫음
-			// 어셉트 스레드 종료
-			//---------------------------
-			return false;
-		}
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Socket Accept [Error: %d]", err);
-		OnError(err, L"Socket Accept");
-		return _isRunning;
+	if (TryAccept(clientsock, clientaddr) == false) {
+		return false;
 	}
+
 	//---------------------------
 	// 컨텐츠에서 처리할것 블랙,화이트 리스트, 지역차단 등등
 	//---------------------------
 	WCHAR IPStr[20];
 	GetStringIP(IPStr, clientaddr);
-	if (OnConnectionRequest(IPStr,clientaddr.sin_addr.S_un.S_addr, clientaddr.sin_port) == false) {
+	if (OnConnectionRequest(IPStr, ntohl(clientaddr.sin_addr.S_un.S_addr), ntohs(clientaddr.sin_port)) == false) {
 		//---------------------------
 		// 컨탠츠에서 차단한 접속처리
 		//---------------------------
@@ -638,20 +708,27 @@ bool CNetServer::AcceptProc() {
 	// 세션 만들기
 	//---------------------------
 	SESSION *pSession = CreateSession(clientsock, clientaddr);
+	if (pSession == nullptr) {
+		::closesocket(clientsock);
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Accept :: Cannot Create Session");
+		return true;
+	}
 
 	//---------------------------
 	// 컨탠츠에서 클라이언트가 완료됐을때 처리 할 가상함수
 	//---------------------------
-	OnClientJoin(pSession->_ID);
+	OnClientJoin(pSession->_IPStr, pSession->_IP, pSession->_port, pSession->_ID);
 
 	//---------------------------
 	// WSARecv걸어주기
 	//---------------------------
 	RecvPost(pSession, dfLOGIC_ACCEPT);
 
-	//DecrementIOCount(pSession, dfLOGIC_ACCEPT);
-	if (InterlockedDecrement(&pSession->_IOcount) == 0)
-		ReleaseSession(pSession, dfLOGIC_ACCEPT);
+
+	// 세션 만들때 _IOcount --
+	DecrementIOCount(pSession, dfLOGIC_ACCEPT);
+	//if (InterlockedDecrement(&pSession->_IOcount) == 0)
+	//	ReleaseSession(pSession, dfLOGIC_ACCEPT);
 
 
 	//---------------------------
@@ -660,7 +737,6 @@ bool CNetServer::AcceptProc() {
 	InterlockedIncrement(&_acceptCalc);
 	InterlockedIncrement(&_curSessionCount);
 	InterlockedIncrement(&_totalAcceptSession);
-	PRO_END(L"acceptProc");
 
 	return _isRunning;
 }
@@ -680,12 +756,12 @@ bool CNetServer::SendThreadProc() {
 		for (int i = 1; i <= this->_maxConnection; ++i) {
 			if (InterlockedOr64((LONG64 *) &_sessionContainer[i]._ID, 0) == 0)
 				continue;
-			SESSION *pSession = GetSessionAddIORef(_sessionContainer[i]._ID, 889988);
+			SESSION *pSession = AcquireSession(_sessionContainer[i]._ID, 889988);
 			if (pSession == nullptr)
 				continue;
 			if (pSession->_sendQueue.GetSize() > 0)
 				SendPost(pSession, 123321);
-			SessionSubIORef(pSession, 998899);
+			ReturnSession(pSession, 998899);
 		}
 	}
 	return false;
@@ -733,6 +809,11 @@ bool CNetServer::SendPost(SESSION *pSession, int logic) {
 		}
 		return FALSE;
 	}
+	//---------------------------
+	// IOCount ++
+	//---------------------------
+	IncrementIOCount(pSession, logic + dfLOGIC_INCREMENT_IO);
+	//InterlockedIncrement(&pSession->_IOcount);
 
 	//---------------------------
 	// 보낼게 있음
@@ -744,11 +825,7 @@ bool CNetServer::SendPost(SESSION *pSession, int logic) {
 
 	SetWSABuffer(bufferSet, pSession, FALSE, logic + dfLOGIC_SET_BUFFER);
 
-	//---------------------------
-	// IOCount ++
-	//---------------------------
-	//IncrementIOCount(pSession, logic + dfLOGIC_INCREMENT_IO);
-	InterlockedIncrement(&pSession->_IOcount);
+
 
 	//---------------------------
 	// 오버랩 초기화
@@ -762,7 +839,8 @@ bool CNetServer::SendPost(SESSION *pSession, int logic) {
 		int err = WSAGetLastError();
 
 		if (err != WSA_IO_PENDING) {
-			if (err != 10054 && err != 10053) {
+			CancelIoEx((HANDLE) pSession->_sock, nullptr);
+			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
 				CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// WSASend(%d) ERROR [%d]", logic, err);
 				//CRASH();
 			}
@@ -770,9 +848,9 @@ bool CNetServer::SendPost(SESSION *pSession, int logic) {
 			//	Error Fail WSASend
 			//  IOCount --
 			//---------------------------
-			//DecrementIOCount(pSession, logic + dfLOGIC_DECREMENT_IO);
-			if (InterlockedDecrement(&pSession->_IOcount) == 0)
-				ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
+			DecrementIOCount(pSession, logic + dfLOGIC_DECREMENT_IO);
+			//if (InterlockedDecrement(&pSession->_IOcount) == 0)
+			//	ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
 
 			return false;
 		}
@@ -789,18 +867,14 @@ bool CNetServer::RecvPost(SESSION *pSession, int logic) {
 	if (InterlockedOr((long *) &pSession->_isAlive, FALSE) == FALSE) {
 		return false;
 	}
-	/*if (pSession->_ID == 0) {
-		return false;
-	}*/
 	if (InterlockedOr64((LONG64 *) &pSession->_ID, 0) == 0) {
 		CRASH();
 	}
 	//---------------------------
 	// IOCount ++
 	//---------------------------
-	//IncrementIOCount(pSession, logic + dfLOGIC_INCREMENT_IO);
-	InterlockedIncrement(&pSession->_IOcount);
-
+	IncrementIOCount(pSession, logic + dfLOGIC_INCREMENT_IO);
+	//InterlockedIncrement(&pSession->_IOcount);
 
 	//---------------------------
 	// WSABUF 셋팅
@@ -812,23 +886,21 @@ bool CNetServer::RecvPost(SESSION *pSession, int logic) {
 
 	SetWSABuffer(bufferSet, pSession, TRUE, logic + dfLOGIC_SET_BUFFER);
 
-
-
 	//---------------------------
 	// 오버랩 초기화
 	//---------------------------
 	memset(&pSession->_recvOverlapped, 0, sizeof(pSession->_recvOverlapped));
+
 	//---------------------------
 	//WSARecv()
 	//---------------------------
-
-
 	int recvRet = WSARecv(pSession->_sock, bufferSet, 2, &byteRecvs, &flag, &pSession->_recvOverlapped, nullptr);
 	if (recvRet == SOCKET_ERROR) {
 		int err = WSAGetLastError();
 
 		if (err != WSA_IO_PENDING) {
-			if (err != 10054 && err != 10053) {
+			CancelIoEx((HANDLE) pSession->_sock, nullptr);
+			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
 				CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// %d :: WSARecv ERROR [%d]\n", logic, err);
 				CRASH();
 
@@ -837,9 +909,9 @@ bool CNetServer::RecvPost(SESSION *pSession, int logic) {
 			//	Error : Fail WSARecv
 			//  IOCount --
 			//---------------------------
-			//DecrementIOCount(pSession, logic + dfLOGIC_DECREMENT_IO);
-			if (InterlockedDecrement(&pSession->_IOcount) == 0)
-				ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
+			DecrementIOCount(pSession, logic + dfLOGIC_DECREMENT_IO);
+			//if (InterlockedDecrement(&pSession->_IOcount) == 0)
+			//	ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
 			return false;
 		}
 	}
@@ -851,7 +923,6 @@ bool CNetServer::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, i
 		//---------------------------
 		// recv버퍼에 넣기
 		//---------------------------
-
 		char *pBuf = pSession->_recvQueue.GetBufferPtr();
 		char *pRear = pSession->_recvQueue.GetRearBufferPtr();
 		int  enSize = pSession->_recvQueue.DirectEnqueueSize();
@@ -860,6 +931,7 @@ bool CNetServer::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, i
 		BufSets[0].len = enSize;
 		BufSets[1].buf = pBuf;
 		BufSets[1].len = frSize - enSize;
+
 		//---------------------------
 		// 무결성 검사
 		//---------------------------
@@ -895,24 +967,40 @@ bool CNetServer::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, i
 
 	return true;
 }
-/*
+
 bool CNetServer::IncrementIOCount(SESSION *pSession, int logic) {
-	if (pSession == NULL) return false;
 	//---------------------------
 	// IOCount++
 	//---------------------------
 	if (pSession == NULL) CRASH();
-	DWORD retval = InterlockedIncrement(&pSession->_IOcount);
+	//DWORD retval = InterlockedIncrement(&pSession->_IOcount);
+	if ((InterlockedIncrement(&pSession->_IOcount) & 0x80000000) != 0) {
+		if (InterlockedDecrement(&pSession->_IOcount) == 0)
+			this->ReleaseSession(pSession, logic);
+		return false;
+	}
+
+#ifdef df_LOGGING_SESSION_LOGIC
+	int idx = InterlockedIncrement(&pSession->_IncIndex);
+	if (idx >= df_LOGGING_SESSION_LOGIC) pSession->_IncIndex = 0;
+	pSession->_IncLog[idx] = logic;
+#endif // df_LOGGING_SESSION_LOGIC
+
 	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"IncrementIOCount() ID[%lld] :: logic[%d]", pSession->_ID, logic);
 	return true;
 }
 
 bool CNetServer::DecrementIOCount(SESSION *pSession, int logic) {
-	if (pSession == NULL) return false;
 	//---------------------------
 	// IOCount--
 	//---------------------------
+	if (pSession == NULL) CRASH();
 	DWORD retval = InterlockedDecrement(&pSession->_IOcount);
+#ifdef df_LOGGING_SESSION_LOGIC
+	int idx = InterlockedIncrement(&pSession->_DecIndex);
+	if (idx >= df_LOGGING_SESSION_LOGIC) pSession->_DecIndex = 0;
+	pSession->_DecLog[idx] = logic;
+#endif // df_LOGGING_SESSION_LOGIC
 	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]", pSession->_ID, logic, retval);
 
 	if (retval == 0) {
@@ -934,18 +1022,21 @@ logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), p
 		CRASH();
 	}
 	return true;
-}*/
+}
 
 
 
-CNetServer::SESSION *CNetServer::GetSessionAddIORef(SESSION_ID sessionID, int logic) {
+CNetServer::SESSION *CNetServer::AcquireSession(SESSION_ID sessionID, int logic) {
 	SESSION *pSession = FindSession(sessionID);
-
+#ifndef df_LOGGING_SESSION_LOGIC
 	if ((InterlockedIncrement(&pSession->_IOcount) & 0x80000000) != 0) {
 		if (InterlockedDecrement(&pSession->_IOcount) == 0)
 			this->ReleaseSession(pSession, logic);
 		return nullptr;
 	}
+#else
+	IncrementIOCount(pSession, logic);
+#endif // !df_LOGGING_SESSION_LOGIC
 
 	if (pSession->_ID != sessionID) {
 		if (InterlockedDecrement(&pSession->_IOcount) == 0)
@@ -956,8 +1047,9 @@ CNetServer::SESSION *CNetServer::GetSessionAddIORef(SESSION_ID sessionID, int lo
 	return pSession;
 }
 
-void CNetServer::SessionSubIORef(SESSION *pSession, int logic) {
+void CNetServer::ReturnSession(SESSION *pSession, int logic) {
 	if (pSession == NULL) CRASH();
+#ifndef df_LOGGING_SESSION_LOGIC
 	//---------------------------
 	// IOCount--
 	//---------------------------
@@ -981,6 +1073,9 @@ SOCK[%d] :: recv [%d]byte, send [%d]byte, IOCount[%d], _IOFlag [%d]",
 logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
 		CRASH();
 	}
+#else
+	DecrementIOCount(pSession, logic);
+#endif // !df_LOGGING_SESSION_LOGIC
 }
 
 
@@ -995,37 +1090,37 @@ bool CNetServer::ReleaseSession(SESSION *pSession, int logic) {
 	if (InterlockedCompareExchange(&pSession->_IOcount, 0x80000000, 0) != 0) {
 		return false;
 	}
-	if (ID != pSession->_ID) {
-		return false;
-	}
-	InterlockedExchange(&pSession->_isAlive, FALSE);
-
-	OnClientLeave(pSession->_ID);
-	closesocket(pSession->_sock);
-	//---------------------------
-	// Session관리 컨테이너에서 삭제
-	//---------------------------
 	LONG64 idRet = InterlockedExchange64((LONG64 *) &pSession->_ID, 0);
 	if (idRet != ID) {
 		CRASH();
 	}
+	InterlockedExchange(&pSession->_isAlive, FALSE);
 
+	closesocket(pSession->_sock);
+	//---------------------------
+	// Session관리 컨테이너에서 삭제
+	//---------------------------
 	int sockRet = InterlockedExchange((long *) &pSession->_sock, INVALID_SOCKET);
 	if (sockRet == INVALID_SOCKET) {
 		CRASH();
 	}
 
-	InterlockedExchange(&pSession->_IOFlag, FALSE);
 
 	//---------------------------
 	// Sendq에 있던거 풀에 다시넣기
 	//---------------------------
-	CPacket *pPacket;
-	while (pSession->_sendQueue.Dequeue(&pPacket)) {
+	DWORD sendCount = InterlockedExchange(&pSession->_sendPacketCnt, 0);
+
+	CPacket *pPacket = nullptr;
+	for (int i = 0; i < sendCount; ++i) {
+		pSession->_sendQueue.Dequeue(&pPacket);
 		pPacket->SubRef();
 	}
 	pSession->_recvQueue.ClearBuffer();
 
+	InterlockedExchange(&pSession->_IOFlag, FALSE);
+
+	OnClientLeave(ID);
 	USHORT idx = SessionIDtoIndex(ID);
 	if (idx == 0) CRASH();
 	_emptyIndex.Push(idx);
@@ -1039,7 +1134,7 @@ bool CNetServer::ReleaseSession(SESSION *pSession, int logic) {
 }
 
 
-CNetServer::SESSION *CNetServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
+CNetServer::SESSION *CNetServer::CreateSession(SOCKET sock, sockaddr_in clientaddr) {
 	//---------------------------
 	// ID생성
 	//---------------------------
@@ -1072,13 +1167,13 @@ CNetServer::SESSION *CNetServer::CreateSession(SOCKET sock, SOCKADDR_IN addr) {
 	//---------------------------
 	// 정보 셋팅
 	//---------------------------
-	pSession->_ID = id;
-	pSession->_sock = sock;
-	GetStringIP(pSession->_IPStr, addr);
-	pSession->_IP = addr.sin_addr.S_un.S_addr;
-	pSession->_port = addr.sin_port;
-	pSession->_lastRecvdTime = timeGetTime();
-
+	InterlockedExchange(&pSession->_ID, id);
+	InterlockedExchange(&pSession->_sock, sock);
+	ZeroMemory(&pSession->_IPStr, sizeof(pSession->_IPStr));
+	GetStringIP(pSession->_IPStr, clientaddr);
+	pSession->_IP = ntohl(clientaddr.sin_addr.S_un.S_addr);
+	pSession->_port = ntohs(clientaddr.sin_port);
+	InterlockedExchange(&pSession->_lastRecvdTime, timeGetTime());
 
 	//---------------------------
 	// IOCP

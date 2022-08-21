@@ -52,8 +52,8 @@ private:
 
 private:
 	// virtual
-	virtual bool OnConnectionRequest(WCHAR *IPStr, u_long IP, u_short Port); //< accept 직후
-	virtual void OnClientJoin(SESSION_ID SessionID); //< Accept 후 접속처리 완료 후 호출.
+	virtual bool OnConnectionRequest(WCHAR *IPStr, DWORD IP, USHORT Port); //< accept 직후
+	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID); //< Accept 후 접속처리 완료 후 호출.
 	virtual void OnClientLeave(SESSION_ID SessionID); //< Release 후 호출
 	virtual void OnRecv(SESSION_ID SessionID, CPacket *packet); //< 패킷 수신 완료 후
 	virtual void OnError(int errorcode, const WCHAR *log); // 에러 발생시 유저한테 알려줄곳
@@ -95,6 +95,7 @@ private:
 	HANDLE									_hThread[2];
 
 	Queue <JobMessage*>						_jobQueue;
+	HANDLE									_DequeueEvent;
 	ObjectPool_TLS <JobMessage>				_jobMsgPool;
 
 

@@ -10,7 +10,7 @@
 #define __SECTOR_LOCK(x, y)		this->SectorLock(x, y)
 #define __SECTOR_UNLOCK(x, y)	this->SectorUnlock(x, y)
 
-CChatServer::CChatServer() {
+CChatServer::CChatServer() :_hThread{ 0 }, _startTime{ 0 }, _timeFormet{ 0 } {
 	CLogger::Initialize();
 	CLogger::SetDirectory(L"serverlog");
 	CLogger::SetLogLevel(dfLOG_LEVEL_DEBUG);
@@ -41,6 +41,14 @@ CChatServer::~CChatServer() {
 
 void CChatServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
 	if (_isRunning == true) return;
+	_DequeueEvent = nullptr;
+	_DequeueEvent = CreateEvent(nullptr, false, false, nullptr);
+	if (_DequeueEvent == nullptr) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"_DequeueEvent == nullptr");
+		return;
+	}
+
+
 	_isRunning = Start(IP, port, workerThreadCount, maxRunThreadCount, nagle, maxConnection);
 	time(&_startTime);
 	localtime_s(&_timeFormet, &_startTime);
@@ -57,48 +65,37 @@ void CChatServer::CommandWait() {
 	int printTick = 0;
 
 	for (;;) {
-		if (_kbhit()) {
-			char cmd = _getch();
-			if (cmd == 'Q' || cmd == 'q') {
-				//MemProfiler::Instance().PrintInfo();
-				Quit();
-				break;
-			}
-			if (cmd == 'P' || cmd == 'p') {
-				PRO_PRINT(L"CLanserver_PROFILE.log");
-				PrintFileMonitor();
-			}
-			if (cmd == 'C' || cmd == 'c') {
-				CRASH();
-			}
-			if (cmd == '1') {
-				wprintf_s(L"CHANGE LOG LEVEL :: DEBUG\n");
-				CLogger::SetLogLevel(dfLOG_LEVEL_DEBUG);
-			}
-			if (cmd == '2') {
-				wprintf_s(L"CHANGE LOG LEVEL :: ERROR\n");
-				CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);
-			}
-			if (cmd == '3') {
-				wprintf_s(L"CHANGE LOG LEVEL :: NOTICE\n");
-				CLogger::SetLogLevel(dfLOG_LEVEL_NOTICE);
-			}
+		char cmd = _getch();
+		if (cmd == 'Q' || cmd == 'q') {
+			//MemProfiler::Instance().PrintInfo();
+			Quit();
+			break;
 		}
-		// Monitor
-		Sleep(1000);
-		// profile
-		if (printTick >= 300) {
+		if (cmd == 'P' || cmd == 'p') {
+			PRO_PRINT(L"CLanserver_PROFILE.log");
 			PrintFileMonitor();
-			printTick = 0;
-		} else
-			PrintMonitor(stdout);
-		printTick++;
+		}
+		if (cmd == 'C' || cmd == 'c') {
+			CRASH();
+		}
+		if (cmd == '1') {
+			wprintf_s(L"CHANGE LOG LEVEL :: DEBUG\n");
+			CLogger::SetLogLevel(dfLOG_LEVEL_DEBUG);
+		}
+		if (cmd == '2') {
+			wprintf_s(L"CHANGE LOG LEVEL :: ERROR\n");
+			CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);
+		}
+		if (cmd == '3') {
+			wprintf_s(L"CHANGE LOG LEVEL :: NOTICE\n");
+			CLogger::SetLogLevel(dfLOG_LEVEL_NOTICE);
+		}
 	}
-
 }
 
 unsigned int __stdcall CChatServer::UpdateThread(LPVOID arg) {
 	CChatServer *pServer = (CChatServer *) arg;
+	while (!pServer->_isRunning);
 	while (pServer->UpdateProc());
 	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"::CHAT SERVER -- Monitor Thread IS Closed..\n");
 	return 0;
@@ -106,6 +103,7 @@ unsigned int __stdcall CChatServer::UpdateThread(LPVOID arg) {
 
 unsigned int __stdcall CChatServer::MonitoringThread(LPVOID arg) {
 	CChatServer *pServer = (CChatServer *) arg;
+	while (!pServer->_isRunning);
 	while (pServer->MonitoringProc());
 	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"::CHAT SERVER -- Monitor Thread IS Closed..\n");
 	return 0;
@@ -113,13 +111,15 @@ unsigned int __stdcall CChatServer::MonitoringThread(LPVOID arg) {
 
 bool CChatServer::UpdateProc() {
 	if (_jobQueue.IsEmpty()) return _isRunning;
+	//WaitForSingleObject(_DequeueEvent, INFINITE);
+
 	++_TotalUpdateCount;
 	JobMessage *job;
 
 	_jobQueue.Dequeue(&job);
 
 	PacketProc(job->_pPacket, job->_SessionID, job->_Type);
-	if(job->_pPacket!=nullptr)
+	if (job->_pPacket != nullptr)
 		job->_pPacket->SubRef();
 
 	_jobMsgPool.Free(job);
@@ -128,13 +128,15 @@ bool CChatServer::UpdateProc() {
 
 bool CChatServer::MonitoringProc() {
 
-	Sleep(999);
+	Sleep(1000);
 	_SectorMoveTPS = InterlockedExchange(&_SectorMoveCalc, 0);
 	_ChatRecvTPS = InterlockedExchange(&_ChatRecvCalc, 0);
 	_ChatSendTPS = InterlockedExchange(&_ChatSendCalc, 0);
 	_LoginTPS = InterlockedExchange(&_LoginCalc, 0);
 	_hardMoniter.UpdateHardWareTime();
 	_procMonitor.UpdateProcessTime();
+
+	PrintMonitor(stdout);
 
 	return _isRunning;
 }
@@ -147,18 +149,24 @@ void CChatServer::BeginThread() {
 	_hThread[i++] = (HANDLE) _beginthreadex(nullptr, 0, MonitoringThread, this, 0, nullptr);
 }
 
-bool CChatServer::OnConnectionRequest(WCHAR *IPStr, u_long IP, u_short Port) {
+bool CChatServer::OnConnectionRequest(WCHAR *IPStr, DWORD IP, USHORT Port) {
 
 
 	return _isRunning;
 }
 
-void CChatServer::OnClientJoin(SESSION_ID SessionID) {
+void CChatServer::OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID) {
 }
 
 void CChatServer::OnClientLeave(SESSION_ID SessionID) {
-	//PacketProc(nullptr, SessionID, CHAT_PACKET_TYPE::ON_CLIENT_LEAVE);
-	//Disconnect(SessionID);
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
+	JobMessage *job = _jobMsgPool.Alloc();
+	job->_SessionID = SessionID;
+	job->_Type = CHAT_PACKET_TYPE::ON_CLIENT_LEAVE;
+	job->_pPacket = nullptr;
+
+	_jobQueue.Enqueue(job);
+	SetEvent(_DequeueEvent);
 }
 
 
@@ -175,8 +183,7 @@ void CChatServer::OnRecv(SESSION_ID SessionID, CPacket *pPacket) {
 	pPacket->AddRef();
 
 	_jobQueue.Enqueue(job);
-
-	//PacketProc(pPacket, SessionID, type);
+	SetEvent(_DequeueEvent);
 
 	pPacket->SubRef();
 }
@@ -186,13 +193,23 @@ void CChatServer::OnError(int errorcode, const WCHAR *log) {
 }
 
 void CChatServer::OnTimeout(SESSION_ID SessionID) {
-	CLogger::_Log(dfLOG_LEVEL_ERROR, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
-	Disconnect(SessionID);
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
+	JobMessage *job = _jobMsgPool.Alloc();
+	job->_SessionID = SessionID;
+	job->_Type = CHAT_PACKET_TYPE::ON_TIME_OUT;
+	job->_pPacket = nullptr;
+
+	_jobQueue.Enqueue(job);
+	SetEvent(_DequeueEvent);
+
+
 	//PacketProc(nullptr, SessionID, CHAT_PACKET_TYPE::ON_TIME_OUT);
 }
 
 void CChatServer::PacketProc(CPacket *pPacket, SESSION_ID SessionID, WORD type) {
-	pPacket->AddRef();
+	if (pPacket != nullptr)
+		pPacket->AddRef();
+
 
 	WCHAR errmsg[512];
 	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"TYPE : %d", type);
@@ -226,8 +243,8 @@ void CChatServer::PacketProc(CPacket *pPacket, SESSION_ID SessionID, WORD type) 
 		Disconnect(SessionID);
 		break;
 	}
-
-	pPacket->SubRef();
+	if (pPacket != nullptr)
+		pPacket->SubRef();
 }
 
 // PACKET_CS_CHAT_REQ_LOGIN
@@ -320,8 +337,8 @@ void CChatServer::PacketProcMoveSector(CPacket *pPacket, SESSION_ID SessionID) {
 		Disconnect(SessionID);
 		return;
 	}
-	
-	
+
+
 
 	// 기존에 있던 섹터가 있는지
 	constexpr WORD comp = -1;
@@ -348,7 +365,7 @@ void CChatServer::PacketProcMoveSector(CPacket *pPacket, SESSION_ID SessionID) {
 void CChatServer::PacketProcChatRequire(CPacket *pPacket, SESSION_ID SessionID) {
 	ACCOUNT_NO no;
 	WORD msgLen;
-	WCHAR message[MASSAGE_MAX_SIZE] ;
+	WCHAR message[MASSAGE_MAX_SIZE];
 	pPacket->AddRef();
 
 	if (pPacket->GetDataSize() < sizeof(ACCOUNT_NO) + sizeof(msgLen)) {
@@ -364,14 +381,14 @@ void CChatServer::PacketProcChatRequire(CPacket *pPacket, SESSION_ID SessionID) 
 		pPacket->SubRef();
 		return;
 	}
-	pPacket->GetData((char *) message, msgLen );
-	message[msgLen/2] = '\0';
+	pPacket->GetData((char *) message, msgLen);
+	message[msgLen / 2] = '\0';
 
 
 
 
 	pPacket->SubRef();
-	Player *pSender = FindPlayer (SessionID);
+	Player *pSender = FindPlayer(SessionID);
 	if (pSender == nullptr) {
 		//TODO ERROR
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pSender == nullptr");
@@ -543,13 +560,13 @@ send packet TPS\t[%lld]\trecv packet TPS\t[%lld]\n\
 login TPS\t[%lld]\tsector move TPS\t[%lld]\n\
 chat recv TPS\t[%lld]\tchat send TPS\t[%lld]\n\
 ",
-monitor._acceptPerSec, monitor._sendPacketPerSec, monitor._recvPacketPerSec,_LoginTPS,_SectorMoveTPS,_ChatRecvTPS,_ChatSendTPS);
+monitor._acceptPerSec, monitor._sendPacketPerSec, monitor._recvPacketPerSec, _LoginTPS, _SectorMoveTPS, _ChatRecvTPS, _ChatSendTPS);
 	fwprintf_s(fp, L"\n\
 ----------------------------TOTAL-------------------------------------\n\
 packet\t\t[%lld]\tsended Byte\t[%lld]\n\
 accept Count\t[%lld]\tdisconnect Count[%lld]\n\
 Update Count\t[%lld]\n",
-monitor._totalPacket, monitor._totalProecessedBytes, monitor._totalAcceptSession, monitor._totalReleaseSession,_TotalUpdateCount);
+monitor._totalPacket, monitor._totalProecessedBytes, monitor._totalAcceptSession, monitor._totalReleaseSession, _TotalUpdateCount);
 	fwprintf_s(fp, L"\n\
 ----------------------------MEMORY------------------------------------ \n\
 Available\t[%lluMb]\tNPPool\t[%lluMb]\tPrivate Mem\t[%lluKb]\n",
@@ -560,10 +577,10 @@ JobMsgPool Capacity\t[%d]\tJobMsgPool size\t\t[%d]\n\
 Player Pool Capacity\t[%d]\tPlayer Pool size\t[%d]\n\
 JobQueue Capacity\t[%d]\tJobQueue Pool size\t[%d]\n\
 ",
-CPacket::_packetPool.GetCapacity(), CPacket::_packetPool.GetSize(), 
+CPacket::_packetPool.GetCapacity(), CPacket::_packetPool.GetSize(),
 _jobMsgPool.GetCapacity(), _jobMsgPool.GetSize(),
 _playerPool.GetCapacity(), _playerPool.GetSize(),
-_jobQueue.GetPoolCapacity(), _jobQueue.GetPoolSize() );
+_jobQueue.GetPoolCapacity(), _jobQueue.GetPoolSize());
 	fwprintf_s(fp, L"\
 player map size\t\t[%lld]\n",
 _playerMap.size());
