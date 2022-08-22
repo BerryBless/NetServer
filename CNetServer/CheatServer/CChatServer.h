@@ -123,5 +123,7 @@ private:
 	ULONGLONG								_LoginTPS;
 	ULONGLONG								_TotalUpdateCount;
 
+	DWORD _PrintMonitorCount;
+
 };
 

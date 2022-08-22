@@ -31,7 +31,7 @@ CChatServer::CChatServer() :_hThread{ 0 }, _startTime{ 0 }, _timeFormet{ 0 } {
 	_LoginCalc = 0;
 	_LoginTPS = 0;
 	_TotalUpdateCount = 0;
-
+	_PrintMonitorCount = 0;
 	InitializeSRWLock(&_playerMapLock);
 
 }
@@ -110,19 +110,21 @@ unsigned int __stdcall CChatServer::MonitoringThread(LPVOID arg) {
 }
 
 bool CChatServer::UpdateProc() {
-	if (_jobQueue.IsEmpty()) return _isRunning;
-	//WaitForSingleObject(_DequeueEvent, INFINITE);
+	while(_isRunning) {
+		//if (_jobQueue.IsEmpty()) return _isRunning;
+		WaitForSingleObject(_DequeueEvent, INFINITE);
 
-	++_TotalUpdateCount;
-	JobMessage *job;
+		JobMessage *job;
 
-	_jobQueue.Dequeue(&job);
+		while (_jobQueue.Dequeue(&job)) {
+			++_TotalUpdateCount;
+			PacketProc(job->_pPacket, job->_SessionID, job->_Type);
+			if (job->_pPacket != nullptr)
+				job->_pPacket->SubRef();
 
-	PacketProc(job->_pPacket, job->_SessionID, job->_Type);
-	if (job->_pPacket != nullptr)
-		job->_pPacket->SubRef();
-
-	_jobMsgPool.Free(job);
+			_jobMsgPool.Free(job);
+		}
+	}
 	return _isRunning;
 }
 
@@ -136,7 +138,15 @@ bool CChatServer::MonitoringProc() {
 	_hardMoniter.UpdateHardWareTime();
 	_procMonitor.UpdateProcessTime();
 
-	PrintMonitor(stdout);
+	// 5분마다 저장
+	if (_PrintMonitorCount >= 3000) {
+		PrintFileMonitor();
+		_PrintMonitorCount = 0;
+	}
+	else {
+		PrintMonitor(stdout);
+	}
+	++_PrintMonitorCount;
 
 	return _isRunning;
 }
@@ -193,17 +203,14 @@ void CChatServer::OnError(int errorcode, const WCHAR *log) {
 }
 
 void CChatServer::OnTimeout(SESSION_ID SessionID) {
-	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
+	/*CLogger::_Log(dfLOG_LEVEL_DEBUG, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
 	JobMessage *job = _jobMsgPool.Alloc();
 	job->_SessionID = SessionID;
 	job->_Type = CHAT_PACKET_TYPE::ON_TIME_OUT;
 	job->_pPacket = nullptr;
 
 	_jobQueue.Enqueue(job);
-	SetEvent(_DequeueEvent);
-
-
-	//PacketProc(nullptr, SessionID, CHAT_PACKET_TYPE::ON_TIME_OUT);
+	SetEvent(_DequeueEvent);*/
 }
 
 void CChatServer::PacketProc(CPacket *pPacket, SESSION_ID SessionID, WORD type) {
@@ -603,19 +610,19 @@ void CChatServer::PrintFileMonitor() {
 	time(&now);
 	localtime_s(&t, &now);
 #ifdef dfPROFILER
-	// PROFILE
-	swprintf_s(FILENAME, 58, L"Profile/%02d%02d%02d_%02d%02d%02d_CHAT_PROFILE.log",
-		t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
-		t.tm_hour, t.tm_min, t.tm_sec);
-	PRO_PRINT(FILENAME);
+		// PROFILE
+		swprintf_s(FILENAME, 128, L"ServerLog/Profile/%02d%02d%02d_%02d%02d%02d_CHAT_PROFILE.log",
+			t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
+			t.tm_hour, t.tm_min, t.tm_sec);
+		PRO_PRINT(FILENAME);
 #endif // dfPROFILER
 
-	swprintf_s(FILENAME, 58, L"Monitor/%02d%02d%02d_%02d%02d%02d_CHAT_SERVER_MONITOR.log",
-		t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
-		t.tm_hour, t.tm_min, t.tm_sec);
-	FILE *fp = stdout;
-	_wfopen_s(&fp, FILENAME, L"a+");
-	fseek(fp, 0, SEEK_END);
-	PrintMonitor(fp);
-	fclose(fp);
+		swprintf_s(FILENAME, 128, L"ServerLog/MonitorLog/%02d%02d%02d_%02d%02d%02d_CHAT_SERVER_MONITOR.log",
+			t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
+			t.tm_hour, t.tm_min, t.tm_sec);
+		FILE *fp = stdout;
+		_wfopen_s(&fp, FILENAME, L"a+");
+		fseek(fp, 0, SEEK_END);
+		PrintMonitor(fp);
+		fclose(fp);
 }

@@ -23,7 +23,12 @@ public:
 	int GetPoolSize() { return _nodePool.GetSize(); }
 	int GetPoolCapacity() { return _nodePool.GetCapacity(); }
 	long GetSize() { return _size; }
-	bool IsEmpty() { return _size == 0; }
+	bool IsEmpty() {
+		AcquireSRWLockExclusive(&_lock);
+		int size = _size;
+		ReleaseSRWLockExclusive(&_lock);
+		return size == 0;
+	}
 	void Clear();
 private:
 

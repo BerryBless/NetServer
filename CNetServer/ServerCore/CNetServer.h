@@ -18,6 +18,7 @@
 #endif // !CRASH
 
 #define df_LOGGING_SESSION_LOGIC 1000
+#define dfSESSION_SEND_PACKER_BUFFER_SIZE 200
 
 #define df_SENDTHREAD
 
@@ -37,6 +38,7 @@ public:
 		WSAOVERLAPPED _sendOverlapped;
 		CRingBuffer _recvQueue;
 		Queue<CPacket *> _sendQueue;
+		CPacket *_pSendPacketBufs[dfSESSION_SEND_PACKER_BUFFER_SIZE];
 
 		// session information
 		SOCKET _sock;
