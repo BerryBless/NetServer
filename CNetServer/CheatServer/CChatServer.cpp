@@ -39,7 +39,7 @@ CChatServer::CChatServer() :_hThread{ 0 }, _startTime{ 0 }, _timeFormet{ 0 } {
 CChatServer::~CChatServer() {
 }
 
-void CChatServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
+/*void CChatServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
 	if (_isRunning == true) return;
 	_DequeueEvent = nullptr;
 	_DequeueEvent = CreateEvent(nullptr, false, false, nullptr);
@@ -50,6 +50,21 @@ void CChatServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, B
 
 
 	_isRunning = Start(IP, port, workerThreadCount, maxRunThreadCount, nagle, maxConnection);
+	time(&_startTime);
+	localtime_s(&_timeFormet, &_startTime);
+	BeginThread();
+}*/
+
+void CChatServer::BeginServer(const WCHAR *szConfigFile) {
+	if (_isRunning == true) return;
+	_DequeueEvent = nullptr;
+	_DequeueEvent = CreateEvent(nullptr, false, false, nullptr);
+	if (_DequeueEvent == nullptr) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"_DequeueEvent == nullptr");
+		return;
+	}
+
+	_isRunning = Start(szConfigFile);
 	time(&_startTime);
 	localtime_s(&_timeFormet, &_startTime);
 	BeginThread();

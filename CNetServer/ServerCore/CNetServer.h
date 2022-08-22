@@ -84,7 +84,7 @@ protected:
 	// Server Interface
 	// ==============================================
 	bool Start(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
-	bool Start(wchar_t *wsConfigPath);
+	bool Start(const wchar_t *wsConfigPath);
 	void Quit();
 	ULONGLONG GetSessionCount() { return _curSessionCount; }
 	bool Disconnect(SESSION_ID SessionID);
@@ -182,6 +182,7 @@ private:
 	// ----------------------------------------------
 	// Option
 	// ----------------------------------------------
+	CParser *_pConfigData;
 	BYTE _maxRunThreadCount ;	// 최대 동시 실행 스레드 수
 	BYTE _workerThreadCount ;	// 생성할 스레드 수
 	u_short _maxConnection ;		// 최대 동접자 수

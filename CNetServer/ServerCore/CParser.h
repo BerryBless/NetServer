@@ -1,6 +1,7 @@
 #pragma once
 #include <stdio.h>
 #include <string>
+#include <list>
 typedef wchar_t WCHAR;
 #pragma region StringFunc
 
@@ -35,7 +36,7 @@ int Strcmp(const WCHAR *str1, const WCHAR *str2, const int len);
 // =========================================================================
 class CParser {
 private:
-	// 네임스페이스 리스트 클래스
+	// 네임스페이스 리스트 구조체
 	struct stNamespaceInfo {
 		WCHAR Name[32];		// 네임스페이스 이름
 		int Start;			// 네임스페이스 시작 인덱스
@@ -49,9 +50,9 @@ public:
 private:
 	WCHAR *_buffer;	// 파일 내용물 (UTF-8을 유니코드로 변환해서 저장)
 	int _filesize;	// 파일크기
-	list<stNamespaceInfo> _namespaceList; // 네임스페이스 인덱스 리스트
-	int _iStart;		// 인덱스 시작
-	int _iEnd;			// 인덱스 끝
+	std::list<stNamespaceInfo> _namespaceList; // 네임스페이스 인덱스 리스트
+	int _start;		// 인덱스 시작
+	int _end;			// 인덱스 끝
 
 private:
 	bool Skip(int &index);				// key 또는 value 시작지점 찾기

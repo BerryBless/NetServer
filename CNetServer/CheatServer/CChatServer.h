@@ -32,7 +32,8 @@ public:
 	CChatServer();
 	~CChatServer();
 
-	void BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
+//	void BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
+	void BeginServer(const WCHAR *szConfigFile);
 	void CloseServer();
 	bool isRunning() {
 		return _isRunning;

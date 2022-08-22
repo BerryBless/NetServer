@@ -25,6 +25,7 @@
 #include "ProcessMoniter.h"
 #include "CPacket.h"
 #include "Types.h"
+#include "CParser.h"
 //#include "MemProfiler.h"
 using namespace std;
 

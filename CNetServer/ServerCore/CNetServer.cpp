@@ -53,6 +53,8 @@ CNetServer::CNetServer() {
 }
 
 CNetServer::~CNetServer() {
+	if(_pConfigData != nullptr)
+		delete _pConfigData;
 	CloseHandle(_hIOCP);
 	WSACleanup();
 }
@@ -82,15 +84,37 @@ bool CNetServer::Start(u_long IP, u_short prot, BYTE workerThreadCount, BYTE max
 
 	Startup();
 
-	_isRunning = true;
 
 	return _isRunning;
 }
 
 
-bool CNetServer::Start(wchar_t *wsConfigPath) {
-	// TODO 파일 패치로 파싱해서 실행
-	return Start(INADDR_ANY, 10101, 24, 12, true, 3000);
+bool CNetServer::Start(const wchar_t *wsConfigPath) {
+	if (_isRunning == true) {
+		//---------------------------
+		// 이미 실행중일
+		//---------------------------
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Network is already running\n");
+		OnError(111, L"Network is already running");
+		return false;
+	}
+	int port = 0;
+	int wThreadCount = 0;
+	int rThreadCount = 0;
+	bool isNagle = false;
+	int maxConnetion = 0;
+
+	_pConfigData = new CParser(wsConfigPath);
+	_pConfigData->SetNamespace(L"NetServerConfig");
+	
+	_pConfigData->TryGetValue(L"ServerPort", port);
+	_pConfigData->TryGetValue(L"WorkerThreadCount", wThreadCount);
+	_pConfigData->TryGetValue(L"MaxRunningThreadCount", rThreadCount);
+	_pConfigData->TryGetValue(L"isNagle", isNagle);
+	_pConfigData->TryGetValue(L"MaxConnectionCount", maxConnetion);
+
+
+	return Start(INADDR_ANY, port, wThreadCount, rThreadCount, isNagle, maxConnetion);
 }
 
 
@@ -263,6 +287,7 @@ void CNetServer::Startup() {
 	// 스레드 실행
 	//---------------------------
 	BeginThreads();
+	_isRunning = true;
 }
 
 bool CNetServer::CreateListenSocket() {
