@@ -56,24 +56,24 @@ private:
 	virtual bool OnConnectionRequest(WCHAR *IPStr, DWORD IP, USHORT Port); //< accept 직후
 	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID); //< Accept 후 접속처리 완료 후 호출.
 	virtual void OnClientLeave(SESSION_ID SessionID); //< Release 후 호출
-	virtual void OnRecv(SESSION_ID SessionID, Packet *packet); //< 패킷 수신 완료 후
+	virtual void OnRecv(SESSION_ID SessionID, CPacket *packet); //< 패킷 수신 완료 후
 	virtual void OnError(int errorcode, const WCHAR *log); // 에러 발생시 유저한테 알려줄곳
 	virtual void OnTimeout(SESSION_ID SessionID);
 
-	void PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type);
+	void PacketProc(CPacket *pPacket, SESSION_ID sessionID, WORD type);
 
-	void PacketProcRequestLogin(Packet *pPacket, SESSION_ID sessionID);
-	void PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID);
-	void PacketProcChatRequire(Packet *pPacket, SESSION_ID sessionID);
-	//void PacketProcHeartBeat(Packet *pPacket, SESSION_ID sessionID);
+	void PacketProcRequestLogin(CPacket *pPacket, SESSION_ID sessionID);
+	void PacketProcMoveSector(CPacket *pPacket, SESSION_ID sessionID);
+	void PacketProcChatRequire(CPacket *pPacket, SESSION_ID sessionID);
+	//void PacketProcHeartBeat(CPacket *pPacket, SESSION_ID sessionID);
 
-	void MakePacketResponseLogin(Packet *pPacket, ACCOUNT_NO account_no, BYTE status);
-	void MakePacketResponseSectorMove(Packet *pPacket, ACCOUNT_NO account_no, WORD sectorX, WORD sectorY);
-	void MakePacketResponseMessage(Packet *pPacket, ACCOUNT_NO account_no, const WCHAR *ID, const WCHAR *nickName, WORD msgLen, const WCHAR *message);
+	void MakePacketResponseLogin(CPacket *pPacket, ACCOUNT_NO account_no, BYTE status);
+	void MakePacketResponseSectorMove(CPacket *pPacket, ACCOUNT_NO account_no, WORD sectorX, WORD sectorY);
+	void MakePacketResponseMessage(CPacket *pPacket, ACCOUNT_NO account_no, const WCHAR *ID, const WCHAR *nickName, WORD msgLen, const WCHAR *message);
 
 private:
-	void BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, Player *ex );
-	void BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sectorY, Player *ex );
+	void BroadcastSector(CPacket *pPacket, WORD sectorX, WORD sectorY, Player *ex );
+	void BroadcastSectorAround(CPacket *pPacket, WORD sectorX, WORD sectorY, Player *ex );
 
 
 private:

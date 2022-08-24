@@ -18,8 +18,8 @@ public:
 	bool isEmpty() { return _pTop == nullptr; }
 	long GetSize() { return _size; }
 
-	void push(T data);
-	bool pop(T& out);
+	void Push(T data);
+	bool Pop(T *out);
 	void Clear();
 
 private:
@@ -44,7 +44,7 @@ inline Stack<T>::~Stack() {
 }
 
 template<typename T>
-inline void Stack<T>::push(T data) {
+inline void Stack<T>::Push(T data) {
 	AcquireSRWLockExclusive(&_lock);
 	NODE *pNode = _nodePool.Alloc();
 	pNode->_data = data;
@@ -55,10 +55,10 @@ inline void Stack<T>::push(T data) {
 }
 
 template<typename T>
-inline bool Stack<T>::pop(T& out) {
+inline bool Stack<T>::Pop(T *out) {
 	AcquireSRWLockExclusive(&_lock);
 	NODE *tempTop = _pTop;
-	out = _pTop->_data;
+	*out = _pTop->_data;
 	_pTop = _pTop->_next;
 	_nodePool.Free(tempTop);
 	--_size;

@@ -5,5 +5,5 @@
 struct JobMessage {
 	ULONGLONG _SessionID;
 	WORD _Type;
-	Packet *_pPacket;
+	CPacket *_pPacket;
 };

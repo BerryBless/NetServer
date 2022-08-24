@@ -131,7 +131,7 @@ bool CChatServer::UpdateProc() {
 
 		JobMessage *job;
 
-		while (_jobQueue.dequeue(job)) {
+		while (_jobQueue.Dequeue(&job)) {
 			++_TotalUpdateCount;
 			PacketProc(job->_pPacket, job->_SessionID, job->_Type);
 			if (job->_pPacket != nullptr)
@@ -190,12 +190,12 @@ void CChatServer::OnClientLeave(SESSION_ID SessionID) {
 	job->_Type = CHAT_PACKET_TYPE::ON_CLIENT_LEAVE;
 	job->_pPacket = nullptr;
 
-	_jobQueue.enqueue(job);
+	_jobQueue.Enqueue(job);
 	SetEvent(_DequeueEvent);
 }
 
 
-void CChatServer::OnRecv(SESSION_ID SessionID, Packet *pPacket) {
+void CChatServer::OnRecv(SESSION_ID SessionID, CPacket *pPacket) {
 	pPacket->AddRef();
 	// jobQueue
 	WORD type;
@@ -207,7 +207,7 @@ void CChatServer::OnRecv(SESSION_ID SessionID, Packet *pPacket) {
 	job->_pPacket = pPacket;
 	pPacket->AddRef();
 
-	_jobQueue.enqueue(job);
+	_jobQueue.Enqueue(job);
 	SetEvent(_DequeueEvent);
 
 	pPacket->SubRef();
@@ -228,7 +228,7 @@ void CChatServer::OnTimeout(SESSION_ID SessionID) {
 	SetEvent(_DequeueEvent);*/
 }
 
-void CChatServer::PacketProc(Packet *pPacket, SESSION_ID SessionID, WORD type) {
+void CChatServer::PacketProc(CPacket *pPacket, SESSION_ID SessionID, WORD type) {
 	if (pPacket != nullptr)
 		pPacket->AddRef();
 
@@ -256,13 +256,13 @@ void CChatServer::PacketProc(Packet *pPacket, SESSION_ID SessionID, WORD type) {
 	case CHAT_PACKET_TYPE::ON_TIME_OUT:
 		wsprintf(errmsg, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
 		CLogger::_Log(dfLOG_LEVEL_ERROR, errmsg);
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		break;
 
 	default:
 		wsprintf(errmsg, L"ERROR :: Session Default Case SessionID : %I64u", SessionID);
 		CLogger::_Log(dfLOG_LEVEL_ERROR, errmsg);
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		break;
 	}
 	if (pPacket != nullptr)
@@ -270,20 +270,20 @@ void CChatServer::PacketProc(Packet *pPacket, SESSION_ID SessionID, WORD type) {
 }
 
 // PACKET_CS_CHAT_REQ_LOGIN
-void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID SessionID) {
+void CChatServer::PacketProcRequestLogin(CPacket *pPacket, SESSION_ID SessionID) {
 	pPacket->AddRef();
 	BYTE status = FALSE;
 	ACCOUNT_NO acno;
 
 	if (pPacket->GetDataSize() < sizeof(ACCOUNT_NO)) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() < sizeof(ACCOUNT_NO)"); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 	}
 	(*pPacket).GetData((char *) &acno, sizeof(ACCOUNT_NO));
 
 	if (pPacket->GetDataSize() != ID_MAX_SIZE + NICK_NAME_MAX_SIZE + TOKEN_KEY_SIZE) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() != ID_MAX_SIZE + NICK_NAME_MAX_SIZE + TOKEN_KEY_SIZE"); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 	}
 	Player *pPlayer = FindPlayer(SessionID);
 	if (pPlayer == nullptr) {
@@ -306,12 +306,12 @@ void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID SessionID) 
 
 	pPacket->SubRef();
 
-	Packet *pResLoginPacket = Packet::AllocAddRef();
+	CPacket *pResLoginPacket = CPacket::AllocAddRef();
 	MakePacketResponseLogin(pResLoginPacket, pPlayer->_AccountNo, status);
 	SendPacket(pPlayer->_SessionID, pResLoginPacket);
 	if (status == FALSE) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"status == FALSE"); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 	}
 
 	InterlockedIncrement(&_LoginCalc);
@@ -320,7 +320,7 @@ void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID SessionID) 
 }
 
 // PACKET_CS_CHAT_REQ_SECTOR_MOVE
-void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID SessionID) {
+void CChatServer::PacketProcMoveSector(CPacket *pPacket, SESSION_ID SessionID) {
 	ACCOUNT_NO no;
 	WORD sx;
 	WORD sy;
@@ -329,7 +329,7 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID SessionID) {
 	pPacket->AddRef();
 	if (pPacket->GetDataSize() != (sizeof(no) + sizeof(sx) + sizeof(sy))) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() != (sizeof(no) + sizeof(sx) + sizeof(sy))"); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		pPacket->SubRef();
 		return;
 	}
@@ -339,7 +339,7 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID SessionID) {
 	// 섹터 범위 초과
 	if (sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE", SessionID); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		return;
 	}
 
@@ -348,15 +348,15 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID SessionID) {
 	Player *pPlayer = FindPlayer(SessionID);
 	if (pPlayer == nullptr) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  pPlayer == nullptr", SessionID); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		return;
 	}if (pPlayer->_isLogin == false) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  pPlayer->_isLogin == false", SessionID); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		return;
 	}if (pPlayer->_AccountNo != no) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  _AccountNo == no", SessionID); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		return;
 	}
 
@@ -377,21 +377,21 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID SessionID) {
 	_sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.emplace(pPlayer);
 
 	// Send RES_SECTOR_MOVE Msg
-	Packet *pResPacket = Packet::AllocAddRef();
+	CPacket *pResPacket = CPacket::AllocAddRef();
 	MakePacketResponseSectorMove(pResPacket, pPlayer->_AccountNo, pPlayer->_SectorX, pPlayer->_SectorY);
 	SendPacket(pPlayer->_SessionID, pResPacket);
 	pResPacket->SubRef();
 }
 
 // PACKET_CS_CHAT_REQ_MESSAGE
-void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
+void CChatServer::PacketProcChatRequire(CPacket *pPacket, SESSION_ID SessionID) {
 	ACCOUNT_NO no;
 	WORD msgLen;
 	WCHAR message[MASSAGE_MAX_SIZE];
 	pPacket->AddRef();
 
 	if (pPacket->GetDataSize() < sizeof(ACCOUNT_NO) + sizeof(msgLen)) {
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		pPacket->SubRef();
 		return;
 	}
@@ -399,7 +399,7 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
 	(*pPacket) >> msgLen;
 
 	if (pPacket->GetDataSize() != msgLen) {
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		pPacket->SubRef();
 		return;
 	}
@@ -414,27 +414,27 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
 	if (pSender == nullptr) {
 		//TODO ERROR
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pSender == nullptr");
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		return;
 	}
 	if (pSender->_isLogin == false) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pSender->_isLogin == false");
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		return;
 	}
 	if (no != pSender->_AccountNo) {
 		//TODO ERROR
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"no != pSender->_AccountNo");
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		return;
 	}
 	if (pSender->_SectorX >= 50 || pSender->_SectorY >= 50) {
 		//TODO ERROR
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pSender->_SectorX >= 50 || pSender->_SectorY >= 50");
-		DisconnectSession(SessionID);
+		Disconnect(SessionID);
 		return;
 	}
-	Packet *pResPacket = Packet::AllocAddRef();
+	CPacket *pResPacket = CPacket::AllocAddRef();
 
 	MakePacketResponseMessage(pResPacket, pSender->_AccountNo, pSender->_ID, pSender->_NickName, msgLen, message);
 	BroadcastSectorAround(pResPacket, pSender->_SectorX, pSender->_SectorY, nullptr);
@@ -444,7 +444,7 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
 
 
 // PACKET_SC_CHAT_RES_LOGIN
-void CChatServer::MakePacketResponseLogin(Packet *pPacket, ACCOUNT_NO account_no, BYTE status) {
+void CChatServer::MakePacketResponseLogin(CPacket *pPacket, ACCOUNT_NO account_no, BYTE status) {
 	pPacket->AddRef();
 	CHAT_PACKET_TYPE type = CHAT_PACKET_TYPE::PACKET_SC_CHAT_RES_LOGIN;
 	(*pPacket) << ((WORD) type) << status << (__int64) account_no;
@@ -452,7 +452,7 @@ void CChatServer::MakePacketResponseLogin(Packet *pPacket, ACCOUNT_NO account_no
 }
 
 //PACKET_SC_CHAT_RES_SECTOR_MOVE
-void CChatServer::MakePacketResponseSectorMove(Packet *pPacket, ACCOUNT_NO account_no, WORD sectorX, WORD sectorY) {
+void CChatServer::MakePacketResponseSectorMove(CPacket *pPacket, ACCOUNT_NO account_no, WORD sectorX, WORD sectorY) {
 	pPacket->AddRef();
 	CHAT_PACKET_TYPE type = CHAT_PACKET_TYPE::PACKET_SC_CHAT_RES_SECTOR_MOVE;
 	(*pPacket) << ((WORD) type);
@@ -463,7 +463,7 @@ void CChatServer::MakePacketResponseSectorMove(Packet *pPacket, ACCOUNT_NO accou
 }
 
 //PACKET_SC_CHAT_RES_MESSAGE
-void CChatServer::MakePacketResponseMessage(Packet *pPacket, ACCOUNT_NO account_no, const WCHAR *ID, const WCHAR *nickName, WORD msgLen, const WCHAR *message) {
+void CChatServer::MakePacketResponseMessage(CPacket *pPacket, ACCOUNT_NO account_no, const WCHAR *ID, const WCHAR *nickName, WORD msgLen, const WCHAR *message) {
 	pPacket->AddRef();
 	CHAT_PACKET_TYPE type = CHAT_PACKET_TYPE::PACKET_SC_CHAT_RES_MESSAGE;
 	(*pPacket) << ((WORD) type);
@@ -476,7 +476,7 @@ void CChatServer::MakePacketResponseMessage(Packet *pPacket, ACCOUNT_NO account_
 
 }
 
-void CChatServer::BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, Player *ex = nullptr) {
+void CChatServer::BroadcastSector(CPacket *pPacket, WORD sectorX, WORD sectorY, Player *ex = nullptr) {
 	__SECTOR_LOCK(sectorX, sectorY);
 	pPacket->AddRef();
 
@@ -492,7 +492,7 @@ void CChatServer::BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, P
 	__SECTOR_UNLOCK(sectorX, sectorY);
 }
 
-void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sectorY, Player *ex = nullptr) {
+void CChatServer::BroadcastSectorAround(CPacket *pPacket, WORD sectorX, WORD sectorY, Player *ex = nullptr) {
 	pPacket->AddRef();
 	WORD sx;
 	WORD sy;
@@ -586,7 +586,7 @@ monitor._acceptPerSec, monitor._sendPacketPerSec, monitor._recvPacketPerSec, _Lo
 	fwprintf_s(fp, L"\n\
 ----------------------------TOTAL-------------------------------------\n\
 packet\t\t[%lld]\tsended Byte\t[%lld]\n\
-accept Count\t[%lld]\tDisconnectSession Count[%lld]\n\
+accept Count\t[%lld]\tdisconnect Count[%lld]\n\
 Update Count\t[%lld]\n",
 monitor._totalPacket, monitor._totalProecessedBytes, monitor._totalAcceptSession, monitor._totalReleaseSession, _TotalUpdateCount);
 	fwprintf_s(fp, L"\n\
@@ -599,7 +599,7 @@ JobMsgPool Capacity\t[%d]\tJobMsgPool size\t\t[%d]\n\
 Player Pool Capacity\t[%d]\tPlayer Pool size\t[%d]\n\
 JobQueue Capacity\t[%d]\tJobQueue Pool size\t[%d]\n\
 ",
-Packet::_packetPool.GetCapacity(), Packet::_packetPool.GetSize(),
+CPacket::_packetPool.GetCapacity(), CPacket::_packetPool.GetSize(),
 _jobMsgPool.GetCapacity(), _jobMsgPool.GetSize(),
 _playerPool.GetCapacity(), _playerPool.GetSize(),
 _jobQueue.GetPoolCapacity(), _jobQueue.GetPoolSize());

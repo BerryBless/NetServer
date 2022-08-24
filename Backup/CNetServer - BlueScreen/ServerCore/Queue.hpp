@@ -17,8 +17,8 @@ public:
 	Queue();
 	~Queue();
 
-	void enqueue(T data);
-	bool dequeue(T& data);
+	void Enqueue(T data);
+	bool Dequeue(T *data);
 	DWORD Peek(T arr[], DWORD size);
 	int GetPoolSize() { return _nodePool.GetSize(); }
 	int GetPoolCapacity() { return _nodePool.GetCapacity(); }
@@ -59,7 +59,7 @@ inline Queue<T>::~Queue() {
 }
 
 template<typename T>
-inline void Queue<T>::enqueue(T data) {
+inline void Queue<T>::Enqueue(T data) {
 	AcquireSRWLockExclusive(&_lock);
 	Node *pNode = (Node *) _nodePool.Alloc();
 	pNode->_data = data;
@@ -76,11 +76,11 @@ inline void Queue<T>::enqueue(T data) {
 }
 
 template<typename T>
-inline bool Queue<T>::dequeue(T& data) {
+inline bool Queue<T>::Dequeue(T *data) {
 	if (_head._next == &_tail) return false;
 	AcquireSRWLockExclusive(&_lock);
 	Node *pNode = _head._next;
-	data = pNode->_data;
+	*data = pNode->_data;
 	pNode->_prev->_next = pNode->_next;
 	pNode->_next->_prev = pNode->_prev;
 
@@ -107,7 +107,7 @@ template<typename T>
 inline void Queue<T>::Clear() {
 	AcquireSRWLockExclusive(&_lock);
 	T temp;
-	while (dequeue(temp));
+	while (Dequeue(&temp));
 
 
 	ReleaseSRWLockExclusive(&_lock);

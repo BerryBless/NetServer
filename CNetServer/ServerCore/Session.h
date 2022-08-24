@@ -1,41 +1,41 @@
 #pragma once
+#ifndef __ECHO_SERVER_SESSION__
+#define __ECHO_SERVER_SESSION__
+
 #include "CorePch.h"
+#include <unordered_map>
+#include <list>
 
-typedef u_int64 SESSION_ID;
-struct SESSION {
-	SESSION_ID _ID;
-
-	// IOCP Buffer
-	WSAOVERLAPPED _recvOverlapped;
-	WSAOVERLAPPED _sendOverlapped;
-	CRingBuffer _recvQueue;
-	Queue<CPacket *> _sendQueue;
+#define SESSION_SEND_PACKER_BUFFER_SIZE 200
+    struct OverlappedEx {
+        OVERLAPPED _Overlapped{ 0 };
+        DWORD _IsRecv = false;
+    };
 
 
+    struct Session {
+        Session() : _SessionID(0), _SendBufferCount(0), _SendPacketBuffer{ 0 }, _Sock(0), _SessionIP(0), _SessionPort(0), _SessionIPStr{ 0 }, _IOCounts(0x80000000), _IOFlag(0), _LastRecvdTime(0)
+        {
 
-	// session information
-	SOCKET _sock;
-	ULONG _IP;
-	USHORT _port;
+        }
+        //Read Only
+        ULONGLONG _SessionID;
+        SOCKET _Sock;
+        ULONG _SessionIP;
+        WCHAR _SessionIPStr[20];
+        USHORT _SessionPort;
 
-	// session lock
-	SRWLOCK _lock;
+        OverlappedEx _RecvJob;
+        DWORD _LastRecvdTime;
+        RingBuffer _RingBuffer;
+        OverlappedEx _SendJob;
+        Packet *_SendPacketBuffer[SESSION_SEND_PACKER_BUFFER_SIZE];
+        Queue<Packet *> _SendPacketQueue;
+        alignas(64) DWORD _SendBufferCount;
+        alignas(64) DWORD _IOCounts;
+        alignas(64) DWORD _IOFlag;
+
+    };
 
 
-	// session state
-	DWORD _lastRecvdTime;
-	alignas(64) DWORD _IOcount;
-	alignas(64) DWORD _IOFlag;
-	alignas(64) DWORD _sendPacketCnt;
-	SESSION() {
-		_ID = 0;
-		_IOcount = 0;
-		_IOFlag = 0;
-		_sendPacketCnt = 0;
-		_sock = 0;
-		_IP = 0;
-		_port = 0;
-		ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
-		ZeroMemory(&_sendOverlapped, sizeof(WSAOVERLAPPED));
-	}
-};
+#endif // !__ECHO_SERVER_SESSION_

@@ -15,7 +15,7 @@
 #include <WinSock2.h>
 #include <iostream>
 #include <timeapi.h>
-#include "RingBuffer.h"
+#include "CRingBuffer.h"
 #include "CLogger.h"
 #include "ObjectPool.hpp"
 #include "CCrashDump.h"
@@ -23,7 +23,7 @@
 #include "Queue.hpp"
 #include "HardWareMoniter.h"
 #include "ProcessMoniter.h"
-#include "SerializingBuffer.h"
+#include "CPacket.h"
 #include "Types.h"
 #include "CParser.h"
 //#include "MemProfiler.h"

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "RingBuffer.h"
-#include "SerializingBuffer.h"
+#include "CRingBuffer.h"
+#include "CPacket.h"
 #include "CLogger.h"
 #include "ObjectPool_TLS.hpp"
 #include "CCrashDump.h"
@@ -36,9 +36,9 @@ public:
 		// IOCP Buffer
 		WSAOVERLAPPED _recvOverlapped;
 		WSAOVERLAPPED _sendOverlapped;
-		RingBuffer _recvQueue;
-		Queue<Packet *> _sendQueue;
-		Packet *_pSendPacketBufs[dfSESSION_SEND_PACKER_BUFFER_SIZE];
+		CRingBuffer _recvQueue;
+		Queue<CPacket *> _sendQueue;
+		CPacket *_pSendPacketBufs[dfSESSION_SEND_PACKER_BUFFER_SIZE];
 
 		// session information
 		SOCKET _sock;
@@ -87,14 +87,14 @@ protected:
 	bool Start(const wchar_t *wsConfigPath);
 	void Quit();
 	ULONGLONG GetSessionCount() { return _curSessionCount; }
-	bool DisconnectSession(SESSION_ID SessionID);
-	bool SendPacket(SESSION_ID SessionID, Packet *pPacket);
+	bool Disconnect(SESSION_ID SessionID);
+	bool SendPacket(SESSION_ID SessionID, CPacket *pPacket);
 
 
 	virtual bool OnConnectionRequest(WCHAR* IPstr, DWORD IP, USHORT Port) = 0; // TODO IP주소 string
 	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID) = 0;
 	virtual void OnClientLeave(SESSION_ID SessionID) = 0;
-	virtual void OnRecv(SESSION_ID SessionID, Packet *pPacket) = 0;
+	virtual void OnRecv(SESSION_ID SessionID, CPacket *pPacket) = 0;
 	virtual void OnError(int errorcode, const WCHAR *log) = 0;
 	virtual void OnTimeout(SESSION_ID SessionID) = 0;
 

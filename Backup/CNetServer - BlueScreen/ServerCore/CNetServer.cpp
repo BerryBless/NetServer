@@ -143,7 +143,7 @@ void CNetServer::Quit() {
 	}
 }
 
-bool CNetServer::DisconnectSession(SESSION_ID SessionID) {
+bool CNetServer::Disconnect(SESSION_ID SessionID) {
 	//---------------------------
 	// 세션 끊기
 	//---------------------------
@@ -164,7 +164,7 @@ bool CNetServer::DisconnectSession(SESSION_ID SessionID) {
 	return ret;
 }
 
-bool CNetServer::SendPacket(SESSION_ID SessionID, Packet *pPacket) {
+bool CNetServer::SendPacket(SESSION_ID SessionID, CPacket *pPacket) {
 	if (pPacket == nullptr)
 		return false;
 	pPacket->AddRef();
@@ -193,7 +193,7 @@ bool CNetServer::SendPacket(SESSION_ID SessionID, Packet *pPacket) {
 	// 페킷 포인터를 센드큐에
 	//---------------------------
 	pPacket->SetNetHeader();
-	pSession->_sendQueue.enqueue(pPacket);
+	pSession->_sendQueue.Enqueue(pPacket);
 	//---------------------------
 	// monitor
 	//---------------------------
@@ -553,7 +553,7 @@ bool CNetServer::SendProc(SESSION *pSession, DWORD transferredSize) {
 	//---------------------------
 	// 완료통지 온 패킷 지우기
 	//---------------------------
-	Packet *pPacket;
+	CPacket *pPacket;
 	DWORD sendedPacketCnt = InterlockedExchange(&pSession->_sendPacketCnt,0);
 
 	for (int i = 0; i < sendedPacketCnt; ++i) {
@@ -634,7 +634,7 @@ bool CNetServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 		if (pSession->_recvQueue.GetUseSize() < (int) (PACKET_NET_HEADER_SIZE + header.len)) {
 			break;
 		}
-		if (header.code != Packet::PACKET_CODE) {
+		if (header.code != CPacket::PACKET_CODE) {
 			CRASH();
 		}
 
@@ -642,7 +642,7 @@ bool CNetServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 		// 패킷 풀에서 하나 꺼내기
 		//---------------------------
 		PRO_BEGIN(L"RecvPost_Packet");
-		Packet *pPacket = Packet::AllocAddRef();
+		CPacket *pPacket = CPacket::AllocAddRef();
 		if (pPacket == NULL) {
 			CRASH();
 		}
@@ -997,7 +997,7 @@ bool CNetServer::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, i
 		int numOfPacket = pSession->_sendQueue.GetSize();
 
 		DWORD snapSize = min(dfSESSION_SEND_PACKER_BUFFER_SIZE, numOfPacket + pSession->_sendPacketCnt);
-		Packet *pPacket = nullptr;
+		CPacket *pPacket = nullptr;
 
 
 		//---------------------------
@@ -1005,7 +1005,7 @@ bool CNetServer::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, i
 		//---------------------------
 		for (int i = pSession->_sendPacketCnt; i < snapSize; i++) {
 			pPacket = nullptr;
-			pSession->_sendQueue.dequeue(pPacket);
+			pSession->_sendQueue.Dequeue(&pPacket);
 			pSession->_pSendPacketBufs[i] = pPacket;
 			BufSets[i].buf =(char*) pPacket->GetSendPtr();
 			BufSets[i].len = pPacket->GetSendSize();
@@ -1163,12 +1163,12 @@ bool CNetServer::ReleaseSession(SESSION *pSession, int logic) {
 	//---------------------------
 	DWORD sendedPacketCnt = InterlockedExchange(&pSession->_sendPacketCnt, 0);
 
-	Packet *pPacket = nullptr;
+	CPacket *pPacket = nullptr;
 	for (int i = 0; i < sendedPacketCnt; ++i) {
 		pPacket = pSession->_pSendPacketBufs[i];
 		pPacket->SubRef();
 	}
-	while (pSession->_sendQueue.dequeue(pPacket))
+	while (pSession->_sendQueue.Dequeue(&pPacket))
 		pPacket->SubRef();
 	pSession->_recvQueue.ClearBuffer();
 
@@ -1177,7 +1177,7 @@ bool CNetServer::ReleaseSession(SESSION *pSession, int logic) {
 	OnClientLeave(ID);
 	USHORT idx = SessionIDtoIndex(ID);
 	if (idx == 0) CRASH();
-	_emptyIndex.push(idx);
+	_emptyIndex.Push(idx);
 
 	//---------------------------
 	// 	   모니터링
@@ -1248,13 +1248,11 @@ SESSION_ID CNetServer::GenerateSessionID() {
 	// 	   Session ID 생성
 	//---------------------------
 	SESSION_ID id = 0;
-	USHORT idx;
 	do {
 		if (_emptyIndex.GetSize() == 0)
 			break;
 
-		_emptyIndex.pop(idx);
-		id = idx;
+		_emptyIndex.Pop((USHORT *) &id);
 		if (id == 0) CRASH();
 		id = id << (8 * 6);
 
@@ -1273,7 +1271,7 @@ USHORT CNetServer::SessionIDtoIndex(SESSION_ID sessionID) {
 
 void CNetServer::InitializeIndex() {
 	for (USHORT i = _maxConnection; i > 0; i--) {
-		_emptyIndex.push(i);
+		_emptyIndex.Push(i);
 	}
 }
 
