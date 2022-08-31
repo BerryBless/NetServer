@@ -223,6 +223,7 @@ protected:
 		ULONGLONG							_totalReleaseSession;
 		ULONGLONG							_recvPacketPerSec;
 		ULONGLONG							_sendPacketPerSec;
+		ULONGLONG							_sendBytePerSec;
 		ULONGLONG							_acceptPerSec;
 		ULONGLONG							_queueSize;
 		ULONGLONG							_queueSizeAvg;
@@ -240,7 +241,9 @@ protected:
 	alignas(64) ULONGLONG					_recvPacketPerSec;
 	alignas(64) ULONGLONG					_sendPacketCalc;
 	alignas(64) ULONGLONG					_sendPacketPerSec;
-	alignas(64) LONGLONG					_totalProcessedBytes;
+	volatile alignas(64) LONG64				_sendProcessedBytesCalc;
+	volatile alignas(64) LONG64				_sendProcessedBytesTPS;
+	volatile alignas(64) LONG64				_totalProcessedByte;
 	alignas(64) ULONGLONG					_acceptCalc;
 	alignas(64) ULONGLONG					_acceptPerSec;
 	alignas(64) ULONGLONG					_totalAcceptSession;

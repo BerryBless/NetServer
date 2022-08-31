@@ -329,7 +329,9 @@ bool CNetServer::CreateListenSocket() {
 
 	DWORD sendBufferSize = 1024 * 64;
 	setsockopt(this->_listensock, SOL_SOCKET, SO_SNDBUF, (const char *) &sendBufferSize, sizeof(DWORD));
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Send Buffer Zero");
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Set Send Buffer 64K");
+	setsockopt(this->_listensock, SOL_SOCKET, SO_RCVBUF, (const char *) &sendBufferSize, sizeof(DWORD));
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Set Recv Buffer 64K");
 
 
 	setsockopt(this->_listensock, IPPROTO_TCP, TCP_NODELAY, (const char *) &_isNagle, sizeof(_isNagle));
@@ -566,7 +568,8 @@ bool CNetServer::SendProc(SESSION *pSession, DWORD transferredSize) {
 	// 	   Send가 끝났다
 	//---------------------------
 	InterlockedExchange(&pSession->_IOFlag, FALSE);
-	InterlockedAdd64(&_totalProcessedBytes, transferredSize);
+	InterlockedAdd64(&_sendProcessedBytesCalc, transferredSize);
+	InterlockedAdd64(&_totalProcessedByte, transferredSize);
 
 #ifndef df_SENDTHREAD
 	//---------------------------
@@ -647,7 +650,14 @@ bool CNetServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 			CRASH();
 		}
 		pPacket->Clear();
-
+		/*payloadDeqRet = pSession->_recvQueue.MoveFront(PACKET_NET_HEADER_SIZE);
+		if (payloadDeqRet != PACKET_NET_HEADER_SIZE) {
+			CRASH();
+		}
+		payloadDeqRet = pSession->_recvQueue.Dequeue(pPacket->GetWritePtr(), header.len);
+		if (payloadDeqRet != header.len) {
+			CRASH();
+		}*/
 		payloadDeqRet = pSession->_recvQueue.Dequeue(pPacket->GetBufferPtr(), header.len + PACKET_NET_HEADER_SIZE);
 		if (payloadDeqRet != header.len + PACKET_NET_HEADER_SIZE) {
 			CRASH();
@@ -805,7 +815,7 @@ bool CNetServer::SendThreadProc() {
 				continue;
 			if (pSession->_sendQueue.GetSize() > 0)
 				SendPost(pSession, 123321);
-			ReturnSession(pSession, 998899);
+			DecrementIOCount(pSession, 998899);
 		}
 	}
 	return false;
@@ -1302,6 +1312,7 @@ void CNetServer::CalcTPS() {
 	_acceptPerSec = InterlockedExchange(&_acceptCalc, 0);
 	_recvPacketPerSec = InterlockedExchange(&_recvPacketCalc, 0);
 	_sendPacketPerSec = InterlockedExchange(&_sendPacketCalc, 0);
+	_sendProcessedBytesTPS = InterlockedExchange64(&_sendProcessedBytesCalc, 0);
 
 }
 
@@ -1314,7 +1325,8 @@ CNetServer::MoniteringInfo CNetServer::GetMoniteringInfo() {
 	info._sendPacketPerSec = _sendPacketPerSec;
 	info._totalAcceptSession = _totalAcceptSession;
 	info._totalPacket = _totalPacket;
-	info._totalProecessedBytes = _totalProcessedBytes;
+	info._sendBytePerSec = _sendProcessedBytesTPS;
+	info._totalProecessedBytes = _totalProcessedByte;
 	info._totalReleaseSession = _totalDisconnectSession;
 	info._sessionCnt = _curSessionCount;
 	//info._stackCapacity = 0;
@@ -1335,7 +1347,9 @@ void CNetServer::ResetMonitor() {
 	_sendPacketCalc = 0;
 	_sendPacketPerSec = 0;
 
-	_totalProcessedBytes = 0;
+	_sendProcessedBytesCalc = 0;
+	_sendProcessedBytesTPS = 0;
+	_totalProcessedByte = 0;
 
 	_acceptCalc = 0;
 	_acceptPerSec = 0;

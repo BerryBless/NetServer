@@ -77,7 +77,7 @@ public:
 	// Return: (int)사용중인 데이타 사이즈.
 	//////////////////////////////////////////////////////////////////////////
 	int		GetSendSize(void) { return _writePos - _sendPos; }
-	int		GetDataSize(void) {	return _writePos - _readPos;}
+	int		GetDataSize(void) { return _writePos - _readPos; }
 
 
 
@@ -245,10 +245,6 @@ public:
 	static constexpr int MSS = 1460;
 	static constexpr int PACKET_CODE = 0x77;
 	static constexpr int FIXED_KEY = 0x32;
-	// 헤더 : 길이
-	// buffer :: XX XX AA AA AA~~~ XX XX: CLan헤더, AA ~ 내용물
-	// 헤더 : AA의 길이(바이트)
-
 };
 
 

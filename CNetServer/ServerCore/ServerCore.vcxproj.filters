@@ -75,6 +75,9 @@
     <ClInclude Include="RingBuffer.h">
       <Filter>Network</Filter>
     </ClInclude>
+    <ClInclude Include="CLanServer.h">
+      <Filter>Main</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -109,6 +112,9 @@
     </ClCompile>
     <ClCompile Include="RingBuffer.cpp">
       <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanServer.cpp">
+      <Filter>Main</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

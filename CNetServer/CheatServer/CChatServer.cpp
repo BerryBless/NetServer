@@ -30,7 +30,8 @@ CChatServer::CChatServer() :_hThread{ 0 }, _startTime{ 0 }, _timeFormet{ 0 } {
 	_ChatSendTPS = 0;
 	_LoginCalc = 0;
 	_LoginTPS = 0;
-	_TotalUpdateCount = 0;
+	_UpdateCalc = 0;
+	_UpdateTPS = 0;
 	_PrintMonitorCount = 0;
 	InitializeSRWLock(&_playerMapLock);
 
@@ -125,14 +126,14 @@ unsigned int __stdcall CChatServer::MonitoringThread(LPVOID arg) {
 }
 
 bool CChatServer::UpdateProc() {
-	while(_isRunning) {
+	while (_isRunning) {
 		//if (_jobQueue.IsEmpty()) return _isRunning;
 		WaitForSingleObject(_DequeueEvent, INFINITE);
 
 		JobMessage *job;
 
 		while (_jobQueue.dequeue(job)) {
-			++_TotalUpdateCount;
+			InterlockedIncrement(&_UpdateCalc);
 			PacketProc(job->_pPacket, job->_SessionID, job->_Type);
 			if (job->_pPacket != nullptr)
 				job->_pPacket->SubRef();
@@ -150,15 +151,25 @@ bool CChatServer::MonitoringProc() {
 	_ChatRecvTPS = InterlockedExchange(&_ChatRecvCalc, 0);
 	_ChatSendTPS = InterlockedExchange(&_ChatSendCalc, 0);
 	_LoginTPS = InterlockedExchange(&_LoginCalc, 0);
+	_UpdateTPS = InterlockedExchange(&_UpdateCalc, 0);
 	_hardMoniter.UpdateHardWareTime();
 	_procMonitor.UpdateProcessTime();
+
+	_TotalSectorSize = 0;
+	for (int y = 0; y < SECTOR_Y_SIZE; ++y) {
+		for (int x = 0; x < SECTOR_X_SIZE; ++x) {
+			_TotalSectorSize += _sector[y][x]._playerSet.size();
+		}
+	}
+
+
+
 
 	// 5분마다 저장
 	if (_PrintMonitorCount >= 3000) {
 		PrintFileMonitor();
 		_PrintMonitorCount = 0;
-	}
-	else {
+	} else {
 		PrintMonitor(stdout);
 	}
 	++_PrintMonitorCount;
@@ -437,6 +448,7 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
 	Packet *pResPacket = Packet::AllocAddRef();
 
 	MakePacketResponseMessage(pResPacket, pSender->_AccountNo, pSender->_ID, pSender->_NickName, msgLen, message);
+	//BroadcastSector(pResPacket, pSender->_SectorX, pSender->_SectorY, nullptr);
 	BroadcastSectorAround(pResPacket, pSender->_SectorX, pSender->_SectorY, nullptr);
 
 	pResPacket->SubRef();
@@ -476,36 +488,32 @@ void CChatServer::MakePacketResponseMessage(Packet *pPacket, ACCOUNT_NO account_
 
 }
 
-void CChatServer::BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, Player *ex = nullptr) {
-	__SECTOR_LOCK(sectorX, sectorY);
+void CChatServer::BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer = nullptr) {
 	pPacket->AddRef();
 
 	SECTOR *pSector = &_sector[sectorY][sectorX];
 	for (auto iter = pSector->_playerSet.begin(); iter != pSector->_playerSet.end(); ++iter) {
 		Player *pPlayer = (*iter);
-		if (pPlayer == ex) continue;
+		if (pPlayer == exPlayer) continue;
 		SendPacket(pPlayer->_SessionID, pPacket);
 		InterlockedIncrement(&_ChatSendCalc);
 	}
 
 	pPacket->SubRef();
-	__SECTOR_UNLOCK(sectorX, sectorY);
 }
 
-void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sectorY, Player *ex = nullptr) {
+void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer = nullptr) {
+	WORD sx = sectorX <= 0 ? 0 : sectorX - 1;
+	WORD sy = sectorY <= 0 ? 0 : sectorY - 1;
+	WORD ex = sectorX >= SECTOR_X_SIZE - 1 ? SECTOR_X_SIZE - 1 : sectorX + 1;
+	WORD ey = sectorY >= SECTOR_Y_SIZE - 1 ? SECTOR_Y_SIZE - 1 : sectorY + 1;
 	pPacket->AddRef();
-	WORD sx;
-	WORD sy;
-	for (int dy = -1; dy < 2; ++dy) {
-		sy = sectorY + dy;
-		if (sy < 0 || sy >= SECTOR_Y_SIZE) continue;
-		for (int dx = -1; dx < 2; ++dx) {
-			sx = sectorX + dx;
-			if (sx < 0 || sx >= SECTOR_X_SIZE) continue;
-			BroadcastSector(pPacket, sx, sy, ex);
+
+	for (WORD dy = sy; dy <= ey; ++dy) {
+		for (WORD dx = sx; dx <= ex; ++dx) {
+			BroadcastSector(pPacket, dx, dy, exPlayer);
 		}
 	}
-
 
 	pPacket->SubRef();
 }
@@ -577,43 +585,39 @@ void CChatServer::PrintMonitor(FILE *fp) {
 		monitor._sessionCnt);
 	fwprintf_s(fp, L"\n\
 -----------------------------TPS--------------------------------------\n\
-Accept TPS\t[%lld]\n\
-send packet TPS\t[%lld]\trecv packet TPS\t[%lld]\n\
-login TPS\t[%lld]\tsector move TPS\t[%lld]\n\
-chat recv TPS\t[%lld]\tchat send TPS\t[%lld]\n\
+Accept TPS\t[%lld]\tsend packet TPS\t[%lld]\tsended Byte TPS\t[%lld]\trecv packet TPS\t[%lld]\n\
+Update TPS\t[%d]\n\
+login TPS\t[%d]\tsector move TPS\t[%d]\n\
+chat recv TPS\t[%d]\tchat send TPS\t[%d]\n\
 ",
-monitor._acceptPerSec, monitor._sendPacketPerSec, monitor._recvPacketPerSec, _LoginTPS, _SectorMoveTPS, _ChatRecvTPS, _ChatSendTPS);
+monitor._acceptPerSec, monitor._sendPacketPerSec, monitor._sendBytePerSec, monitor._recvPacketPerSec, _UpdateTPS, _LoginTPS, _SectorMoveTPS, _ChatRecvTPS, _ChatSendTPS);
 	fwprintf_s(fp, L"\n\
 ----------------------------TOTAL-------------------------------------\n\
 packet\t\t[%lld]\tsended Byte\t[%lld]\n\
 accept Count\t[%lld]\tDisconnectSession Count[%lld]\n\
-Update Count\t[%lld]\n",
-monitor._totalPacket, monitor._totalProecessedBytes, monitor._totalAcceptSession, monitor._totalReleaseSession, _TotalUpdateCount);
+\n",
+monitor._totalPacket, monitor._totalProecessedBytes, monitor._totalAcceptSession, monitor._totalReleaseSession);
 	fwprintf_s(fp, L"\n\
 ----------------------------MEMORY------------------------------------ \n\
-Available\t[%lluMb]\tNPPool\t[%lluMb]\tPrivate Mem\t[%lluKb]\n",
+Available [%lluMb]\tNPPool\ [%lluMb] Private Mem\t[%lluKb]\n\n",
 _hardMoniter.AvailableMemoryMBytes(), _hardMoniter.NonPagedPoolMBytes(), _procMonitor.PrivateMemoryKBytes());
 	fwprintf_s(fp, L"\
 Packet pool Capacity\t[%d]\tPacket pool size\t[%d]\n\
 JobMsgPool Capacity\t[%d]\tJobMsgPool size\t\t[%d]\n\
 Player Pool Capacity\t[%d]\tPlayer Pool size\t[%d]\n\
 JobQueue Capacity\t[%d]\tJobQueue Pool size\t[%d]\n\
+player map size\t\t[%lld]\tTotal Sector Container Size[%lld]\
 ",
 Packet::_packetPool.GetCapacity(), Packet::_packetPool.GetSize(),
 _jobMsgPool.GetCapacity(), _jobMsgPool.GetSize(),
 _playerPool.GetCapacity(), _playerPool.GetSize(),
-_jobQueue.GetPoolCapacity(), _jobQueue.GetPoolSize());
-	fwprintf_s(fp, L"\
-player map size\t\t[%lld]\n",
-_playerMap.size());
+_jobQueue.GetPoolCapacity(), _jobQueue.GetPoolSize(),
+_playerMap.size(), _TotalSectorSize);
 	fwprintf_s(fp, L"\n\
 ---------------------------CORE USAGE--------------------------------- \n\
 PROCESS\t[T %.1llf%% K %.1llf%% U %.1llf%%]\tCPU\t[T %.1llf%% K %.1llf%% U %.1llf%%]\n",
 _procMonitor.ProcessTotal(), _procMonitor.ProcessKernel(), _procMonitor.ProcessUser(),
 _hardMoniter.ProcessorTotal(), _hardMoniter.ProcessorKernel(), _hardMoniter.ProcessorUser());
-
-
-
 }
 
 void CChatServer::PrintFileMonitor() {
@@ -625,19 +629,19 @@ void CChatServer::PrintFileMonitor() {
 	time(&now);
 	localtime_s(&t, &now);
 #ifdef dfPROFILER
-		// PROFILE
-		swprintf_s(FILENAME, 128, L"ServerLog/Profile/%02d%02d%02d_%02d%02d%02d_CHAT_PROFILE.log",
-			t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
-			t.tm_hour, t.tm_min, t.tm_sec);
-		PRO_PRINT(FILENAME);
+	// PROFILE
+	swprintf_s(FILENAME, 128, L"ServerLog/Profile/%02d%02d%02d_%02d%02d%02d_CHAT_PROFILE.log",
+		t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
+		t.tm_hour, t.tm_min, t.tm_sec);
+	PRO_PRINT(FILENAME);
 #endif // dfPROFILER
 
-		swprintf_s(FILENAME, 128, L"ServerLog/MonitorLog/%02d%02d%02d_%02d%02d%02d_CHAT_SERVER_MONITOR.log",
-			t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
-			t.tm_hour, t.tm_min, t.tm_sec);
-		FILE *fp = stdout;
-		_wfopen_s(&fp, FILENAME, L"a+");
-		fseek(fp, 0, SEEK_END);
-		PrintMonitor(fp);
-		fclose(fp);
+	swprintf_s(FILENAME, 128, L"ServerLog/MonitorLog/%02d%02d%02d_%02d%02d%02d_CHAT_SERVER_MONITOR.log",
+		t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
+		t.tm_hour, t.tm_min, t.tm_sec);
+	FILE *fp = stdout;
+	_wfopen_s(&fp, FILENAME, L"a+");
+	fseek(fp, 0, SEEK_END);
+	PrintMonitor(fp);
+	fclose(fp);
 }

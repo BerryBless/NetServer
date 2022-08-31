@@ -72,8 +72,8 @@ private:
 	void MakePacketResponseMessage(Packet *pPacket, ACCOUNT_NO account_no, const WCHAR *ID, const WCHAR *nickName, WORD msgLen, const WCHAR *message);
 
 private:
-	void BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, Player *ex );
-	void BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sectorY, Player *ex );
+	void BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer );
+	void BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer);
 
 
 private:
@@ -114,15 +114,17 @@ private:
 	HardWareMoniter							_hardMoniter;
 	ProcessMoniter							_procMonitor;
 
-	ULONGLONG								_SectorMoveCalc;
-	ULONGLONG								_SectorMoveTPS;
-	ULONGLONG								_ChatRecvCalc;
-	ULONGLONG								_ChatRecvTPS;
-	ULONGLONG								_ChatSendCalc;
-	ULONGLONG								_ChatSendTPS;
-	ULONGLONG								_LoginCalc;
-	ULONGLONG								_LoginTPS;
-	ULONGLONG								_TotalUpdateCount;
+	LONG								_TotalSectorSize;
+	LONG								_SectorMoveCalc;
+	LONG								_SectorMoveTPS;
+	LONG								_ChatRecvCalc;
+	LONG								_ChatRecvTPS;
+	LONG								_ChatSendCalc;
+	LONG								_ChatSendTPS;
+	LONG								_LoginCalc;
+	LONG								_LoginTPS;
+	LONG								_UpdateCalc;
+	LONG								_UpdateTPS;
 
 	DWORD _PrintMonitorCount;
 
