@@ -377,15 +377,23 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID SessionID) {
 	constexpr WORD comp = -1;
 	if (pPlayer->_SectorX != comp && pPlayer->_SectorY != comp) {
 		// 기존섹터 삭제
-		auto iter = _sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.find(pPlayer);
-		if (iter != _sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.end()) {
-			_sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.erase(iter);
+		__SECTOR_LOCK(pPlayer->_SectorX, pPlayer->_SectorY);
+		{
+			auto iter = _sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.find(pPlayer);
+			if (iter != _sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.end()) {
+				_sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.erase(iter);
+			}
 		}
+		__SECTOR_UNLOCK(pPlayer->_SectorX, pPlayer->_SectorY);
 	}
 	// 이동
 	pPlayer->_SectorX = sx;
 	pPlayer->_SectorY = sy;
-	_sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.emplace(pPlayer);
+	__SECTOR_LOCK(pPlayer->_SectorX, pPlayer->_SectorY);
+	{
+		_sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.emplace(pPlayer);
+	}
+	__SECTOR_UNLOCK(pPlayer->_SectorX, pPlayer->_SectorY);
 
 	// Send RES_SECTOR_MOVE Msg
 	Packet *pResPacket = Packet::AllocAddRef();
@@ -491,13 +499,17 @@ void CChatServer::MakePacketResponseMessage(Packet *pPacket, ACCOUNT_NO account_
 void CChatServer::BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer = nullptr) {
 	pPacket->AddRef();
 
-	SECTOR *pSector = &_sector[sectorY][sectorX];
-	for (auto iter = pSector->_playerSet.begin(); iter != pSector->_playerSet.end(); ++iter) {
-		Player *pPlayer = (*iter);
-		if (pPlayer == exPlayer) continue;
-		SendPacket(pPlayer->_SessionID, pPacket);
-		InterlockedIncrement(&_ChatSendCalc);
+	__SECTOR_LOCK(sectorX, sectorY);
+	{
+		SECTOR *pSector = &_sector[sectorY][sectorX];
+		for (auto iter = pSector->_playerSet.begin(); iter != pSector->_playerSet.end(); ++iter) {
+			Player *pPlayer = (*iter);
+			if (pPlayer == exPlayer) continue;
+			SendPacket(pPlayer->_SessionID, pPacket);
+			InterlockedIncrement(&_ChatSendCalc);
+		}
 	}
+	__SECTOR_UNLOCK(sectorX, sectorY);
 
 	pPacket->SubRef();
 }
@@ -511,7 +523,27 @@ void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sect
 
 	for (WORD dy = sy; dy <= ey; ++dy) {
 		for (WORD dx = sx; dx <= ex; ++dx) {
-			BroadcastSector(pPacket, dx, dy, exPlayer);
+			__SECTOR_LOCK(dx, dy);
+		}
+	}
+
+	{
+		for (WORD dy = sy; dy <= ey; ++dy) {
+			for (WORD dx = sx; dx <= ex; ++dx) {
+				SECTOR *pSector = &_sector[dy][dx];
+				for (auto iter = pSector->_playerSet.begin(); iter != pSector->_playerSet.end(); ++iter) {
+					Player *pPlayer = (*iter);
+					if (pPlayer == exPlayer) continue;
+					SendPacket(pPlayer->_SessionID, pPacket);
+					InterlockedIncrement(&_ChatSendCalc);
+				}
+			}
+		}
+	}
+
+	for (WORD dy = sy; dy <= ey; ++dy) {
+		for (WORD dx = sx; dx <= ex; ++dx) {
+			__SECTOR_UNLOCK(dx, dy);
 		}
 	}
 
