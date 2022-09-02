@@ -568,6 +568,7 @@ bool CNetServer::SendProc(SESSION *pSession, DWORD transferredSize) {
 	// 	   Send가 끝났다
 	//---------------------------
 	InterlockedExchange(&pSession->_IOFlag, FALSE);
+	InterlockedAdd64(&_sendedPacketCalc, sendedPacketCnt);
 	InterlockedAdd64(&_sendProcessedBytesCalc, transferredSize);
 	InterlockedAdd64(&_totalProcessedByte, transferredSize);
 
@@ -807,7 +808,9 @@ bool CNetServer::NetMonitorProc() {
 #ifdef df_SENDTHREAD
 bool CNetServer::SendThreadProc() {
 	while (_isRunning) {
+		//::Sleep(0);
 		for (int i = 1; i <= this->_maxConnection; ++i) {
+			//::Sleep(0);
 			if (InterlockedOr((LONG *) &_sessionContainer[i]._isAlive, FALSE) == FALSE)
 				continue;
 			SESSION *pSession = AcquireSession(_sessionContainer[i]._ID, 889988);
@@ -1313,6 +1316,7 @@ void CNetServer::CalcTPS() {
 	_recvPacketPerSec = InterlockedExchange(&_recvPacketCalc, 0);
 	_sendPacketPerSec = InterlockedExchange(&_sendPacketCalc, 0);
 	_sendProcessedBytesTPS = InterlockedExchange64(&_sendProcessedBytesCalc, 0);
+	_sendedPacketPerSec = InterlockedExchange64(&_sendedPacketCalc, 0);
 
 }
 
@@ -1326,6 +1330,7 @@ CNetServer::MoniteringInfo CNetServer::GetMoniteringInfo() {
 	info._totalAcceptSession = _totalAcceptSession;
 	info._totalPacket = _totalPacket;
 	info._sendBytePerSec = _sendProcessedBytesTPS;
+	info._sendedPacketPerSec = _sendedPacketPerSec;
 	info._totalProecessedBytes = _totalProcessedByte;
 	info._totalReleaseSession = _totalDisconnectSession;
 	info._sessionCnt = _curSessionCount;
@@ -1346,7 +1351,8 @@ void CNetServer::ResetMonitor() {
 	_recvPacketPerSec = 0;
 	_sendPacketCalc = 0;
 	_sendPacketPerSec = 0;
-
+	_sendedPacketCalc = 0;
+	_sendedPacketPerSec = 0;
 	_sendProcessedBytesCalc = 0;
 	_sendProcessedBytesTPS = 0;
 	_totalProcessedByte = 0;

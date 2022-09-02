@@ -7,6 +7,8 @@
 #define PACKET_LAN_HEADER		LAN_HEADER
 #define PACKET_LAN_HEADER_SIZE	sizeof(PACKET_LAN_HEADER)
 
+//#define df_LOGGING_PACKET_COUNTER_LOGIC
+
 #pragma pack(push, 1)
 struct LAN_HEADER {
 	unsigned short	len;
@@ -195,8 +197,13 @@ public:
 
 	void ResetRef();
 
-	//int _logSubLogic[100]; // 디버깅용 SubRef의 0dl 언재되었나
-	//unsigned long _logidx = 0;
+#ifdef df_LOGGING_PACKET_COUNTER_LOGIC
+	int _logAddLogic[100]; // 디버깅용 SubRef의 0dl 언재되었나
+	unsigned long _addlogidx = 0;
+
+	int _logSubLogic[100]; // 디버깅용 SubRef의 0dl 언재되었나
+	unsigned long _sublogidx = 0;
+#endif // df_LOGGING_PACKET_COUNTER_LOGIC
 
 
 	static ObjectPool_TLS<Packet> _packetPool;

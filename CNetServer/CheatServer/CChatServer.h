@@ -126,6 +126,11 @@ private:
 	LONG								_UpdateCalc;
 	LONG								_UpdateTPS;
 
+
+	LONGLONG							_SectorAroundCount;
+	LONGLONG							_totalSectorAroundSend;
+	LONG								_SectorAroundMax;
+
 	DWORD _PrintMonitorCount;
 
 };

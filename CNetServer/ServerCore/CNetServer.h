@@ -17,8 +17,8 @@
 }while(0)
 #endif // !CRASH
 
-#define df_LOGGING_SESSION_LOGIC 1000
-#define dfSESSION_SEND_PACKER_BUFFER_SIZE 200
+//#define df_LOGGING_SESSION_LOGIC 1000
+#define dfSESSION_SEND_PACKER_BUFFER_SIZE 500
 
 #define df_SENDTHREAD
 
@@ -223,6 +223,7 @@ protected:
 		ULONGLONG							_totalReleaseSession;
 		ULONGLONG							_recvPacketPerSec;
 		ULONGLONG							_sendPacketPerSec;
+		ULONGLONG							_sendedPacketPerSec;
 		ULONGLONG							_sendBytePerSec;
 		ULONGLONG							_acceptPerSec;
 		ULONGLONG							_queueSize;
@@ -239,6 +240,8 @@ protected:
 	alignas(64) ULONGLONG					_totalPacket;
 	alignas(64) ULONGLONG					_recvPacketCalc;
 	alignas(64) ULONGLONG					_recvPacketPerSec;
+	alignas(64) LONGLONG					_sendedPacketCalc;
+	alignas(64) LONGLONG					_sendedPacketPerSec;
 	alignas(64) ULONGLONG					_sendPacketCalc;
 	alignas(64) ULONGLONG					_sendPacketPerSec;
 	volatile alignas(64) LONG64				_sendProcessedBytesCalc;

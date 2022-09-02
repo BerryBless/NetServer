@@ -57,6 +57,10 @@ inline void Stack<T>::push(T data) {
 template<typename T>
 inline bool Stack<T>::pop(T& out) {
 	AcquireSRWLockExclusive(&_lock);
+	if (_pTop == nullptr) {
+		ReleaseSRWLockExclusive(&_lock);
+		return false;
+	}
 	NODE *tempTop = _pTop;
 	out = _pTop->_data;
 	_pTop = _pTop->_next;
