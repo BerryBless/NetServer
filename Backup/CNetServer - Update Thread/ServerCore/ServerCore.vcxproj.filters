@@ -1,0 +1,120 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Network">
+      <UniqueIdentifier>{1c471974-aa33-454b-b179-b775fe755ea3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils">
+      <UniqueIdentifier>{db28efa4-1bbe-4d69-b8e6-7aafe79fcfd5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{e17a7975-5d18-4c21-9dc1-a3a3bb4e0c61}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CCrashDump.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CLogger.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializingBuffer.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CorePch.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjectPool.hpp">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjectPool_TLS.hpp">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="LFQueue.hpp">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="LFStack.hpp">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Stack.hpp">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Queue.hpp">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Profiler.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="ProcessMoniter.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="HardWareMoniter.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CParser.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonProtocol.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Types.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetServer.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="Session.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="NetCoreErrorDefine.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="RingBuffer.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanServer.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CCrashDump.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CLogger.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializingBuffer.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CorePch.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="Profiler.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="ProcessMoniter.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="HardWareMoniter.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CParser.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetServer.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="RingBuffer.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanServer.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
