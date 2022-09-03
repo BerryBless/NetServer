@@ -5,10 +5,14 @@
 #include <conio.h>
 #include <time.h>
 #include <stdio.h>
-#define __PLAYER_MAP_LOCK()		this->PlayerMapLock()
-#define __PLAYER_MAP_UNLOCK()	this->PlayerMapUnlock()
-#define __SECTOR_LOCK(x, y)		this->SectorLock(x, y)
-#define __SECTOR_UNLOCK(x, y)	this->SectorUnlock(x, y)
+//#define __PLAYER_MAP_LOCK()		this->PlayerMapLock()
+//#define __PLAYER_MAP_UNLOCK()	this->PlayerMapUnlock()
+//#define __SECTOR_LOCK(x, y)		this->SectorLock(x, y)
+//#define __SECTOR_UNLOCK(x, y)	this->SectorUnlock(x, y)
+#define __PLAYER_MAP_LOCK()		
+#define __PLAYER_MAP_UNLOCK()	
+#define __SECTOR_LOCK(x, y)		
+#define __SECTOR_UNLOCK(x, y)	
 
 CChatServer::CChatServer() :_hThread{ 0 }, _startTime{ 0 }, _timeFormet{ 0 } {
 	CLogger::Initialize();
@@ -32,12 +36,10 @@ CChatServer::CChatServer() :_hThread{ 0 }, _startTime{ 0 }, _timeFormet{ 0 } {
 	_LoginTPS = 0;
 	_UpdateCalc = 0;
 	_UpdateTPS = 0;
-	_PrintMonitorCount = 0;
 
 
 	_totalSectorAroundSend = 0;
 	_SectorAroundCount = 0;
-	_SectorAroundMax = 0;
 
 	InitializeSRWLock(&_playerMapLock);
 
@@ -94,7 +96,6 @@ void CChatServer::CommandWait() {
 			break;
 		}
 		if (cmd == 'P' || cmd == 'p') {
-			PRO_PRINT(L"CLanserver_PROFILE.log");
 			PrintFileMonitor();
 		}
 		if (cmd == 'C' || cmd == 'c') {
@@ -151,34 +152,37 @@ bool CChatServer::UpdateProc() {
 }
 
 bool CChatServer::MonitoringProc() {
+	int PrintMonitorCount = 0;
+	while (_isRunning) {
 
-	Sleep(1000);
-	_SectorMoveTPS = InterlockedExchange(&_SectorMoveCalc, 0);
-	_ChatRecvTPS = InterlockedExchange(&_ChatRecvCalc, 0);
-	_ChatSendTPS = InterlockedExchange(&_ChatSendCalc, 0);
-	_LoginTPS = InterlockedExchange(&_LoginCalc, 0);
-	_UpdateTPS = InterlockedExchange(&_UpdateCalc, 0);
-	_hardMoniter.UpdateHardWareTime();
-	_procMonitor.UpdateProcessTime();
+		Sleep(1000);
+		_SectorMoveTPS = InterlockedExchange(&_SectorMoveCalc, 0);
+		_ChatRecvTPS = InterlockedExchange(&_ChatRecvCalc, 0);
+		_ChatSendTPS = InterlockedExchange(&_ChatSendCalc, 0);
+		_LoginTPS = InterlockedExchange(&_LoginCalc, 0);
+		_UpdateTPS = InterlockedExchange(&_UpdateCalc, 0);
+		_hardMoniter.UpdateHardWareTime();
+		_procMonitor.UpdateProcessTime();
 
-	_TotalSectorSize = 0;
-	for (int y = 0; y < SECTOR_Y_SIZE; ++y) {
-		for (int x = 0; x < SECTOR_X_SIZE; ++x) {
-			_TotalSectorSize += _sector[y][x]._playerSet.size();
+		_TotalSectorSize = 0;
+		for (int y = 0; y < SECTOR_Y_SIZE; ++y) {
+			for (int x = 0; x < SECTOR_X_SIZE; ++x) {
+				_TotalSectorSize += _sector[y][x]._playerSet.size();
+			}
 		}
+
+
+
+
+		// 5분마다 저장
+		if (PrintMonitorCount >= 300) {
+			PrintFileMonitor();
+			PrintMonitorCount = 0;
+		} else {
+			PrintMonitor(stdout);
+		}
+		++PrintMonitorCount;
 	}
-
-
-
-
-	// 5분마다 저장
-	if (_PrintMonitorCount >= 3000) {
-		PrintFileMonitor();
-		_PrintMonitorCount = 0;
-	} else {
-		PrintMonitor(stdout);
-	}
-	++_PrintMonitorCount;
 
 	return _isRunning;
 }
@@ -229,7 +233,9 @@ void CChatServer::OnRecv(SESSION_ID SessionID, Packet *pPacket) {
 
 	pPacket->SubRef(2);
 }
+void CChatServer::OnSend(SESSION_ID SessionID) {
 
+}
 void CChatServer::OnError(int errorcode, const WCHAR *log) {
 
 }
@@ -288,6 +294,7 @@ void CChatServer::PacketProc(Packet *pPacket, SESSION_ID SessionID, WORD type) {
 
 // PACKET_CS_CHAT_REQ_LOGIN
 void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID SessionID) {
+	PRO_BEGIN(L"RequestLogin");
 	pPacket->AddRef(4);
 	BYTE status = FALSE;
 	ACCOUNT_NO acno;
@@ -334,10 +341,12 @@ void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID SessionID) 
 	InterlockedIncrement(&_LoginCalc);
 	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"Login OK ANO[%d]", acno); // TODO ERROR MSG
 	pResLoginPacket->SubRef();
+	PRO_END(L"RequestLogin");
 }
 
 // PACKET_CS_CHAT_REQ_SECTOR_MOVE
 void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID SessionID) {
+	PRO_BEGIN(L"MoveSector");
 	ACCOUNT_NO no;
 	WORD sx;
 	WORD sy;
@@ -406,10 +415,12 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID SessionID) {
 	MakePacketResponseSectorMove(pResPacket, pPlayer->_AccountNo, pPlayer->_SectorX, pPlayer->_SectorY);
 	SendPacket(pPlayer->_SessionID, pResPacket);
 	pResPacket->SubRef(7);
+	PRO_END(L"MoveSector");
 }
 
 // PACKET_CS_CHAT_REQ_MESSAGE
 void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
+	PRO_BEGIN(L"ChatRequire");
 	ACCOUNT_NO no;
 	WORD msgLen;
 	WCHAR message[MASSAGE_MAX_SIZE];
@@ -459,7 +470,9 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
 		DisconnectSession(SessionID);
 		return;
 	}
+	PRO_END(L"ChatRequire");
 	Packet *pResPacket = Packet::AllocAddRef();
+
 
 	MakePacketResponseMessage(pResPacket, pSender->_AccountNo, pSender->_ID, pSender->_NickName, msgLen, message);
 	//BroadcastSector(pResPacket, pSender->_SectorX, pSender->_SectorY, nullptr);
@@ -518,7 +531,7 @@ void CChatServer::BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, P
 }
 
 void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer = nullptr) {
-	int beginX = sectorX - 1;
+	/*int beginX = sectorX - 1;
 	int beginY = sectorY - 1;
 
 	pPacket->AddRef();
@@ -539,63 +552,52 @@ void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sect
 
 	}
 	pPacket->SubRef();
-	InterlockedIncrement64(&_SectorAroundCount);
+	InterlockedIncrement64(&_SectorAroundCount);*/
 
 
 
-	//WORD sx = sectorX <= 0 ? 0 : sectorX - 1;
-	//WORD sy = sectorY <= 0 ? 0 : sectorY - 1;
-	//WORD ex = sectorX >= SECTOR_X_SIZE - 1 ? SECTOR_X_SIZE - 1 : sectorX + 1;
-	//WORD ey = sectorY >= SECTOR_Y_SIZE - 1 ? SECTOR_Y_SIZE - 1 : sectorY + 1;
-	//Stack<SESSION_ID> sendSessionStack;
-	//pPacket->AddRef(16);
+	WORD sx = sectorX <= 0 ? 0 : sectorX - 1;
+	WORD sy = sectorY <= 0 ? 0 : sectorY - 1;
+	WORD ex = sectorX >= SECTOR_X_SIZE - 1 ? SECTOR_X_SIZE - 1 : sectorX + 1;
+	WORD ey = sectorY >= SECTOR_Y_SIZE - 1 ? SECTOR_Y_SIZE - 1 : sectorY + 1;
+	pPacket->AddRef(16);
 
-	//for (WORD dy = sy; dy <= ey; ++dy) {
-	//	for (WORD dx = sx; dx <= ex; ++dx) {
-	//		__SECTOR_LOCK(dx, dy);
-	//	}
-	//}
+	/*for (WORD dy = sy; dy <= ey; ++dy) {
+		for (WORD dx = sx; dx <= ex; ++dx) {
+			__SECTOR_LOCK(dx, dy);
+		}
+	}*/
 
-	//{
-	//	for (WORD dy = sy; dy <= ey; ++dy) {
-	//		for (WORD dx = sx; dx <= ex; ++dx) {
-	//			SECTOR *pSector = &_sector[dy][dx];
-	//			for (auto iter = pSector->_playerSet.begin(); iter != pSector->_playerSet.end(); ++iter) {
-	//				Player *pPlayer = (*iter);
-	//				if (pPlayer == exPlayer) continue;
-	//				sendSessionStack.push(pPlayer->_SessionID);
-	//			}
-	//		}
-	//	}
-	//}
+	{
+		for (WORD dy = sy; dy <= ey; ++dy) {
+			for (WORD dx = sx; dx <= ex; ++dx) {
+				PRO_BEGIN(L"ChatBroadcast");
 
-	//for (WORD dy = sy; dy <= ey; ++dy) {
-	//	for (WORD dx = sx; dx <= ex; ++dx) {
-	//		__SECTOR_UNLOCK(dx, dy);
-	//	}
-	//}
+				//SECTOR *pSector = &_sector[dy][dx];
+				//for (auto iter = pSector->_playerSet.begin(); iter != pSector->_playerSet.end(); ++iter) {
+				::unordered_set<Player *> *pSectorPlayerSet = &_sector[dy][dx]._playerSet;
+				for (auto iter = pSectorPlayerSet->begin(); iter != pSectorPlayerSet->end(); ++iter) {
+					Player *pPlayer = (*iter);
+					if (pPlayer == exPlayer) continue;
+					SendPacket(pPlayer->_SessionID, pPacket);
+					InterlockedIncrement(&_ChatSendCalc);
+					InterlockedIncrement64(&_totalSectorAroundSend);
+				}
 
-	//// MONITOR
-	//LONG size = sendSessionStack.GetSize();
+				PRO_END(L"ChatBroadcast");
+			}
+		}
+		InterlockedIncrement64(&_SectorAroundCount);
+	}
 
-	//_SectorAroundMax = _SectorAroundMax < size ? size : _SectorAroundMax;
-	//InterlockedAdd(&_ChatSendCalc, size);
-	//InterlockedAdd64(&_totalSectorAroundSend, size);
-	//InterlockedIncrement64(&_SectorAroundCount);
+	/*for (WORD dy = sy; dy <= ey; ++dy) {
+		for (WORD dx = sx; dx <= ex; ++dx) {
+			__SECTOR_UNLOCK(dx, dy);
+		}
+	}*/
 
-	//// SEND
-	//SESSION_ID sendID;
-	//while (sendSessionStack.pop(sendID)) {
-	//	SendPacket(sendID,pPacket);
-	//}
-	//pPacket->SubRef(16);
-
-
-
-	
-
+	pPacket->SubRef(16);
 }
-
 
 void CChatServer::InsertPlayer(ULONGLONG SessionID, Player *pPlayer) {
 	_playerMap.emplace(::make_pair(SessionID, pPlayer));
@@ -670,18 +672,18 @@ Update TPS\t[%d]\n\
 login TPS\t[%d]\tsector move TPS\t[%d]\n\
 chat recv TPS\t[%d]\tchat send TPS\t[%d]\n\
 ",
-monitor._acceptPerSec, monitor._sendPacketPerSec,  monitor._recvPacketPerSec, monitor._sendedPacketPerSec, _UpdateTPS, _LoginTPS, _SectorMoveTPS, _ChatRecvTPS, _ChatSendTPS);
+monitor._acceptPerSec, monitor._sendPacketPerSec, monitor._recvPacketPerSec, monitor._sendedPacketPerSec, _UpdateTPS, _LoginTPS, _SectorMoveTPS, _ChatRecvTPS, _ChatSendTPS);
 
 	fwprintf_s(fp, L"\n\
 ----------------------------TOTAL-------------------------------------\n\
 packet\t\t[%lld]\tsended Byte\t[%lld]\n\
 accept Count\t[%lld]\tDisconnectSession Count[%lld]\n\
-SEND SECTOR AVG\t[%lld]\tSEND SECTOR MAX\t[%d]\n",
+SEND SECTOR AVG\t[%lld]\t\n",
 monitor._totalPacket, monitor._totalProecessedBytes, monitor._totalAcceptSession, monitor._totalReleaseSession,
-_SectorAroundCount == 0 ? 0 : _totalSectorAroundSend / _SectorAroundCount , _SectorAroundMax);
+_SectorAroundCount == 0 ? 0 : _totalSectorAroundSend / _SectorAroundCount);
 	fwprintf_s(fp, L"\n\
 ----------------------------MEMORY------------------------------------ \n\
-Available [%lluMb]\tNPPool\ [%lluMb] Private Mem\t[%lluKb]\n\n",
+Available [%lluMb]\tNPPool\ [%lluMb] Private Mem\t[%lluKb]\n",
 _hardMoniter.AvailableMemoryMBytes(), _hardMoniter.NonPagedPoolMBytes(), _procMonitor.PrivateMemoryKBytes());
 	fwprintf_s(fp, L"\
 Packet pool Capacity\t[%d]\tPacket pool size\t[%d]\n\

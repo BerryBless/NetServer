@@ -17,7 +17,7 @@
 }while(0)
 #endif // !CRASH
 
-#define df_LOGGING_SESSION_LOGIC 1000
+//#define df_LOGGING_SESSION_LOGIC 1000
 #define dfSESSION_SEND_PACKER_BUFFER_SIZE 200
 
 #define df_SENDTHREAD

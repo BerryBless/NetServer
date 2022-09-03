@@ -57,6 +57,7 @@ private:
 	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID); //< Accept 후 접속처리 완료 후 호출.
 	virtual void OnClientLeave(SESSION_ID SessionID); //< Release 후 호출
 	virtual void OnRecv(SESSION_ID SessionID, Packet *packet); //< 패킷 수신 완료 후
+	virtual void OnSend(SESSION_ID SessionID); //< 패킷 수신 완료 후
 	virtual void OnError(int errorcode, const WCHAR *log); // 에러 발생시 유저한테 알려줄곳
 	virtual void OnTimeout(SESSION_ID SessionID);
 
@@ -126,12 +127,7 @@ private:
 	LONG								_UpdateCalc;
 	LONG								_UpdateTPS;
 
-
 	LONGLONG							_SectorAroundCount;
 	LONGLONG							_totalSectorAroundSend;
-	LONG								_SectorAroundMax;
-
-	DWORD _PrintMonitorCount;
-
 };
 
