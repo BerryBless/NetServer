@@ -111,6 +111,7 @@ enum CHAT_PACKET_TYPE {
 	// 클라이언트는 이를 30초마다 보내줌.
 	// 서버는 40초 이상동안 메시지 수신이 없는 클라이언트를 강제로 끊어줘야 함.
 	//------------------------------------------------------------	
+	PACKET_CS_CHAT_REQ_HEARTBEAT,
 
 	// Client가 나갔을때 Packet*는 nullptr인 상태로 ON_CLIENT_LEAVE메시지가 푸쉬된다.
 	ON_CLIENT_LEAVE,

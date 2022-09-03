@@ -66,7 +66,7 @@ private:
 	void PacketProcRequestLogin(Packet *pPacket, SESSION_ID sessionID);
 	void PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID);
 	void PacketProcChatRequire(Packet *pPacket, SESSION_ID sessionID);
-	//void PacketProcHeartBeat(Packet *pPacket, SESSION_ID sessionID);
+	void PacketProcHeartBeat(Packet *pPacket, SESSION_ID sessionID);
 
 	void MakePacketResponseLogin(Packet *pPacket, ACCOUNT_NO account_no, BYTE status);
 	void MakePacketResponseSectorMove(Packet *pPacket, ACCOUNT_NO account_no, WORD sectorX, WORD sectorY);
@@ -75,7 +75,6 @@ private:
 private:
 	void BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer );
 	void BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer);
-
 
 private:
 	void InsertPlayer(ULONGLONG sessionID, Player *pPlayer);

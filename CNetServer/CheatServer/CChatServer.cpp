@@ -275,13 +275,14 @@ void CChatServer::PacketProc(Packet *pPacket, SESSION_ID SessionID, WORD type) {
 		InterlockedIncrement(&_LoginCalc);
 		RemovePlayer(SessionID);
 		break;
-
 	case CHAT_PACKET_TYPE::ON_TIME_OUT:
 		wsprintf(errmsg, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
 		CLogger::_Log(dfLOG_LEVEL_ERROR, errmsg);
 		DisconnectSession(SessionID);
 		break;
-
+	case CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_HEARTBEAT:
+		//PacketProcHeartBeat(pPacket, SessionID);
+		break;
 	default:
 		wsprintf(errmsg, L"ERROR :: Session Default Case SessionID : %I64u", SessionID);
 		CLogger::_Log(dfLOG_LEVEL_ERROR, errmsg);
@@ -480,7 +481,12 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
 
 	pResPacket->SubRef(11);
 }
-
+void CChatServer::PacketProcHeartBeat(Packet *pPacket, SESSION_ID sessionID) {
+	Player *pPlayer = FindPlayer(sessionID);
+	if (pPlayer == nullptr) {
+		DisconnectSession(sessionID);
+	}
+}
 
 // PACKET_SC_CHAT_RES_LOGIN
 void CChatServer::MakePacketResponseLogin(Packet *pPacket, ACCOUNT_NO account_no, BYTE status) {
@@ -567,14 +573,13 @@ void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sect
 			__SECTOR_LOCK(dx, dy);
 		}
 	}*/
-
+	PRO_BEGIN(L"ChatBroadcast");
 	{
 		for (WORD dy = sy; dy <= ey; ++dy) {
 			for (WORD dx = sx; dx <= ex; ++dx) {
-				PRO_BEGIN(L"ChatBroadcast");
-
 				//SECTOR *pSector = &_sector[dy][dx];
 				//for (auto iter = pSector->_playerSet.begin(); iter != pSector->_playerSet.end(); ++iter) {
+
 				::unordered_set<Player *> *pSectorPlayerSet = &_sector[dy][dx]._playerSet;
 				for (auto iter = pSectorPlayerSet->begin(); iter != pSectorPlayerSet->end(); ++iter) {
 					Player *pPlayer = (*iter);
@@ -583,12 +588,11 @@ void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sect
 					InterlockedIncrement(&_ChatSendCalc);
 					InterlockedIncrement64(&_totalSectorAroundSend);
 				}
-
-				PRO_END(L"ChatBroadcast");
 			}
 		}
 		InterlockedIncrement64(&_SectorAroundCount);
 	}
+	PRO_END(L"ChatBroadcast");
 
 	/*for (WORD dy = sy; dy <= ey; ++dy) {
 		for (WORD dx = sx; dx <= ex; ++dx) {

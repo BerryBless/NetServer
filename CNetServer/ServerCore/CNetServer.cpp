@@ -174,7 +174,7 @@ bool CNetServer::SendPacket(SESSION_ID SessionID, Packet *pPacket) {
 	//---------------------------
 	SESSION *pSession = AcquireSession(SessionID, 664466);
 	if (pSession == NULL) {
-		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: can not find session..");
+		//CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: can not find session..");
 		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: can not find session..");
 		pPacket->SubRef();
 		return false;
@@ -184,7 +184,7 @@ bool CNetServer::SendPacket(SESSION_ID SessionID, Packet *pPacket) {
 	//---------------------------
 	if (!InterlockedOr((LONG *) &pSession->_isAlive, 0)) {
 		CRASH();
-		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: Session is colsed..");
+		//CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: Session is colsed..");
 		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: Session is colsed..");
 		pPacket->SubRef();
 		return false;
@@ -446,8 +446,8 @@ unsigned int __stdcall CNetServer::TimeOutThread(LPVOID arg) {
 #ifdef df_SENDTHREAD
 unsigned int __stdcall CNetServer::SendThread(LPVOID arg) {
 	CNetServer *pServer = (CNetServer *) arg;
-	while (pServer->SendThreadProc())
-		CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- SendThread IS Closed..\n");
+	while (pServer->SendThreadProc());
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- SendThread IS Closed..\n");
 	return 0;
 }
 #endif // df_SENDTHREAD
@@ -718,7 +718,7 @@ bool CNetServer::SendThreadProc() {
 				continue;
 			if (pSession->_sendQueue.GetSize() > 0)
 				SendPost(pSession, 123321);
-			DecrementIOCount(pSession, 998899);
+			ReturnSession(pSession, 998899);
 		}
 	}
 	return false;
@@ -1093,9 +1093,6 @@ logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), p
 
 
 bool CNetServer::ReleaseSession(SESSION *pSession, int logic) {
-	// TEMP : 현재 테스트에서 세션이 끊이면 에러!
-	CRASH();
-
 	//---------------------------
 	// Release Session
 	//---------------------------
