@@ -37,6 +37,9 @@ void CEchoServer::OnRecv(SESSION_ID SessionID, Packet *pPacket) {
 	EchoProc(SessionID, pPacket);
 }
 
+void CEchoServer::OnSend(SESSION_ID SessionID) {
+}
+
 void CEchoServer::OnError(int errorcode, const WCHAR *log) {
 	//wprintf_s(L"%d :: %s", errorcode, log);
 }
@@ -119,9 +122,8 @@ _timeFormet.tm_mon + 1, _timeFormet.tm_mday, (_timeFormet.tm_year + 1900) % 100,
 Accept TPS\t[%lld]\n\
 send packet TPS\t[%lld]\n\
 recv packet TPS\t[%lld]\n\
-send byte bps\t[%lld]\n\
-recv byte bps\t[%lld]\n",
-monitor._acceptPerSec, monitor._sendPacketPerSec,  monitor._recvPacketPerSec, monitor._sendBytePerSec,monitor._recvBytePerSec);
+send byte bps\t[%lld]\n",
+monitor._acceptPerSec, monitor._sendPacketPerSec,  monitor._recvPacketPerSec, monitor._sendBytePerSec);
 	fwprintf_s(outFP, L"\n\
 ----------------------------TOTAL-------------------------------------\n\
 packet\t\t[%lld]\n\
