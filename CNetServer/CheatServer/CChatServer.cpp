@@ -81,7 +81,20 @@ void CChatServer::BeginServer(const WCHAR *szConfigFile) {
 
 
 void CChatServer::CloseServer() {
-	Quit();
+	_isRunning = false;
+	SetEvent(_DequeueEvent);
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"CHAT SERVER CLOSE");
+
+	DWORD retval = WaitForMultipleObjects(2, _hThread, TRUE, INFINITE);
+	switch (retval) {
+	case WAIT_FAILED:
+		break;
+	case WAIT_TIMEOUT:
+		break;
+	default:
+		break;
+	}
+	CNetServer::Quit();
 }
 
 
@@ -92,7 +105,7 @@ void CChatServer::CommandWait() {
 		char cmd = _getch();
 		if (cmd == 'Q' || cmd == 'q') {
 			//MemProfiler::Instance().PrintInfo();
-			Quit();
+			CloseServer();
 			break;
 		}
 		if (cmd == 'P' || cmd == 'p') {
