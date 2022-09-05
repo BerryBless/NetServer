@@ -10,6 +10,21 @@
     <Filter Include="Main">
       <UniqueIdentifier>{e17a7975-5d18-4c21-9dc1-a3a3bb4e0c61}</UniqueIdentifier>
     </Filter>
+    <Filter Include="DB">
+      <UniqueIdentifier>{f665a7b1-fdb7-4530-a1b2-1dd3b79ce87d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Memory">
+      <UniqueIdentifier>{9fa435d3-4932-46ab-9381-ed375ea6d975}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils\DataStructure">
+      <UniqueIdentifier>{017cb20d-cbbf-4a30-ac70-1a3707570089}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Main\Server">
+      <UniqueIdentifier>{7881a370-dcc4-44a4-b300-a8832a2aa7fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Main\Client">
+      <UniqueIdentifier>{dd0ab1f2-c3ec-4142-8e5f-7b898dffdbd6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -26,24 +41,6 @@
     </ClInclude>
     <ClInclude Include="CorePch.h">
       <Filter>Main</Filter>
-    </ClInclude>
-    <ClInclude Include="ObjectPool.hpp">
-      <Filter>Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="ObjectPool_TLS.hpp">
-      <Filter>Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="LFQueue.hpp">
-      <Filter>Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="LFStack.hpp">
-      <Filter>Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="Stack.hpp">
-      <Filter>Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="Queue.hpp">
-      <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="Profiler.h">
       <Filter>Utils</Filter>
@@ -63,9 +60,6 @@
     <ClInclude Include="Types.h">
       <Filter>Utils</Filter>
     </ClInclude>
-    <ClInclude Include="CNetServer.h">
-      <Filter>Main</Filter>
-    </ClInclude>
     <ClInclude Include="Session.h">
       <Filter>Network</Filter>
     </ClInclude>
@@ -75,8 +69,41 @@
     <ClInclude Include="RingBuffer.h">
       <Filter>Network</Filter>
     </ClInclude>
+    <ClInclude Include="DBConnection.h">
+      <Filter>DB</Filter>
+    </ClInclude>
+    <ClInclude Include="DBConnectionPool.h">
+      <Filter>DB</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjectPool.hpp">
+      <Filter>Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjectPool_TLS.hpp">
+      <Filter>Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="LFStack.hpp">
+      <Filter>Utils\DataStructure</Filter>
+    </ClInclude>
+    <ClInclude Include="LFQueue.hpp">
+      <Filter>Utils\DataStructure</Filter>
+    </ClInclude>
+    <ClInclude Include="Queue.hpp">
+      <Filter>Utils\DataStructure</Filter>
+    </ClInclude>
+    <ClInclude Include="Stack.hpp">
+      <Filter>Utils\DataStructure</Filter>
+    </ClInclude>
     <ClInclude Include="CLanServer.h">
-      <Filter>Main</Filter>
+      <Filter>Main\Server</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetServer.h">
+      <Filter>Main\Server</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanClient.h">
+      <Filter>Main\Client</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetClient.h">
+      <Filter>Main\Client</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -107,14 +134,26 @@
     <ClCompile Include="CParser.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
-    <ClCompile Include="CNetServer.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
     <ClCompile Include="RingBuffer.cpp">
       <Filter>Network</Filter>
     </ClCompile>
+    <ClCompile Include="DBConnection.cpp">
+      <Filter>DB</Filter>
+    </ClCompile>
+    <ClCompile Include="DBConnectionPool.cpp">
+      <Filter>DB</Filter>
+    </ClCompile>
     <ClCompile Include="CLanServer.cpp">
-      <Filter>Main</Filter>
+      <Filter>Main\Server</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetServer.cpp">
+      <Filter>Main\Server</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanClient.cpp">
+      <Filter>Main\Client</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetClient.cpp">
+      <Filter>Main\Client</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

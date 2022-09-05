@@ -107,8 +107,14 @@ template<typename T>
 inline void Queue<T>::Clear() {
 	AcquireSRWLockExclusive(&_lock);
 	T temp;
-	while (dequeue(temp));
+	while (_head._next != &_tail) {
+		Node *pNode = _head._next;
+		pNode->_prev->_next = pNode->_next;
+		pNode->_next->_prev = pNode->_prev;
 
+		--_size;
 
+		_nodePool.Free(pNode);
+	}
 	ReleaseSRWLockExclusive(&_lock);
 }

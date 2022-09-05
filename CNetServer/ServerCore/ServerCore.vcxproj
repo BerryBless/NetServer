@@ -158,9 +158,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CCrashDump.h" />
+    <ClInclude Include="CLanClient.h" />
     <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CLogger.h" />
+    <ClInclude Include="CNetClient.h" />
     <ClInclude Include="CNetServer.h" />
+    <ClInclude Include="DBConnection.h" />
+    <ClInclude Include="DBConnectionPool.h" />
     <ClInclude Include="NetCoreErrorDefine.h" />
     <ClInclude Include="ObjectPool.hpp" />
     <ClInclude Include="ObjectPool_TLS.hpp" />
@@ -182,10 +186,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CCrashDump.cpp" />
+    <ClCompile Include="CLanClient.cpp" />
     <ClCompile Include="CLanServer.cpp" />
     <ClCompile Include="CLogger.cpp" />
+    <ClCompile Include="CNetClient.cpp" />
     <ClCompile Include="CNetServer.cpp" />
     <ClCompile Include="CorePch.cpp" />
+    <ClCompile Include="DBConnection.cpp" />
+    <ClCompile Include="DBConnectionPool.cpp" />
     <ClCompile Include="SerializingBuffer.cpp" />
     <ClCompile Include="CParser.cpp" />
     <ClCompile Include="RingBuffer.cpp" />

@@ -37,7 +37,7 @@ CNetServer::CNetServer() {
 	_workerThreadCount = 0;
 	_maxConnection = 0;
 	_isNagle = false;
-	_timeoutMillisec = 40000;
+	_timeoutMillisec = 4000;
 
 	_isRunning = false;
 	_NumThreads = 0;
@@ -126,6 +126,7 @@ void CNetServer::Quit() {
 	// 종료코드를 완료통지에 넣어 워커 스레드 종료
 	// _listensock을 닫아 어셉트 스레드 종료
 	//---------------------------
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"CNetServer Quit Start");
 	_isRunning = false;
 	PostQueuedCompletionStatus(_hIOCP, dfEXIT_CODE, dfEXIT_CODE, NULL);
 	closesocket(_listensock);
@@ -731,6 +732,7 @@ bool CNetServer::TimeOutProc() {
 	while (_isRunning) {
 		timeoutTime = timeGetTime();
 		Sleep(_timeoutMillisec);
+		if (_isRunning == false) return false;
 		for (int i = 1; i <= this->_maxConnection; ++i) {
 			if (InterlockedOr((LONG *) &_sessionContainer[i]._IOcount, 0) & 0x80000000 != 0) continue;
 			if (InterlockedOr((LONG *) &_sessionContainer[i]._isAlive, FALSE) == FALSE) continue;

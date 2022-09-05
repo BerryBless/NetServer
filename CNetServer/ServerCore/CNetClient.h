@@ -1,6 +1,6 @@
 #pragma once
-#include "CRingBuffer.h"
-#include "CPacket.h"
+#include "RingBuffer.h"
+#include "SerializingBuffer.h"
 #include "CLogger.h"
 #include "ObjectPool.hpp"
 #include "CCrashDump.h"
@@ -23,8 +23,8 @@ public:
 		// IOCP Buffer
 		WSAOVERLAPPED _recvOverlapped;
 		WSAOVERLAPPED _sendOverlapped;
-		CRingBuffer _recvQueue;
-		Queue<CPacket *> _sendQueue;
+		RingBuffer _recvQueue;
+		Queue<Packet *> _sendQueue;
 
 		// session state
 		alignas(64) DWORD _IOcount;
@@ -55,7 +55,7 @@ public:
 	// ==============================================
 	bool Connect(const WCHAR *serverIP, USHORT serverPort);	// 서버IP
 	bool Disconnect();
-	bool SendPacket(CPacket *pPacket);
+	bool SendPacket(Packet *pPacket);
 	void SetThreadNum(BYTE worker, BYTE active);
 	bool Start();
 	void Quit();
@@ -65,7 +65,7 @@ protected:
 
 	virtual void OnEnterJoinServer() = 0; //< 서버와의 연결 성공 후
 	virtual void OnLeaveServer() = 0; //< 서버와의 연결이 끊어졌을 때
-	virtual void OnRecv(CPacket *pPacket) = 0;
+	virtual void OnRecv(Packet *pPacket) = 0;
 	virtual void OnSend(int sendsize) = 0;
 	virtual void OnError(int errorcode, const WCHAR *) = 0;
 

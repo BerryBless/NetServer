@@ -65,14 +65,14 @@ bool CLanClient::Disconnect() {
 	return ret;
 }
 
-bool CLanClient::SendPacket(CPacket *pPacket) {
+bool CLanClient::SendPacket(Packet *pPacket) {
 	//---------------------------
 	 // 페킷 포인터를 센드큐에
 	 //---------------------------
 	pPacket->SetLanHeader();
 	pPacket->AddRef();
 
-	_client._sendQueue.Enqueue(pPacket);
+	_client._sendQueue.enqueue(pPacket);
 	//---------------------------
 	// monitor
 	//---------------------------
@@ -276,11 +276,11 @@ bool CLanClient::SendProc(DWORD transferredSize) {
 	//---------------------------
 	// 완료통지 온 패킷 지우기
 	//---------------------------
-	CPacket *pPacket;
+	Packet *pPacket;
 	int sendedPacketCnt = _client._sendPacketCnt;
 
 	for (int i = 0; i < sendedPacketCnt; ++i) {
-		_client._sendQueue.Dequeue(&pPacket);
+		_client._sendQueue.dequeue(pPacket);
 		pPacket->SubRef(4);
 		pPacket = nullptr;
 	}
@@ -367,7 +367,7 @@ bool CLanClient::RecvProc(DWORD transferredSize) {
 		//---------------------------
 		// 패킷 풀에서 하나 꺼내기
 		//---------------------------
-		CPacket *pPacket = CPacket::AllocAddRef();
+		Packet *pPacket = Packet::AllocAddRef();
 		if (pPacket == NULL) {
 			CRASH();
 		}
@@ -570,7 +570,7 @@ bool CLanClient::SetWSABuffer(WSABUF *BufSets, bool isRecv) {
 		//---------------------------
 		// SendQ의 패킷을 WSABUF에 등록
 		//---------------------------
-		CPacket *pPacketBufs[100];
+		Packet *pPacketBufs[100];
 		//---------------------------
 		// 패킷을 얼마나 보낼지
 		//---------------------------
@@ -638,8 +638,8 @@ bool CLanClient::ReleaseSessionProc(int logic) {
 	//closesocket(_client._sock);
 	_client._sock = INVALID_SOCKET;
 	InterlockedExchange(&_client._IOFlag, FALSE);
-	CPacket *pPacket;
-	while (_client._sendQueue.Dequeue(&pPacket)) {
+	Packet *pPacket;
+	while (_client._sendQueue.dequeue(pPacket)) {
 		pPacket->SubRef(66);
 	}
 	_client._recvQueue.ClearBuffer();

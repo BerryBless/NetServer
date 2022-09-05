@@ -50,7 +50,7 @@ public:
 		SRWLOCK _lock;
 
 		// session state
-		DWORD _lastRecvdTime;
+		DWORD _lastActiveTime;
 		alignas(64) DWORD _IOcount;
 		alignas(64) DWORD _IOFlag;
 		alignas(64) DWORD _sendPacketCnt;
@@ -95,6 +95,7 @@ protected:
 	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID) = 0;
 	virtual void OnClientLeave(SESSION_ID SessionID) = 0;
 	virtual void OnRecv(SESSION_ID SessionID, Packet *pPacket) = 0;
+	virtual void OnSend(SESSION_ID SessionID) = 0; //< 패킷 수신 완료 후
 	virtual void OnError(int errorcode, const WCHAR *log) = 0;
 	virtual void OnTimeout(SESSION_ID SessionID) = 0;
 
@@ -130,6 +131,7 @@ private:
 
 	bool SendPost(SESSION *pSession, int logic);
 	bool RecvPost(SESSION *pSession, int logic);
+	bool TryGetRecvPacket(SESSION *pSession, Packet *pPacket);
 	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic);
 
 
@@ -139,17 +141,17 @@ private:
 	// ==============================================
 	SESSION *AcquireSession(SESSION_ID sessionID, int logic);
 	void ReturnSession(SESSION *pSession, int logic);
+	inline bool IncrementIOCount(SESSION *pSession, int logic);
+	inline bool DecrementIOCount(SESSION *pSession, int logic);
 
 	bool ReleaseSession(SESSION *pSession, int logic);
 
-	bool IncrementIOCount(SESSION *pSession, int logic);
-	bool DecrementIOCount(SESSION *pSession, int logic);
-
+	inline void SetSessionActiveTimer(SESSION *pSession) { InterlockedExchange(&pSession->_lastActiveTime, timeGetTime()); }
 
 	SESSION *CreateSession(SOCKET sock, sockaddr_in clientaddr);
 	SESSION_ID GenerateSessionID();
-	USHORT SessionIDtoIndex(SESSION_ID sessionID);
-	SESSION *FindSession(SESSION_ID sessionID);
+	inline USHORT SessionIDtoIndex(SESSION_ID sessionID);
+	inline SESSION *FindSession(SESSION_ID sessionID);
 	void InitializeIndex();
 
 	inline void GetStringIP(WCHAR *str, sockaddr_in &addr) {
@@ -161,11 +163,11 @@ private:
 	// ==============================================
 
 
-	void SessionLock(SESSION *pSession);
-	void SessionUnlock(SESSION *pSession);
+	inline void SessionLock(SESSION *pSession);
+	inline void SessionUnlock(SESSION *pSession);
 
-	void SessionContainerLock();
-	void SessionContainerUnlock();
+	inline void SessionContainerLock();
+	inline void SessionContainerUnlock();
 
 private:
 	// ==============================================
@@ -223,8 +225,8 @@ protected:
 		ULONGLONG							_totalReleaseSession;
 		ULONGLONG							_recvPacketPerSec;
 		ULONGLONG							_sendPacketPerSec;
+		ULONGLONG							_sendedPacketPerSec;
 		ULONGLONG							_sendBytePerSec;
-		ULONGLONG							_recvBytePerSec;
 		ULONGLONG							_acceptPerSec;
 		ULONGLONG							_queueSize;
 		ULONGLONG							_queueSizeAvg;
@@ -240,10 +242,10 @@ protected:
 	alignas(64) ULONGLONG					_totalPacket;
 	alignas(64) ULONGLONG					_recvPacketCalc;
 	alignas(64) ULONGLONG					_recvPacketPerSec;
+	alignas(64) LONGLONG					_sendedPacketCalc;
+	alignas(64) LONGLONG					_sendedPacketPerSec;
 	alignas(64) ULONGLONG					_sendPacketCalc;
 	alignas(64) ULONGLONG					_sendPacketPerSec;
-	volatile alignas(64) LONG64				_recvProcessedBytesCalc;
-	volatile alignas(64) LONG64				_recvProcessedBytesTPS;
 	volatile alignas(64) LONG64				_sendProcessedBytesCalc;
 	volatile alignas(64) LONG64				_sendProcessedBytesTPS;
 	volatile alignas(64) LONG64				_totalProcessedByte;
