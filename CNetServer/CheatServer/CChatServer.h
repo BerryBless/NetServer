@@ -15,7 +15,7 @@
 #define MASSAGE_MAX_LEN			512
 #define MASSAGE_MAX_SIZE		1024
 
-//#define UPDATE_THREAD
+#define UPDATE_THREAD
 
 class CChatServer : public CNetServer {
 
@@ -101,11 +101,15 @@ private:
 private:
 	DWORD									_isRunning;
 
-	HANDLE									_hThread[2];
+	//HANDLE									_hThread[2];
+	CThread									_moinitorThrad;
 
+#ifdef UPDATE_THREAD
+	CThread									_updateThread;
 	Queue <JobMessage*>						_jobQueue;
 	HANDLE									_DequeueEvent;
 	ObjectPool_TLS <JobMessage>				_jobMsgPool;
+#endif // UPDATE_THREAD
 
 
 	SECTOR **_sector;

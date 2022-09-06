@@ -18,7 +18,7 @@
 #define __SECTOR_UNLOCK(x, y)	
 #endif // !UPDATE_THREAD
 
-CChatServer::CChatServer() :_hThread{ 0 }, _startTime{ 0 }, _timeFormet{ 0 } {
+CChatServer::CChatServer() : _startTime{ 0 }, _timeFormet{ 0 } {
 	CLogger::Initialize();
 	CLogger::SetDirectory(L"serverlog");
 	CLogger::SetLogLevel(dfLOG_LEVEL_DEBUG);
@@ -90,18 +90,12 @@ void CChatServer::CloseServer() {
 	_isRunning = false;
 #ifdef UPDATE_THREAD
 	SetEvent(_DequeueEvent);
+	_updateThread.EndThread();
 #endif // UPDATE_THREAD
 	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"CHAT SERVER CLOSE");
 
-	DWORD retval = WaitForMultipleObjects(2, _hThread, TRUE, INFINITE);
-	switch (retval) {
-	case WAIT_FAILED:
-		break;
-	case WAIT_TIMEOUT:
-		break;
-	default:
-		break;
-	}
+	_updateThread.EndThread();
+	
 	for (int i = 0; i < SECTOR_Y_SIZE; i++)
 		delete[] _sector[i];
 	delete[] _sector;
@@ -221,10 +215,25 @@ void CChatServer::BeginThread() {
 	int i = 0;
 #ifdef UPDATE_THREAD
 	// Update (jobQ Thread)
-	_hThread[i++] = (HANDLE) _beginthreadex(nullptr, 0, UpdateThread, this, 0, nullptr);
+	_updateThread.SetThreadName(L"CHAT SERVER Update Thread");
+	_updateThread.BeginThread();
+	_updateThread.Launch(
+		[](LPVOID arg) {
+			CChatServer *pServer = (CChatServer *) arg;
+			while (pServer->UpdateProc());
+		}
+		, this);
 #endif
 	// MonitorThread
-	_hThread[i++] = (HANDLE) _beginthreadex(nullptr, 0, MonitoringThread, this, 0, nullptr);
+	_moinitorThrad.SetThreadName(L"CHAT SERVER Monitor Thread");
+	_moinitorThrad.BeginThread();
+	_moinitorThrad.Launch(
+		[](LPVOID arg) {
+			CChatServer *pServer = (CChatServer *) arg;
+			while (pServer->MonitoringProc());
+		}
+	, this);
+	CLogger::_Log(dfLOG_LEVEL_NOTICE,L"ChatServer BeginThread OK.. ");
 }
 
 bool CChatServer::OnConnectionRequest(WCHAR *IPStr, DWORD IP, USHORT Port) {

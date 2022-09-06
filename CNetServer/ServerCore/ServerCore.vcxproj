@@ -163,6 +163,7 @@
     <ClInclude Include="CLogger.h" />
     <ClInclude Include="CNetClient.h" />
     <ClInclude Include="CNetServer.h" />
+    <ClInclude Include="CThread.h" />
     <ClInclude Include="DBConnection.h" />
     <ClInclude Include="DBConnectionPool.h" />
     <ClInclude Include="NetCoreErrorDefine.h" />
@@ -192,6 +193,7 @@
     <ClCompile Include="CNetClient.cpp" />
     <ClCompile Include="CNetServer.cpp" />
     <ClCompile Include="CorePch.cpp" />
+    <ClCompile Include="CThread.cpp" />
     <ClCompile Include="DBConnection.cpp" />
     <ClCompile Include="DBConnectionPool.cpp" />
     <ClCompile Include="SerializingBuffer.cpp" />

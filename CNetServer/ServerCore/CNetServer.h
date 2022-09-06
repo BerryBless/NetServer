@@ -20,7 +20,7 @@
 //#define df_LOGGING_SESSION_LOGIC 1000
 #define dfSESSION_SEND_PACKER_BUFFER_SIZE 200
 
-//#define df_SENDTHREAD
+#define df_SENDTHREAD
 
 // ----------------------------------------------
 // SESSION_ID
@@ -109,14 +109,6 @@ private:
 	void Startup();
 	bool CreateListenSocket();
 	void BeginThreads();
-	static unsigned int __stdcall WorkerThread(LPVOID arg);
-	static unsigned int __stdcall AcceptThread(LPVOID arg);
-	static unsigned int __stdcall MonitorThread(LPVOID arg);
-	static unsigned int __stdcall TimeOutThread(LPVOID arg);
-#ifdef df_SENDTHREAD
-	static unsigned int __stdcall SendThread(LPVOID arg);
-#endif // df_SENDTHREAD
-
 
 	bool OnGQCS();
 	bool SendProc(SESSION *pSession, DWORD transferredSize);
@@ -202,7 +194,7 @@ private:
 	// Handle
 	// ----------------------------------------------
 	HANDLE _hIOCP;				// IOCP핸들
-	HANDLE *_hThreads;			// WorkerThread Handle
+	CThread *_threads;			// WorkerThread Handle
 
 	// ----------------------------------------------
 	// Session Container 

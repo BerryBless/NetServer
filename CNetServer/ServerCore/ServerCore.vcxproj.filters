@@ -25,6 +25,9 @@
     <Filter Include="Utils\DataStructure\Memory">
       <UniqueIdentifier>{9fa435d3-4932-46ab-9381-ed375ea6d975}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Thread">
+      <UniqueIdentifier>{6687fbbb-2dbc-4b65-b2b0-7bd91151dfca}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -105,6 +108,9 @@
     <ClInclude Include="CNetClient.h">
       <Filter>Main\Client</Filter>
     </ClInclude>
+    <ClInclude Include="CThread.h">
+      <Filter>Thread</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -154,6 +160,9 @@
     </ClCompile>
     <ClCompile Include="CNetClient.cpp">
       <Filter>Main\Client</Filter>
+    </ClCompile>
+    <ClCompile Include="CThread.cpp">
+      <Filter>Thread</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

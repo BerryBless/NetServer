@@ -109,14 +109,6 @@ private:
 	void Startup();
 	bool CreateListenSocket();
 	void BeginThreads();
-	static unsigned int __stdcall WorkerThread(LPVOID arg);
-	static unsigned int __stdcall AcceptThread(LPVOID arg);
-	static unsigned int __stdcall MonitorThread(LPVOID arg);
-	static unsigned int __stdcall TimeOutThread(LPVOID arg);
-#ifdef df_SENDTHREAD
-	static unsigned int __stdcall SendThread(LPVOID arg);
-#endif // df_SENDTHREAD
-
 
 	bool OnGQCS();
 	bool SendProc(SESSION *pSession, DWORD transferredSize);
@@ -131,6 +123,7 @@ private:
 
 	bool SendPost(SESSION *pSession, int logic);
 	bool RecvPost(SESSION *pSession, int logic);
+	void PostClientLeave(SESSION_ID sessionID); // leave 컨텐츠처리를 스레드 분리를 위한 함수
 	bool TryGetRecvPacket(SESSION *pSession, Packet *pPacket);
 	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic);
 
@@ -201,7 +194,7 @@ private:
 	// Handle
 	// ----------------------------------------------
 	HANDLE _hIOCP;				// IOCP핸들
-	HANDLE *_hThreads;			// WorkerThread Handle
+	CThread *_threads;			// WorkerThread Handle
 
 	// ----------------------------------------------
 	// Session Container 

@@ -40,6 +40,7 @@
 #include "Types.h"
 #include "CParser.h"
 #include "DBConnectionPool.h"
+#include "CThread.h"
 //#include "MemProfiler.h"
 using namespace std;
 
