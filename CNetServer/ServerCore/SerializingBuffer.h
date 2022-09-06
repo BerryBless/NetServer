@@ -37,6 +37,7 @@ public:
 		eBUFFER_DEFAULT = 1400		// 패킷의 기본 버퍼 사이즈.
 	};
 
+public:
 	//////////////////////////////////////////////////////////////////////////
 	// 생성자, 파괴자.
 	//
@@ -119,6 +120,7 @@ public:
 	// debug
 	/////
 	void PrintPacket();
+public:
 	/* ============================================================================= */
 	// 연산자 오버로딩
 	/* ============================================================================= */
@@ -127,36 +129,110 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	// 넣기.	각 변수 타입마다 모두 만듬.
 	//////////////////////////////////////////////////////////////////////////
-	Packet &operator << (unsigned char byValue);
-	Packet &operator << (char chValue);
-
-	Packet &operator << (short shValue);
-	Packet &operator << (unsigned short wValue);
-
-	Packet &operator << (int iValue);
-	Packet &operator << (unsigned long dwValue);
-	Packet &operator << (float fValue);
-
-	Packet &operator << (__int64 iValue);
-	Packet &operator << (double dValue);
-
+	inline Packet &operator << (unsigned char value) {
+		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+		_writePos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator << (char value) {
+		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+		_writePos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator << (short value) {
+		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+		_writePos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator << (unsigned short value) {
+		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+		_writePos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator << (int value) {
+		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+		_writePos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator << (unsigned long value) {
+		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+		_writePos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator << (float value) {
+		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+		_writePos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator << (__int64 value) {
+		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+		_writePos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator << (double value) {
+		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+		_writePos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator << (unsigned long long value) {
+		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+		_writePos += sizeof(value);
+		return *this;
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// 빼기.	각 변수 타입마다 모두 만듬.
 	//////////////////////////////////////////////////////////////////////////
-	Packet &operator >> (unsigned char &byValue);
-	Packet &operator >> (char &chValue);
-
-	Packet &operator >> (short &shValue);
-	Packet &operator >> (unsigned short &wValue);
-
-	Packet &operator >> (int &iValue);
-	Packet &operator >> (unsigned long &dwValue);
-	Packet &operator >> (float &fValue);
-
-	Packet &operator >> (__int64 &iValue);
-	Packet &operator >> (double &dValue);
-
+	inline Packet &operator >> (unsigned char &value) {
+		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+		_readPos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator >> (char &value) {
+		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+		_readPos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator >> (short &value) {
+		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+		_readPos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator >> (unsigned short &value) {
+		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+		_readPos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator >> (int &value) {
+		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+		_readPos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator >> (unsigned long &value) {
+		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+		_readPos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator >> (float &value) {
+		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+		_readPos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator >> (__int64 &value) {
+		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+		_readPos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator >> (double &value) {
+		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+		_readPos += sizeof(value);
+		return *this;
+	}
+	inline Packet &operator >> (unsigned long long &value) {
+		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+		_readPos += sizeof(value);
+		return *this;
+	}
 
 
 
@@ -166,7 +242,7 @@ public:
 	// Parameters: (char *)Dest 포인터. (int)Size.
 	// Return: (int)복사한 사이즈.
 	//////////////////////////////////////////////////////////////////////////
-	int		GetData(char *chpDest, int iSize);
+	int GetData(char *pDest, int iSize);
 
 	//////////////////////////////////////////////////////////////////////////
 	// 데이타 삽입.
@@ -174,17 +250,15 @@ public:
 	// Parameters: (char *)Src 포인터. (int)SrcSize.
 	// Return: (int)복사한 사이즈.
 	//////////////////////////////////////////////////////////////////////////
-	int		PutData(char *chpSrc, int iSrcSize);
+	int PutData(char *pSrc, int iSrcSize);
 
 	//////////////////////////////////////////////////////////////////////////
 	// 할당받으며 참조포인트 리셋후 하나 증가
-	//
 	//////////////////////////////////////////////////////////////////////////
 	static Packet *AllocAddRef();
 
 	//////////////////////////////////////////////////////////////////////////
 	// 이 패킷의 참조 카운터 증가
-	//
 	//////////////////////////////////////////////////////////////////////////
 	void	AddRef(int logic = 0);
 

@@ -20,7 +20,7 @@
 //#define df_LOGGING_SESSION_LOGIC 1000
 #define dfSESSION_SEND_PACKER_BUFFER_SIZE 200
 
-#define df_SENDTHREAD
+//#define df_SENDTHREAD
 
 // ----------------------------------------------
 // SESSION_ID
@@ -131,6 +131,7 @@ private:
 
 	bool SendPost(SESSION *pSession, int logic);
 	bool RecvPost(SESSION *pSession, int logic);
+	void PostClientLeave(SESSION_ID sessionID); // leave 컨텐츠처리를 스레드 분리를 위한 함수
 	bool TryGetRecvPacket(SESSION *pSession , Packet *pPacket);
 	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic);
 

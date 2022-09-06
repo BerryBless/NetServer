@@ -6,5 +6,5 @@ void HelloWorld() {
 	printf_s("HELLO SERVER!");
 }
 
-long CCrashDump::_dumpCount = 0;
-static CCrashDump g_dump;
+//long CCrashDump::_dumpCount = 0;
+//static CCrashDump g_dump;

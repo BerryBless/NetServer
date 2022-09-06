@@ -6,6 +6,7 @@
 
 // cmd code
 #define dfEXIT_CODE 0xFFFFFFFF // GQCS()에서 이게 오면 종료
+#define dfCLIENT_LEAVE_CODE 0xFFFFFF00 // GQCS()에서 이게 오면 OnClientLeave 호출
 
 // CS
 #define SESSION_LOCK(pSession)		SessionLock(pSession)
@@ -483,7 +484,8 @@ bool CNetServer::OnGQCS() {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"overlapped is NULL ERROR CODE [%d]", err);
 		OnError(err, L"IOCP ERROR :: overlapped is NULL");
 		return true;
-	} else if (pOverlapped == (OVERLAPPED *) 0xffffffff) {
+	} else if (pOverlapped == (OVERLAPPED *) dfCLIENT_LEAVE_CODE) {
+		OnClientLeave(completionKey);
 		return true;
 	}
 
@@ -888,6 +890,10 @@ bool CNetServer::RecvPost(SESSION *pSession, int logic) {
 	//PRO_END(L"RecvPost");
 	return true;
 }
+
+void CNetServer::PostClientLeave(SESSION_ID sessionID) {
+	PostQueuedCompletionStatus(_hIOCP, 0, sessionID, (LPOVERLAPPED) dfCLIENT_LEAVE_CODE);
+}		
 
 bool CNetServer::TryGetRecvPacket(SESSION *pSession, Packet *pPacket) {
 	PACKET_NET_HEADER header;

@@ -15,6 +15,7 @@
 #define MASSAGE_MAX_LEN			512
 #define MASSAGE_MAX_SIZE		1024
 
+//#define UPDATE_THREAD
 
 class CChatServer : public CNetServer {
 
@@ -77,16 +78,23 @@ private:
 	void BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer);
 
 private:
+	// Player Management
 	void InsertPlayer(ULONGLONG sessionID, Player *pPlayer);
 	void RemovePlayer(ULONGLONG sessionID);
 	Player *FindPlayer(ULONGLONG sessionID);
 
+private:
+	// LOCK
 	inline void PlayerMapLock() { AcquireSRWLockExclusive(&this->_playerMapLock); }
 	inline void PlayerMapUnlock() { ReleaseSRWLockExclusive(&this->_playerMapLock); }
 	inline void SectorLock(WORD x, WORD y) { AcquireSRWLockExclusive(&this->_sector[y][x]._lock); }
 	inline void SectorUnlock(WORD x, WORD y) { ReleaseSRWLockExclusive(&this->_sector[y][x]._lock); }
+	inline void SectorSLock(WORD x, WORD y) { AcquireSRWLockShared(&this->_sector[y][x]._lock); }
+	inline void SectorSUnlock(WORD x, WORD y) { ReleaseSRWLockShared(&this->_sector[y][x]._lock); }
+	inline BOOLEAN TrySectorLock(WORD x, WORD y) { return TryAcquireSRWLockExclusive(&this->_sector[y][x]._lock); }
 
 private:
+	// Monitoring
 	void PrintMonitor(FILE *fp);
 	void PrintFileMonitor();
 
@@ -109,7 +117,6 @@ private:
 	// server start timestemp
 	tm _timeFormet;
 	time_t _startTime;
-
 
 	HardWareMoniter							_hardMoniter;
 	ProcessMoniter							_procMonitor;

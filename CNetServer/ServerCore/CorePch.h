@@ -1,3 +1,16 @@
+
+/*
+프로젝트 설정
+1. General -> OutputD Directory -> $(SolutionDir)Binary\$(Configuration)\
+2. pch 적용
+3. 최적화 컴파일 끄기
+4. VC++ Directories
+	Include Directories -> Edit -> New Line -> $(SolutionDir)ServerCore
+	Library Directories -> Edit -> New Line -> $(SolutionDir)Libraries
+*/
+
+
+
 #pragma once
 #pragma comment(lib, "ws2_32")
 #pragma comment (lib, "winmm")
@@ -14,18 +27,6 @@
 #include <WS2tcpip.h>
 #include <WinSock2.h>
 #include <iostream>
-/*
-프로젝트 설정
-1. General -> OutputD Directory -> $(SolutionDir)Binary\$(Configuration)\
-2. pch 적용
-3. 최적화 컴파일 끄기
-4. VC++ Directories
-	Include Directories -> Edit -> New Line -> $(SolutionDir)ServerCore
-	Library Directories -> Edit -> New Line -> $(SolutionDir)Libraries
-*/
-
-
-
 #include <timeapi.h>
 #include "RingBuffer.h"
 #include "CLogger.h"

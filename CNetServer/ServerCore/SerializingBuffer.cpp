@@ -139,14 +139,14 @@ bool Packet::VerifyCheckSum() {
 
 
 void Packet::PrintPacket() {
-	/*printf_s("\nPacket Start\n");
+	printf_s("\nPacket Start\n");
 	for (int i = 0; i < _writePos; ++i) {
 		printf_s("%02x ", _pBuffer[i]);
 	}
-	printf_s("\nPacket End\n");*/
+	printf_s("\nPacket End\n");
 }
 
-Packet &Packet::operator=(Packet &clSrPacket) {
+inline Packet &Packet::operator=(Packet &clSrPacket) {
 	// 버퍼 내용물 복사
 	//this->Clear();
 	this->_readPos = clSrPacket.GetReadPtr() - clSrPacket.GetBufferPtr();
@@ -154,114 +154,114 @@ Packet &Packet::operator=(Packet &clSrPacket) {
 	memcpy_s(this->_pBuffer, this->_iBufferSize, clSrPacket.GetBufferPtr(), this->_writePos);
 	return *this;
 }
-
-Packet &Packet::operator<<(unsigned char byValue) {
+/*
+inline Packet &Packet::operator<<(unsigned char byValue) {
 	memcpy_s(_pBuffer + _writePos, _iBufferSize, &byValue, sizeof(byValue));
 	_writePos += sizeof(byValue);
 	return *this;
 }
 
-Packet &Packet::operator<<(char chValue) {
+inline Packet &Packet::operator<<(char chValue) {
 	memcpy_s(_pBuffer + _writePos, _iBufferSize, &chValue, sizeof(chValue));
 	_writePos += sizeof(chValue);
 	return *this;
 }
 
-Packet &Packet::operator<<(short shValue) {
+inline Packet &Packet::operator<<(short shValue) {
 	memcpy_s(_pBuffer + _writePos, _iBufferSize, &shValue, sizeof(shValue));
 	_writePos += sizeof(shValue);
 	return *this;
 }
 
-Packet &Packet::operator<<(unsigned short wValue) {
+inline Packet &Packet::operator<<(unsigned short wValue) {
 	memcpy_s(_pBuffer + _writePos, _iBufferSize, &wValue, sizeof(wValue));
 	_writePos += sizeof(wValue);
 	return *this;
 }
 
-Packet &Packet::operator<<(int iValue) {
+inline Packet &Packet::operator<<(int iValue) {
 	memcpy_s(_pBuffer + _writePos, _iBufferSize, &iValue, sizeof(iValue));
 	_writePos += sizeof(iValue);
 	return *this;
 }
 
-Packet &Packet::operator<<(unsigned long dwValue) {
+inline Packet &Packet::operator<<(unsigned long dwValue) {
 	memcpy_s(_pBuffer + _writePos, _iBufferSize, &dwValue, sizeof(dwValue));
 	_writePos += sizeof(dwValue);
 	return *this;
 }
 
-Packet &Packet::operator<<(float fValue) {
+inline Packet &Packet::operator<<(float fValue) {
 	memcpy_s(_pBuffer + _writePos, _iBufferSize, &fValue, sizeof(fValue));
 	_writePos += sizeof(fValue);
 	return *this;
 }
 
-Packet &Packet::operator<<(__int64 iValue) {
+inline Packet &Packet::operator<<(__int64 iValue) {
 	memcpy_s(_pBuffer + _writePos, _iBufferSize, &iValue, sizeof(iValue));
 	_writePos += sizeof(iValue);
 	return *this;
 }
 
-Packet &Packet::operator<<(double dValue) {
+inline Packet &Packet::operator<<(double dValue) {
 	memcpy_s(_pBuffer + _writePos, _iBufferSize, &dValue, sizeof(dValue));
 	_writePos += sizeof(dValue);
 	return *this;
 }
 
-Packet &Packet::operator>>(unsigned char &byValue) {
+inline Packet &Packet::operator>>(unsigned char &byValue) {
 	memcpy_s(&byValue, sizeof(byValue), _pBuffer + _readPos, sizeof(byValue));
 	_readPos += sizeof(byValue);
 	return *this;
 }
 
-Packet &Packet::operator>>(char &chValue) {
+inline Packet &Packet::operator>>(char &chValue) {
 	memcpy_s(&chValue, sizeof(chValue), _pBuffer + _readPos, sizeof(chValue));
 	_readPos += sizeof(chValue);
 	return *this;
 }
 
-Packet &Packet::operator>>(short &shValue) {
+inline Packet &Packet::operator>>(short &shValue) {
 	memcpy_s(&shValue, sizeof(shValue), _pBuffer + _readPos, sizeof(shValue));
 	_readPos += sizeof(shValue);
 	return *this;
 }
 
-Packet &Packet::operator>>(unsigned short &wValue) {
+inline Packet &Packet::operator>>(unsigned short &wValue) {
 	memcpy_s(&wValue, sizeof(wValue), _pBuffer + _readPos, sizeof(wValue));
 	_readPos += sizeof(wValue);
 	return *this;
 }
 
-Packet &Packet::operator>>(int &iValue) {
+inline Packet &Packet::operator>>(int &iValue) {
 	memcpy_s(&iValue, sizeof(iValue), _pBuffer + _readPos, sizeof(iValue));
 	_readPos += sizeof(iValue);
 	return *this;
 }
 
-Packet &Packet::operator>>(unsigned long &dwValue) {
+inline Packet &Packet::operator>>(unsigned long &dwValue) {
 	memcpy_s(&dwValue, sizeof(dwValue), _pBuffer + _readPos, sizeof(dwValue));
 	_readPos += sizeof(dwValue);
 	return *this;
 }
 
-Packet &Packet::operator>>(float &fValue) {
+inline Packet &Packet::operator>>(float &fValue) {
 	memcpy_s(&fValue, sizeof(fValue), _pBuffer + _readPos, sizeof(fValue));
 	_readPos += sizeof(fValue);
 	return *this;
 }
 
-Packet &Packet::operator>>(__int64 &iValue) {
+inline Packet &Packet::operator>>(__int64 &iValue) {
 	memcpy_s(&iValue, sizeof(iValue), _pBuffer + _readPos, sizeof(iValue));
 	_readPos += sizeof(iValue);
 	return *this;
 }
 
-Packet &Packet::operator>>(double &dValue) {
+inline Packet &Packet::operator>>(double &dValue) {
 	memcpy_s(&dValue, sizeof(dValue), _pBuffer + _readPos, sizeof(dValue));
 	_readPos += sizeof(dValue);
 	return *this;
-}
+}//*/
 
 int Packet::GetData(char *chpDest, int iSize) {
 	if (iSize > GetDataSize()) {

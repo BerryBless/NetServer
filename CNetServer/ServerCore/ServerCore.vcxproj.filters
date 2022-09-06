@@ -13,9 +13,6 @@
     <Filter Include="DB">
       <UniqueIdentifier>{f665a7b1-fdb7-4530-a1b2-1dd3b79ce87d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Memory">
-      <UniqueIdentifier>{9fa435d3-4932-46ab-9381-ed375ea6d975}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Utils\DataStructure">
       <UniqueIdentifier>{017cb20d-cbbf-4a30-ac70-1a3707570089}</UniqueIdentifier>
     </Filter>
@@ -24,6 +21,9 @@
     </Filter>
     <Filter Include="Main\Client">
       <UniqueIdentifier>{dd0ab1f2-c3ec-4142-8e5f-7b898dffdbd6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils\DataStructure\Memory">
+      <UniqueIdentifier>{9fa435d3-4932-46ab-9381-ed375ea6d975}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -76,10 +76,10 @@
       <Filter>DB</Filter>
     </ClInclude>
     <ClInclude Include="ObjectPool.hpp">
-      <Filter>Memory</Filter>
+      <Filter>Utils\DataStructure\Memory</Filter>
     </ClInclude>
     <ClInclude Include="ObjectPool_TLS.hpp">
-      <Filter>Memory</Filter>
+      <Filter>Utils\DataStructure\Memory</Filter>
     </ClInclude>
     <ClInclude Include="LFStack.hpp">
       <Filter>Utils\DataStructure</Filter>
