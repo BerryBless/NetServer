@@ -17,7 +17,6 @@
 }while(0)
 #endif // !CRASH
 
-
 //#define df_SENDTHREAD
 
 // ----------------------------------------------
@@ -26,16 +25,16 @@
 // 0은 사용이 되지않는 ID
 // ----------------------------------------------
 
-class CLanServer {
+class CServer {
 public:
-	CLanServer();
-	~CLanServer();
+	CServer(bool isEncryption = false);
+	~CServer();
 protected:
 	// ==============================================
 	// Server Interface
 	// ==============================================
 	bool Start(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
-	bool Start(const wchar_t *sConfigFile);
+	bool Start(const wchar_t *wsConfigPath);
 	void Quit();
 	ULONGLONG GetSessionCount() { return _curSessionCount; }
 	bool DisconnectSession(SESSION_ID sessionID);
@@ -72,23 +71,23 @@ private:
 	bool SendThreadProc();
 #endif
 
-	bool SendPost(SESSION *pSession, int logic = 0);
-	bool RecvPost(SESSION *pSession, int logic = 0);
+	bool SendPost(SESSION *pSession, int logic);
+	bool RecvPost(SESSION *pSession, int logic);
 	void PostClientLeave(SESSION_ID sessionID); // leave 컨텐츠처리를 스레드 분리를 위한 함수
 	bool TryGetRecvPacket(SESSION *pSession, Packet *pPacket);
-	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic = 0);
+	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic);
 
 
 private:
 	// ==============================================
 	// Session Management
 	// ==============================================
-	SESSION *AcquireSession(SESSION_ID sessionID, int logic = 0);
-	void ReturnSession(SESSION *pSession, int logic = 0);
-	inline bool IncrementIOCount(SESSION *pSession, int logic = 0);
-	inline bool DecrementIOCount(SESSION *pSession, int logic = 0);
+	SESSION *AcquireSession(SESSION_ID sessionID, int logic);
+	void ReturnSession(SESSION *pSession, int logic);
+	inline bool IncrementIOCount(SESSION *pSession, int logic);
+	inline bool DecrementIOCount(SESSION *pSession, int logic);
 
-	bool ReleaseSession(SESSION *pSession, int logic = 0);
+	bool ReleaseSession(SESSION *pSession, int logic);
 
 	inline void SetSessionActiveTimer(SESSION *pSession) { InterlockedExchange(&pSession->_lastActiveTime, timeGetTime()); }
 
@@ -139,22 +138,19 @@ private:
 	// Network State
 	// ----------------------------------------------
 	bool _isRunning;	// 서버가 진행중인가?
-	BYTE _numThreads;		// 몇개의 스레드가 생성되었는가
+	bool _isEncryptionPacket; // 패킷 암호화
+	BYTE _NumThreads;		// 몇개의 스레드가 생성되었는가
 
 	// ----------------------------------------------
 	// Handle
 	// ----------------------------------------------
 	HANDLE _hIOCP;				// IOCP핸들
-
-	// ----------------------------------------------
-	// THREAD
-	// ----------------------------------------------
 	CThread *_tWorkers;			// WorkerThread Handle
-	CThread _tAccept = CThread(L"LanServer Accept Thread");
-	CThread _tMonitoring = CThread(L"LanServer Monitoring Thread");
-	CThread _tTimeout = CThread(L"LanServer Time Out Thread");
+	CThread _tAccept = CThread(L"NetServer Accept Thread");
+	CThread _tMonitoring = CThread(L"NetServer Monitoring Thread");
+	CThread _tTimeout = CThread(L"NetServer Time Out Thread");
 #ifdef df_SENDTHREAD
-	CThread _tSend = CThread(L"LanServer Send Thread");
+	CThread _tSend = CThread(L"NetServer Send Thread");
 #endif // df_SENDTHREAD
 	// ----------------------------------------------
 	// Session Container 

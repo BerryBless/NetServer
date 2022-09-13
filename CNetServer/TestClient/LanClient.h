@@ -1,6 +1,6 @@
 #pragma once
-#include "CLanClient.h"
-class LanClient : public CLanClient {
+#include "CClient.h"
+class LanClient : public CClient {
 private:
 	struct Player {
 		SESSION_ID _ID;

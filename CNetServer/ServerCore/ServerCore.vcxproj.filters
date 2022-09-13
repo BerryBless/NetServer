@@ -90,20 +90,14 @@
     <ClInclude Include="Stack.hpp">
       <Filter>Utils\DataStructure</Filter>
     </ClInclude>
-    <ClInclude Include="CLanServer.h">
-      <Filter>Main\Server</Filter>
-    </ClInclude>
-    <ClInclude Include="CNetServer.h">
-      <Filter>Main\Server</Filter>
-    </ClInclude>
-    <ClInclude Include="CLanClient.h">
-      <Filter>Main\Client</Filter>
-    </ClInclude>
-    <ClInclude Include="CNetClient.h">
-      <Filter>Main\Client</Filter>
-    </ClInclude>
     <ClInclude Include="CThread.h">
       <Filter>Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="CServer.h">
+      <Filter>Main\Server</Filter>
+    </ClInclude>
+    <ClInclude Include="CClient.h">
+      <Filter>Main\Client</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -143,20 +137,14 @@
     <ClCompile Include="DBConnectionPool.cpp">
       <Filter>DB</Filter>
     </ClCompile>
-    <ClCompile Include="CLanServer.cpp">
-      <Filter>Main\Server</Filter>
-    </ClCompile>
-    <ClCompile Include="CNetServer.cpp">
-      <Filter>Main\Server</Filter>
-    </ClCompile>
-    <ClCompile Include="CLanClient.cpp">
-      <Filter>Main\Client</Filter>
-    </ClCompile>
-    <ClCompile Include="CNetClient.cpp">
-      <Filter>Main\Client</Filter>
-    </ClCompile>
     <ClCompile Include="CThread.cpp">
       <Filter>Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="CServer.cpp">
+      <Filter>Main\Server</Filter>
+    </ClCompile>
+    <ClCompile Include="CClient.cpp">
+      <Filter>Main\Client</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

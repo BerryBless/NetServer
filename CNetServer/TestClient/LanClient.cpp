@@ -1,19 +1,19 @@
 #include "pch.h"
 #include "LanClient.h"
 
-LanClient::LanClient() {
-	CLanClient::Start(1, 1, FALSE, 50);
+LanClient::LanClient() : CClient(false){
+	CClient::Start(1, 1, FALSE, 50);
 }
 
 LanClient::~LanClient() {
-	CLanClient::Quit();
+	CClient::Quit();
 }
 
 void LanClient::SendTest() {
 }
 
 void LanClient::Connect() {
-	CLanClient::Connect(L"127.0.0.1", 6000);
+	CClient::Connect(L"127.0.0.1", 6000);
 }
 
 void LanClient::OnEnterServer(SESSION_ID sessionID) {

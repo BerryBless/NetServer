@@ -16,14 +16,14 @@
 }while(0)
 #endif // !CRASH
 
-class CLanClient {
+class CClient {
 public:
-	CLanClient();
-	~CLanClient();
+	CClient(bool isEncryption = false);
+	~CClient();
 	// ==============================================
 	// Client Interface
 	// ==============================================
-	
+
 	ULONGLONG GetSessionCount() { return _curSessionCount; }
 	bool DisconnectSession(SESSION_ID sessionID);
 	bool SendPacket(SESSION_ID sessionID, Packet *pPacket);
@@ -59,8 +59,8 @@ private:
 	bool TryConnectServer(SOCKET &socket, sockaddr_in &addr);
 	bool NetMonitorProc();
 
-	bool SendPost(SESSION *pSession, int logic=0);
-	bool RecvPost(SESSION *pSession, int logic=0);
+	bool SendPost(SESSION *pSession, int logic = 0);
+	bool RecvPost(SESSION *pSession, int logic = 0);
 	void PostClientLeave(SESSION_ID sessionID); // leave 컨텐츠처리를 스레드 분리를 위한 함수
 	bool TryGetRecvPacket(SESSION *pSession, Packet *pPacket);
 	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic = 0);
@@ -113,6 +113,7 @@ private:
 	// Network State
 	// ----------------------------------------------
 	long _isRunning = 0;		// 서버가 진행중인가?
+	bool _isEncryptionPacket ;
 	BYTE _numThreads = 0;		// 몇개의 스레드가 생성되었는가
 
 	// ----------------------------------------------

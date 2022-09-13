@@ -18,10 +18,7 @@
 #define __SECTOR_UNLOCK(x, y)	
 #endif // !UPDATE_THREAD
 
-CChatServer::CChatServer() : _startTime{ 0 }, _timeFormet{ 0 } {
-	CLogger::Initialize();
-	CLogger::SetDirectory(L"serverlog");
-	CLogger::SetLogLevel(dfLOG_LEVEL_DEBUG);
+CChatServer::CChatServer() : CServer(true), _startTime{ 0 }, _timeFormet{ 0 } {
 	_isRunning = false;
 
 	// Sector 할당
@@ -95,7 +92,7 @@ void CChatServer::CloseServer() {
 	CloseHandle(_DequeueEvent);
 #endif // UPDATE_THREAD
 	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"CHAT SERVER CLOSE");
-	CNetServer::Quit();
+	CServer::Quit();
 	for (int i = 0; i < SECTOR_Y_SIZE; i++)
 		delete[] _sector[i];
 	delete[] _sector;

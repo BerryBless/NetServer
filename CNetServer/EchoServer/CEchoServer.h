@@ -1,9 +1,9 @@
 #pragma once
-#include "CLanServer.h"
+#include "CServer.h"
 //#include "CNetServer.h"
 #include <unordered_map>
 
-class CEchoServer : public CLanServer {
+class CEchoServer : public CServer {
 //class CEchoServer : public CNetServer {
 
 public:

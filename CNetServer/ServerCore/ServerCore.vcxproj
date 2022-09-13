@@ -157,12 +157,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CClient.h" />
     <ClInclude Include="CCrashDump.h" />
-    <ClInclude Include="CLanClient.h" />
-    <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CLogger.h" />
-    <ClInclude Include="CNetClient.h" />
-    <ClInclude Include="CNetServer.h" />
+    <ClInclude Include="CServer.h" />
     <ClInclude Include="CThread.h" />
     <ClInclude Include="DBConnection.h" />
     <ClInclude Include="DBConnectionPool.h" />
@@ -184,13 +182,11 @@
     <ClInclude Include="Types.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CClient.cpp" />
     <ClCompile Include="CCrashDump.cpp" />
-    <ClCompile Include="CLanClient.cpp" />
-    <ClCompile Include="CLanServer.cpp" />
     <ClCompile Include="CLogger.cpp" />
-    <ClCompile Include="CNetClient.cpp" />
-    <ClCompile Include="CNetServer.cpp" />
     <ClCompile Include="CorePch.cpp" />
+    <ClCompile Include="CServer.cpp" />
     <ClCompile Include="CThread.cpp" />
     <ClCompile Include="DBConnection.cpp" />
     <ClCompile Include="DBConnectionPool.cpp" />

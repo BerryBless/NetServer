@@ -1,6 +1,6 @@
 #pragma once
 #include "Player.h"
-#include "CNetServer.h"
+#include "CServer.h"
 #include "JobMessage.h"
 
 
@@ -17,7 +17,7 @@
 
 //#define UPDATE_THREAD
 
-class CChatServer : public CNetServer {
+class CChatServer : public CServer {
 
 private:
 	struct SECTOR {
