@@ -21,6 +21,9 @@
     <ClCompile Include="CMonitoringServer.cpp">
       <Filter>Main</Filter>
     </ClCompile>
+    <ClCompile Include="CMonitorToolServer.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -31,6 +34,9 @@
     </ClInclude>
     <ClInclude Include="SS_MoniteringProtocol.h">
       <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CMonitorToolServer.h">
+      <Filter>Main</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

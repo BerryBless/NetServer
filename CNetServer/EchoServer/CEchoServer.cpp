@@ -11,7 +11,7 @@ bool CEchoServer::OnConnectionRequest(WCHAR *IPStr, DWORD IP, USHORT Port) {
 	return true;
 }
 
-void CEchoServer::OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID) {
+void CEchoServer::OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, SESSION_ID sessionID) {
 	Packet *pPacket = Packet::AllocAddRef();
 
 	pPacket->Clear();

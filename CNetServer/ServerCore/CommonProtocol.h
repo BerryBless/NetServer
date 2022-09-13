@@ -57,7 +57,6 @@ enum PACKET_TYPE {
 	//------------------------------------------------------------
 	en_PACKET_SS_MONITOR_DATA_UPDATE,
 
-
 	en_PACKET_CS_MONITOR = 25000,
 	//------------------------------------------------------
 	// Monitor -> Monitor Tool Protocol  (Client <-> Server 프로토콜)

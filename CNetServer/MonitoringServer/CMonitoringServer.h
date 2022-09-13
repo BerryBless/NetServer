@@ -1,139 +1,79 @@
 #pragma once
-#include "CLanServer.h"
-#include "CNetServer.h"
+#include "CServer.h"
 #include "DBConnectionPool.h"
 #include "CommonProtocol.h"
 #include "SS_MoniteringProtocol.h"
-#include <set>
-#include <vector>
+#include <unordered_map>
+#include "CMonitorToolServer.h"
 
 
+// 내부에서 데이터를 받을 서버
 
 
-class CMonitoringServer : public CLanServer, public CNetServer {
+class DBConnectionPool;
+class CMonitorToolServer;
 
+class CMonitoringServer : public CServer {
+	struct ServerConnect {
+		SESSION_ID _id = 0;
+		bool _isLogin = false;
+	};
 public:
 	CMonitoringServer();
 	~CMonitoringServer();
 
-private:
-	void OnRecv(ULONGLONG sessionID, Packet *recvPacket) override;
-	bool OnConnectionRequest(WCHAR *ipStr, DWORD ip, USHORT port) override;
-	void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID) override;
-	void OnClientLeave(ULONGLONG sessionID) override; // Release후 호출
-	void OnTimeout(ULONGLONG sessionID) override;
+	void BeginServer(const WCHAR *szConfigFile);
+	void CloseServer();
+	bool isRunning() {
+		return _isRunning;
+	}
+	void CommandWait();
+
+
+
 
 private:
-	void InitNetServer();
-	void InitLanServer();
-	void InitDataBase();
+	virtual bool OnConnectionRequest(WCHAR *IPstr, DWORD IP, USHORT Port);
+	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, SESSION_ID sessionID) ;
+	virtual void OnClientLeave(SESSION_ID sessionID);
+	virtual void OnRecv(SESSION_ID sessionID, Packet *pPacket) ;
+	virtual void OnSend(SESSION_ID sessionID);
+	virtual void OnError(int errorcode, const WCHAR *log) ;
+	virtual void OnTimeout(SESSION_ID sessionID);
 
+	void PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type);
+	void PacketProcMonitorDataUpdate(Packet *packet, SESSION_ID sessionID);
+	void MakePacketMonitorDataUpdate(Packet *packet, BYTE serverNo, BYTE dataType, int dataValue, int timeStamp);
+private:
+
+
+	void UpdateChatServerData(BYTE messageType, int data, int timeStamp);
+
+private:
+	bool _isRunning;
+
+private:
+	/// <summary>
+	/// 모니터링 할 서버 관리
+	/// </summary>
+
+
+	void InsertServer(SESSION_ID sessionID, ServerConnect *pServer);
+	void RemoveServer(SESSION_ID sessionID);
+	ServerConnect *FindServer(SESSION_ID sessionID);
+
+	unordered_map<SESSION_ID, ServerConnect *>		_serverMap;
+
+
+/// <summary>
+/// 모니터링
+/// </summary>
+private:
+	CMonitorToolServer *_pMonitorToolServer; //외부와의 소통을 위한 서버
+
+private:
 	constexpr static int MAX_VALUE = 0x7fffffff;
 	constexpr static int MIN_VALUE = 0;
-	BYTE MESSAGE_TYPE_TABLE[10][20]
-	{
-		{0}, // 아무것도 없는구간임
-		{
-			0,
-			dfMONITOR_DATA_TYPE_GAME_SERVER_RUN,
-			dfMONITOR_DATA_TYPE_GAME_SERVER_CPU,
-			dfMONITOR_DATA_TYPE_GAME_SERVER_MEM,
-			dfMONITOR_DATA_TYPE_GAME_SESSION,
-			dfMONITOR_DATA_TYPE_GAME_AUTH_PLAYER,
-			dfMONITOR_DATA_TYPE_GAME_GAME_PLAYER,
-			dfMONITOR_DATA_TYPE_GAME_ACCEPT_TPS,
-			dfMONITOR_DATA_TYPE_GAME_PACKET_RECV_TPS,
-			dfMONITOR_DATA_TYPE_GAME_PACKET_SEND_TPS,
-			dfMONITOR_DATA_TYPE_GAME_DB_WRITE_TPS,
-			dfMONITOR_DATA_TYPE_GAME_DB_WRITE_MSG,
-			dfMONITOR_DATA_TYPE_GAME_AUTH_THREAD_FPS,
-			dfMONITOR_DATA_TYPE_GAME_GAME_THREAD_FPS,
-			dfMONITOR_DATA_TYPE_GAME_PACKET_POOL
-		}, // game server
-		{
-			0,
-			dfMONITOR_DATA_TYPE_CHAT_SERVER_RUN,
-			dfMONITOR_DATA_TYPE_CHAT_SERVER_CPU,
-			dfMONITOR_DATA_TYPE_CHAT_SERVER_MEM,
-			dfMONITOR_DATA_TYPE_CHAT_SESSION,
-			dfMONITOR_DATA_TYPE_CHAT_PLAYER,
-			dfMONITOR_DATA_TYPE_CHAT_UPDATE_TPS,
-			dfMONITOR_DATA_TYPE_CHAT_PACKET_POOL,
-			dfMONITOR_DATA_TYPE_CHAT_UPDATEMSG_POOL
-		}, // Chatting Server
-		{
-			0,
-			dfMONITOR_DATA_TYPE_LOGIN_SERVER_RUN,
-			dfMONITOR_DATA_TYPE_LOGIN_SERVER_CPU,
-			dfMONITOR_DATA_TYPE_LOGIN_SERVER_MEM,
-			dfMONITOR_DATA_TYPE_LOGIN_SESSION,
-			dfMONITOR_DATA_TYPE_LOGIN_AUTH_TPS,
-			dfMONITOR_DATA_TYPE_LOGIN_PACKET_POOL,
-		}, // Login Server
-	};
-
-	int MonitoringThreadProc();
-
-	void PacketProc(Packet *packet, ULONGLONG sessionID, WORD type);
-
-	void PacketProcMonitorDataUpdate(Packet *packet, ULONGLONG sessionID);
-
-	void MakePacketMonitorDataUpdate(Packet *packet, BYTE serverNo, BYTE dataType, int dataValue, int timeStamp);
-
-	void QueryHardWareData();
-	void QueryGameServerData();
-	void QueryChatServerData();
-	void QueryLoginServerData();
-
-	void ResetHardWareData();
-	void ResetGameServerData();
-	void ResetChatServerData();
-	void ResetLoginServerData();
-
-	void UpdateServerData(BYTE serverType, BYTE messageType, int data, int timeStamp);
-	void UpdateLoginServerData(BYTE messageType, int data, int timeStamp);
-	void UpdateChatServerData(BYTE messageType, int data, int timeStamp);
-	void UpdateGameServerData(BYTE messageType, int data, int timeStamp);
-
-	void Start();
-	void Close();
-
-	void UpdateHardwareData();
-	void QueryDataBase(int serverNo, const char *dataType, int min, int max, int avr);
-
-
-private:
-	std::set<ULONGLONG>						_MoniteringsessionIDList;
-
-	constexpr static int					SESSION_KEY_SIZE = 32;
-	char									_MonitoringSessionKey[33]{ "aaaaxxxxwwwwaaadhrrf!!!#ssdd6543" };
-	ULONGLONG								_MonitoringsessionID;
-
-	HardWareMoniter							_HardWareMonitor;
-	ProcessMoniter							_ProcessMonitor;
-	DWORD									_RunningFlag;
-
-	constexpr static int					TOTAL = 0;
-	constexpr static int					MIN = 1;
-	constexpr static int					MAX = 2;
-	constexpr static int					TICK = 3;
-	char QUERY_FORMAT[50][256]{
-		""
-		"INSERT INTO `LOGDB`.`M_MONITORLOG_%.2d_%.2d` (`logtime`,`serverno`,`type`,`min`,`max`,`avr`) values(now(),%d,\"%s\",%d,%d,%d)",
-		"CREATE TABLE `LOGDB`.`M_MONITORLOG_%.2d_%.2d` LIKE `logdb`.`monitorlog_template`",
-
-		"INSERT INTO `LOGDB`.`G_MONITORLOG_%.2d_%.2d` (`logtime`,`serverno`,`type`,`min`,`max`,`avr`) values(now(),%d,\"%s\",%d,%d,%d)",
-		"CREATE TABLE `LOGDB`.`G_MONITORLOG_%.2d_%.2d` LIKE `logdb`.`monitorlog_template`",
-
-		"INSERT INTO `LOGDB`.`C_MONITORLOG_%.2d_%.2d` (`logtime`,`serverno`,`type`,`min`,`max`,`avr`) values(now(),%d,\"%s\",%d,%d,%d)",
-		"CREATE TABLE `LOGDB`.`C_MONITORLOG_%.2d_%.2d` LIKE `logdb`.`monitorlog_template`",
-
-		"INSERT INTO `LOGDB`.`L_MONITORLOG_%.2d_%.2d` (`logtime`,`serverno`,`type`,`min`,`max`,`avr`) values(now(),%d,\"%s\",%d,%d,%d)",
-		"CREATE TABLE `LOGDB`.`L_MONITORLOG_%.2d_%.2d` LIKE `logdb`.`monitorlog_template`"
-		""
-	};
-
-
 	//---------------------------------------------------------------------
 	//HARD WARE DATA
 

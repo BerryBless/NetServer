@@ -99,6 +99,9 @@
     <ClInclude Include="CClient.h">
       <Filter>Main\Client</Filter>
     </ClInclude>
+    <ClInclude Include="SMClient.h">
+      <Filter>Main\Client</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -144,6 +147,9 @@
       <Filter>Main\Server</Filter>
     </ClCompile>
     <ClCompile Include="CClient.cpp">
+      <Filter>Main\Client</Filter>
+    </ClCompile>
+    <ClCompile Include="SMClient.cpp">
       <Filter>Main\Client</Filter>
     </ClCompile>
   </ItemGroup>

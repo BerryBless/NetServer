@@ -218,7 +218,7 @@ bool CChatServer::OnConnectionRequest(WCHAR *IPStr, DWORD IP, USHORT Port) {
 	return _isRunning;
 }
 
-void CChatServer::OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID) {
+void CChatServer::OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, SESSION_ID sessionID) {
 }
 
 void CChatServer::OnClientLeave(SESSION_ID sessionID) {
@@ -638,13 +638,13 @@ void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sect
 	pPacket->SubRef(16);
 }
 
-void CChatServer::InsertPlayer(ULONGLONG sessionID, Player *pPlayer) {
+void CChatServer::InsertPlayer(SESSION_ID sessionID, Player *pPlayer) {
 	__PLAYER_MAP_LOCK();
 	_playerMap.emplace(::make_pair(sessionID, pPlayer));
 	__PLAYER_MAP_UNLOCK();
 }
 
-void CChatServer::RemovePlayer(ULONGLONG sessionID) {
+void CChatServer::RemovePlayer(SESSION_ID sessionID) {
 	__PLAYER_MAP_LOCK();
 	auto iter = _playerMap.find(sessionID);
 	if (iter == _playerMap.end()) {
@@ -681,7 +681,7 @@ void CChatServer::RemovePlayer(ULONGLONG sessionID) {
 	_playerPool.Free(pPlayer);
 }
 
-Player *CChatServer::FindPlayer(ULONGLONG sessionID) {
+Player *CChatServer::FindPlayer(SESSION_ID sessionID) {
 	__PLAYER_MAP_LOCK();
 	auto iter = _playerMap.find(sessionID);
 	if (iter == _playerMap.end()) {

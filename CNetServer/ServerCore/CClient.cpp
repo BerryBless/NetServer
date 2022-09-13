@@ -243,12 +243,14 @@ void CClient::BeginThreads() {
 	}
 
 	// MONITORING
+#ifdef MONITOR_THREAD
 	_tMonitoring.Launch(
 		[](LPVOID arg) {
 			CClient *pClient = (CClient *) arg;
 			pClient->NetMonitorProc();
 		},
 		this);
+#endif MONITOR_THREAD
 }
 
 bool CClient::OnGQCS() {

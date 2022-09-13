@@ -1,6 +1,7 @@
 #pragma once
 #include "Player.h"
 #include "CServer.h"
+#include "SMClient.h"
 #include "JobMessage.h"
 
 
@@ -33,7 +34,7 @@ public:
 	CChatServer();
 	~CChatServer();
 
-//	void BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
+	//	void BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
 	void BeginServer(const WCHAR *szConfigFile);
 	void CloseServer();
 	bool isRunning() {
@@ -52,7 +53,7 @@ private:
 private:
 	// virtual
 	virtual bool OnConnectionRequest(WCHAR *IPStr, DWORD IP, USHORT Port); //< accept 직후
-	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID); //< Accept 후 접속처리 완료 후 호출.
+	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, SESSION_ID sessionID); //< Accept 후 접속처리 완료 후 호출.
 	virtual void OnClientLeave(SESSION_ID sessionID); //< Release 후 호출
 	virtual void OnRecv(SESSION_ID sessionID, Packet *packet); //< 패킷 수신 완료 후
 	virtual void OnSend(SESSION_ID sessionID); //< 패킷 수신 완료 후
@@ -71,14 +72,14 @@ private:
 	void MakePacketResponseMessage(Packet *pPacket, ACCOUNT_NO account_no, const WCHAR *ID, const WCHAR *nickName, WORD msgLen, const WCHAR *message);
 
 private:
-	void BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer );
+	void BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer);
 	void BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer);
 
 private:
 	// Player Management
-	void InsertPlayer(ULONGLONG sessionID, Player *pPlayer);
-	void RemovePlayer(ULONGLONG sessionID);
-	Player *FindPlayer(ULONGLONG sessionID);
+	void InsertPlayer(SESSION_ID sessionID, Player *pPlayer);
+	void RemovePlayer(SESSION_ID sessionID);
+	Player *FindPlayer(SESSION_ID sessionID);
 
 private:
 	// LOCK
@@ -99,18 +100,18 @@ private:
 	DWORD									_isRunning;
 
 	//HANDLE									_hThread[2];
-	CThread									_moinitorThrad =  CThread(L"Chat Server Monitorting Thread");;
+	CThread									_moinitorThrad = CThread(L"Chat Server Monitorting Thread");;
 
 #ifdef UPDATE_THREAD
 	CThread									_updateThread = CThread(L"Chat Server Update Thread");
-	Queue <JobMessage*>						_jobQueue;
+	Queue <JobMessage *>						_jobQueue;
 	HANDLE									_DequeueEvent;
 	ObjectPool_TLS <JobMessage>				_jobMsgPool;
 #endif // UPDATE_THREAD
 
 
 	SECTOR **_sector;
-	unordered_map<ULONGLONG, Player *>		_playerMap;
+	unordered_map<SESSION_ID, Player *>		_playerMap;
 	SRWLOCK									_playerMapLock;
 	ObjectPool<Player>						_playerPool;
 
@@ -119,8 +120,10 @@ private:
 	tm _timeFormet;
 	time_t _startTime;
 
-	HardWareMoniter							_hardMoniter;
-	ProcessMoniter							_procMonitor;
+private:
+	SMClient							_monitorServerConnect;
+	HardWareMoniter						_hardMoniter;
+	ProcessMoniter						_procMonitor;
 
 	LONG								_SectorMoveCalc;
 	LONG								_SectorMoveTPS;

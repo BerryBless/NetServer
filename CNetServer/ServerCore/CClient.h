@@ -16,6 +16,8 @@
 }while(0)
 #endif // !CRASH
 
+//#define MONITOR_THREAD
+
 class CClient {
 public:
 	CClient(bool isEncryption = false);
@@ -134,7 +136,9 @@ private:
 	// THREAD
 	// ----------------------------------------------
 	CThread *_tWorkers;
+#ifdef MONITOR_THREAD
 	CThread _tMonitoring = CThread(L"LanClient Monitoring Thread");
+#endif // MONITOR_THREAD
 
 	// ----------------------------------------------
 	// Session Container 

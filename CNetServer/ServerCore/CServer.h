@@ -41,11 +41,11 @@ protected:
 	bool SendPacket(SESSION_ID sessionID, Packet *pPacket);
 
 
-	virtual bool OnConnectionRequest(WCHAR *IPstr, DWORD IP, USHORT Port) = 0; // TODO IP주소 string
-	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID) = 0;
+	virtual bool OnConnectionRequest(WCHAR *IPstr, DWORD IP, USHORT Port) = 0; 
+	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, SESSION_ID sessionID) = 0;
 	virtual void OnClientLeave(SESSION_ID sessionID) = 0;
 	virtual void OnRecv(SESSION_ID sessionID, Packet *pPacket) = 0;
-	virtual void OnSend(SESSION_ID sessionID) = 0; //< 패킷 수신 완료 후
+	virtual void OnSend(SESSION_ID sessionID) = 0; 
 	virtual void OnError(int errorcode, const WCHAR *log) = 0;
 	virtual void OnTimeout(SESSION_ID sessionID) = 0;
 

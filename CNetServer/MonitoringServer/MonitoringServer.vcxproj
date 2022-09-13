@@ -162,6 +162,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CMonitoringServer.cpp" />
+    <ClCompile Include="CMonitorToolServer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -172,6 +173,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CMonitoringServer.h" />
+    <ClInclude Include="CMonitorToolServer.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="SS_MoniteringProtocol.h" />
   </ItemGroup>
