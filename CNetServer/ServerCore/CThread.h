@@ -25,25 +25,27 @@ private:
 	};
 public:
 	CThread();
+	CThread(const WCHAR *tName);
 	~CThread();
 
 	static unsigned int __stdcall Thread(LPVOID arg);
-
 public:
-	bool BeginThread();
 	bool Launch(void (*pTask)(LPVOID), LPVOID arg);
 	void Join();
-	void EndThread();
 
 	void SetThreadName(const WCHAR *name);
 private:
-	bool _isLaunching;
-	bool _isRunning;
-	CTask _task;
-	HANDLE _hThread;
-	HANDLE _hLaunchEvent; // 스레드당 하나냐 풀당 하나냐...
-	HANDLE _hJoinEvent;
+	bool BeginThread();
+	void EndThread();
 
-	WCHAR _name[50] = L"";
+private:
+	bool		_isLaunching;
+	bool		_isRunning;
+	CTask		_task;
+	HANDLE		_hThread;
+	HANDLE		_hLaunchEvent; // 스레드당 하나냐 풀당 하나냐...
+	HANDLE		_hJoinEvent;
+
+	int _tid;
+	WCHAR _name[64] = L"";
 };
-

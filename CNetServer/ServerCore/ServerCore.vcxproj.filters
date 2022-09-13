@@ -84,12 +84,6 @@
     <ClInclude Include="ObjectPool_TLS.hpp">
       <Filter>Utils\DataStructure\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="LFStack.hpp">
-      <Filter>Utils\DataStructure</Filter>
-    </ClInclude>
-    <ClInclude Include="LFQueue.hpp">
-      <Filter>Utils\DataStructure</Filter>
-    </ClInclude>
     <ClInclude Include="Queue.hpp">
       <Filter>Utils\DataStructure</Filter>
     </ClInclude>

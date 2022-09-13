@@ -20,7 +20,7 @@
 //#define df_LOGGING_SESSION_LOGIC 1000
 #define dfSESSION_SEND_PACKER_BUFFER_SIZE 200
 
-#define df_SENDTHREAD
+//#define df_SENDTHREAD
 
 // ----------------------------------------------
 // SESSION_ID
@@ -194,8 +194,13 @@ private:
 	// Handle
 	// ----------------------------------------------
 	HANDLE _hIOCP;				// IOCP핸들
-	CThread *_threads;			// WorkerThread Handle
-
+	CThread *_tWorkers;			// WorkerThread Handle
+	CThread _tAccept = CThread(L"NetServer Accept Thread");
+	CThread _tMonitoring = CThread(L"NetServer Monitoring Thread");
+	CThread _tTimeout = CThread(L"NetServer Time Out Thread");
+#ifdef df_SENDTHREAD
+	CThread _tSend = CThread(L"NetServer Send Thread");
+#endif // df_SENDTHREAD
 	// ----------------------------------------------
 	// Session Container 
 	// ----------------------------------------------

@@ -15,7 +15,7 @@
 #define MASSAGE_MAX_LEN			512
 #define MASSAGE_MAX_SIZE		1024
 
-#define UPDATE_THREAD
+//#define UPDATE_THREAD
 
 class CChatServer : public CNetServer {
 
@@ -43,9 +43,6 @@ public:
 	void CommandWait();
 private:
 	// Thtread
-
-	static unsigned int __stdcall UpdateThread(LPVOID arg);
-	static unsigned int __stdcall MonitoringThread(LPVOID arg);
 
 	bool UpdateProc();
 	bool MonitoringProc();
@@ -102,10 +99,10 @@ private:
 	DWORD									_isRunning;
 
 	//HANDLE									_hThread[2];
-	CThread									_moinitorThrad;
+	CThread									_moinitorThrad =  CThread(L"Chat Server Monitorting Thread");;
 
 #ifdef UPDATE_THREAD
-	CThread									_updateThread;
+	CThread									_updateThread = CThread(L"Chat Server Update Thread");
 	Queue <JobMessage*>						_jobQueue;
 	HANDLE									_DequeueEvent;
 	ObjectPool_TLS <JobMessage>				_jobMsgPool;
@@ -125,7 +122,6 @@ private:
 	HardWareMoniter							_hardMoniter;
 	ProcessMoniter							_procMonitor;
 
-	LONG								_TotalSectorSize;
 	LONG								_SectorMoveCalc;
 	LONG								_SectorMoveTPS;
 	LONG								_ChatRecvCalc;
@@ -134,6 +130,8 @@ private:
 	LONG								_ChatSendTPS;
 	LONG								_LoginCalc;
 	LONG								_LoginTPS;
+	LONG								_LeaveCalc;
+	LONG								_LeaveTPS;
 	LONG								_UpdateCalc;
 	LONG								_UpdateTPS;
 

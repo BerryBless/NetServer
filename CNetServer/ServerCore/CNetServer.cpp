@@ -8,14 +8,6 @@
 #define dfEXIT_CODE 0xFFFFFFFF // GQCS()에서 이게 오면 종료
 #define dfCLIENT_LEAVE_CODE 0xFFFFFF00 // GQCS()에서 이게 오면 OnClientLeave 호출
 
-// CS
-#define SESSION_LOCK(pSession)		SessionLock(pSession)
-#define SESSION_UNLOCK(pSession)	SessionUnlock(pSession)
-
-#define dfMIN(a,b) a>b?b:a
-#define dfMAX(a,b) a<b?b:a
-
-
 CNetServer::CNetServer() {
 
 
@@ -38,14 +30,14 @@ CNetServer::CNetServer() {
 	_workerThreadCount = 0;
 	_maxConnection = 0;
 	_isNagle = false;
-	_timeoutMillisec = 4000;
+	_timeoutMillisec = 2000;
 
 	_isRunning = false;
 	_NumThreads = 0;
 
 	_hIOCP = INVALID_HANDLE_VALUE;
 	//_hThreads = nullptr;
-	_threads = nullptr;
+	_tWorkers = nullptr;
 
 	_sessionContainer = nullptr;
 	_emptyIndex.Clear();
@@ -80,7 +72,7 @@ bool CNetServer::Start(u_long IP, u_short prot, BYTE workerThreadCount, BYTE max
 	_Port = prot;
 	_bindIP = IP;
 	_workerThreadCount = workerThreadCount;
-	_maxRunThreadCount = dfMIN(workerThreadCount, maxRunThreadCount);
+	_maxRunThreadCount = min(workerThreadCount, maxRunThreadCount);
 	_isNagle = nagle;
 	_maxConnection = maxConnection;
 
@@ -137,9 +129,10 @@ void CNetServer::Quit() {
 	//---------------------------
 	// 서버 종료 기다리기
 	//---------------------------
-	for (int i = 0; i < _NumThreads; ++i) {
+	/*for (int i = 0; i < _NumThreads; ++i) {
 		_threads[i].EndThread();
-	}
+	}*/
+	delete[] _tWorkers;
 }
 
 bool CNetServer::DisconnectSession(SESSION_ID SessionID) {
@@ -181,7 +174,6 @@ bool CNetServer::SendPacket(SESSION_ID SessionID, Packet *pPacket) {
 	// 지워진(끊어진) 세션
 	//---------------------------
 	if (!InterlockedOr((LONG *) &pSession->_isAlive, 0)) {
-		CRASH();
 		//CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: Session is colsed..");
 		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: Session is colsed..");
 		pPacket->SubRef();
@@ -272,20 +264,6 @@ void CNetServer::Startup() {
 	_sessionContainer = new SESSION[(int) (_maxConnection + (u_short) 1)];
 
 	InitializeIndex();
-
-
-	//---------------------------
-	// 스레드 핸들 배열 생성
-	// _workerThreadCount + acceptThread + monitorThread + SendThread
-	//---------------------------
-#ifdef df_SENDTHREAD
-	_NumThreads = _workerThreadCount + 4;
-#else
-	_NumThreads = _workerThreadCount + 3;
-#endif
-	//_hThreads = new HANDLE[(long long) _NumThreads];
-	_threads = new CThread[(long long) _NumThreads];
-
 
 	//---------------------------
 	// 스레드 실행
@@ -384,59 +362,50 @@ bool CNetServer::CreateListenSocket() {
 }
 
 void CNetServer::BeginThreads() {
-	int i = 0;
 	// WORKER
-	for (; i < _workerThreadCount; i++) {
-		_threads[i].SetThreadName(L"Worker Thread");
-		_threads[i].BeginThread();
-		_threads[i].Launch(
+	_tWorkers = new CThread[_workerThreadCount]();
+	for (int i = 0; i < _workerThreadCount; i++) {
+		_tWorkers[i].SetThreadName(L"NetServer Worker Thread");
+		_tWorkers[i].Launch(
 			[](LPVOID arg) {
 				CNetServer *pServer = (CNetServer *) arg;
-				while (pServer->OnGQCS());
+				pServer->OnGQCS();
 			},
 			this);
 	}
 
 	// ACCEPT
-	_threads[i].SetThreadName(L"Accept Thread");
-	_threads[i].BeginThread();
-	_threads[i++].Launch(
+	_tAccept.Launch(
 		[](LPVOID arg) {
 			CNetServer *pServer = (CNetServer *) arg;
-			while (pServer->AcceptProc());
+			pServer->AcceptProc();
 		},
 		this);
 
 
 	// MONITORING
-	_threads[i].SetThreadName(L"Monitoring Thread");
-	_threads[i].BeginThread();
-	_threads[i++].Launch(
+	_tMonitoring.Launch(
 		[](LPVOID arg) {
 			CNetServer *pServer = (CNetServer *) arg;
-			while (pServer->NetMonitorProc());
+			pServer->NetMonitorProc();
 		},
 		this);
 
 	// TIME OUT
-	_threads[i].SetThreadName(L"Time Out Thread");
-	_threads[i].BeginThread();
-	_threads[i++].Launch(
+	_tTimeout.Launch(
 		[](LPVOID arg) {
 			CNetServer *pServer = (CNetServer *) arg;
-			while (pServer->TimeOutProc());
+			pServer->TimeOutProc();
 		},
 		this);
 
 
 #ifdef df_SENDTHREAD
 	// SEND THREAD
-	_threads[i].SetThreadName(L"Send Thread");
-	_threads[i].BeginThread();
-	_threads[i++].Launch(
+	_tSend.Launch(
 		[](LPVOID arg) {
 			CNetServer *pServer = (CNetServer *) arg;
-			while (pServer->SendThreadProc());
+			pServer->SendThreadProc();
 		},
 		this);
 #endif // df_SENDTHREAD
@@ -865,7 +834,6 @@ bool CNetServer::RecvPost(SESSION *pSession, int logic) {
 			CancelIoEx((HANDLE) pSession->_sock, nullptr);
 			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
 				CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// %d :: WSARecv ERROR [%d]\n", logic, err);
-				CRASH();
 
 			}
 			//---------------------------
@@ -886,6 +854,43 @@ bool CNetServer::RecvPost(SESSION *pSession, int logic) {
 void CNetServer::PostClientLeave(SESSION_ID sessionID) {
 	PostQueuedCompletionStatus(_hIOCP, 0, sessionID, (LPOVERLAPPED) dfCLIENT_LEAVE_CODE);
 }
+/* //CLanServer
+bool CLanServer::TryGetRecvPacket(SESSION *pSession, Packet *pPacket) {
+	PACKET_LAN_HEADER header;
+	pPacket->Clear();
+
+	if (pSession->_recvQueue.GetUseSize() < PACKET_LAN_HEADER_SIZE) {
+		return false;
+	}
+
+	int headerPeekRet = pSession->_recvQueue.Peek((unsigned char *) &header, PACKET_LAN_HEADER_SIZE);
+	if (headerPeekRet != PACKET_LAN_HEADER_SIZE) {
+		CRASH();
+		return false;
+	}
+	if (pSession->_recvQueue.GetUseSize() < (int) (PACKET_LAN_HEADER_SIZE + header.len)) {
+		return false;
+	}
+	int headMoveFront = pSession->_recvQueue.MoveFront(PACKET_LAN_HEADER_SIZE);
+	if (headMoveFront != PACKET_LAN_HEADER_SIZE) {
+		CRASH();
+	}
+
+	int recvPeekRet = pSession->_recvQueue.Dequeue(pPacket->GetWritePtr(), header.len);
+	if (recvPeekRet != header.len) {
+		DisconnectSession(pSession->_ID);
+		return false;
+	}
+	int MoveWritePosRet = pPacket->MoveWritePos(header.len);
+	if (MoveWritePosRet != header.len) {
+		pPacket->PrintPacket();
+		CRASH();
+		DisconnectSession(pSession->_ID);
+	}
+
+	return true;
+}
+*/
 
 bool CNetServer::TryGetRecvPacket(SESSION *pSession, Packet *pPacket) {
 	PACKET_NET_HEADER header;
@@ -897,10 +902,11 @@ bool CNetServer::TryGetRecvPacket(SESSION *pSession, Packet *pPacket) {
 
 	int headerPeekRet = pSession->_recvQueue.Peek((unsigned char *) &header, PACKET_NET_HEADER_SIZE);
 	if (headerPeekRet != PACKET_NET_HEADER_SIZE) {
-		CRASH();
+		DisconnectSession(pSession->_ID);
 		return false;
 	}
 	if (pSession->_recvQueue.GetUseSize() < (int) (PACKET_NET_HEADER_SIZE + header.len)) {
+		DisconnectSession(pSession->_ID);
 		return false;
 	}
 	if (header.code != Packet::PACKET_CODE) {
@@ -916,7 +922,6 @@ bool CNetServer::TryGetRecvPacket(SESSION *pSession, Packet *pPacket) {
 	int MoveWritePosRet = pPacket->MoveWritePos(header.len);
 	if (MoveWritePosRet != header.len) {
 		pPacket->PrintPacket();
-		CRASH();
 		DisconnectSession(pSession->_ID);
 	}
 
@@ -1134,7 +1139,7 @@ bool CNetServer::ReleaseSession(SESSION *pSession, int logic) {
 
 	InterlockedExchange(&pSession->_IOFlag, FALSE);
 
-	OnClientLeave(ID);
+	PostClientLeave(ID);
 	USHORT idx = SessionIDtoIndex(ID);
 	if (idx == 0) CRASH();
 	_emptyIndex.push(idx);

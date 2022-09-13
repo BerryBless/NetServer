@@ -7,6 +7,9 @@
     <Filter Include="Utils">
       <UniqueIdentifier>{33354a8e-0e0c-4002-8159-535995b76115}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Network">
+      <UniqueIdentifier>{8c00f3e2-2550-4f29-90d6-735897601a72}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -25,6 +28,9 @@
     </ClInclude>
     <ClInclude Include="CMonitoringServer.h">
       <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="SS_MoniteringProtocol.h">
+      <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

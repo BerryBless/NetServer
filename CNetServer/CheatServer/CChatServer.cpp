@@ -38,6 +38,8 @@ CChatServer::CChatServer() : _startTime{ 0 }, _timeFormet{ 0 } {
 	_ChatSendTPS = 0;
 	_LoginCalc = 0;
 	_LoginTPS = 0;
+	_LeaveCalc = 0;
+	_LeaveTPS = 0;
 	_UpdateCalc = 0;
 	_UpdateTPS = 0;
 
@@ -90,16 +92,13 @@ void CChatServer::CloseServer() {
 	_isRunning = false;
 #ifdef UPDATE_THREAD
 	SetEvent(_DequeueEvent);
-	_updateThread.EndThread();
+	CloseHandle(_DequeueEvent);
 #endif // UPDATE_THREAD
 	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"CHAT SERVER CLOSE");
-
-	_updateThread.EndThread();
-	
+	CNetServer::Quit();
 	for (int i = 0; i < SECTOR_Y_SIZE; i++)
 		delete[] _sector[i];
 	delete[] _sector;
-	CNetServer::Quit();
 }
 
 
@@ -110,6 +109,7 @@ void CChatServer::CommandWait() {
 		char cmd = _getch();
 		if (cmd == 'Q' || cmd == 'q') {
 			//MemProfiler::Instance().PrintInfo();
+			CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Close Server from Cmd");
 			CloseServer();
 			break;
 		}
@@ -117,6 +117,7 @@ void CChatServer::CommandWait() {
 			PrintFileMonitor();
 		}
 		if (cmd == 'C' || cmd == 'c') {
+			CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Crash Server from Cmd");
 			CRASH();
 		}
 		if (cmd == '1') {
@@ -134,21 +135,6 @@ void CChatServer::CommandWait() {
 	}
 }
 
-unsigned int __stdcall CChatServer::UpdateThread(LPVOID arg) {
-	CChatServer *pServer = (CChatServer *) arg;
-	while (!pServer->_isRunning);
-	while (pServer->UpdateProc());
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"::CHAT SERVER -- Monitor Thread IS Closed..\n");
-	return 0;
-}
-
-unsigned int __stdcall CChatServer::MonitoringThread(LPVOID arg) {
-	CChatServer *pServer = (CChatServer *) arg;
-	while (!pServer->_isRunning);
-	while (pServer->MonitoringProc());
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"::CHAT SERVER -- Monitor Thread IS Closed..\n");
-	return 0;
-}
 
 bool CChatServer::UpdateProc() {
 #ifdef UPDATE_THREAD
@@ -180,20 +166,15 @@ bool CChatServer::MonitoringProc() {
 	while (_isRunning) {
 
 		Sleep(1000);
+		if (_isRunning == false) break;
 		_SectorMoveTPS = InterlockedExchange(&_SectorMoveCalc, 0);
 		_ChatRecvTPS = InterlockedExchange(&_ChatRecvCalc, 0);
 		_ChatSendTPS = InterlockedExchange(&_ChatSendCalc, 0);
 		_LoginTPS = InterlockedExchange(&_LoginCalc, 0);
+		_LeaveTPS = InterlockedExchange(&_LeaveCalc, 0);
 		_UpdateTPS = InterlockedExchange(&_UpdateCalc, 0);
 		_hardMoniter.UpdateHardWareTime();
 		_procMonitor.UpdateProcessTime();
-
-		_TotalSectorSize = 0;
-		for (int y = 0; y < SECTOR_Y_SIZE; ++y) {
-			for (int x = 0; x < SECTOR_X_SIZE; ++x) {
-				_TotalSectorSize += _sector[y][x]._playerSet.size();
-			}
-		}
 
 
 
@@ -216,7 +197,6 @@ void CChatServer::BeginThread() {
 #ifdef UPDATE_THREAD
 	// Update (jobQ Thread)
 	_updateThread.SetThreadName(L"CHAT SERVER Update Thread");
-	_updateThread.BeginThread();
 	_updateThread.Launch(
 		[](LPVOID arg) {
 			CChatServer *pServer = (CChatServer *) arg;
@@ -226,7 +206,6 @@ void CChatServer::BeginThread() {
 #endif
 	// MonitorThread
 	_moinitorThrad.SetThreadName(L"CHAT SERVER Monitor Thread");
-	_moinitorThrad.BeginThread();
 	_moinitorThrad.Launch(
 		[](LPVOID arg) {
 			CChatServer *pServer = (CChatServer *) arg;
@@ -290,14 +269,18 @@ void CChatServer::OnError(int errorcode, const WCHAR *log) {
 }
 
 void CChatServer::OnTimeout(SESSION_ID SessionID) {
-	/*CLogger::_Log(dfLOG_LEVEL_DEBUG, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
+#ifdef UPDATE_THREAD
 	JobMessage *job = _jobMsgPool.Alloc();
 	job->_SessionID = SessionID;
 	job->_Type = CHAT_PACKET_TYPE::ON_TIME_OUT;
 	job->_pPacket = nullptr;
 
-	_jobQueue.Enqueue(job);
-	SetEvent(_DequeueEvent);*/
+	//_jobQueue.enqueue(job);
+	//SetEvent(_DequeueEvent);
+#else
+	//PacketProc(nullptr,SessionID, CHAT_PACKET_TYPE::ON_TIME_OUT);
+#endif // UPDATE_THREAD
 }
 
 void CChatServer::PacketProc(Packet *pPacket, SESSION_ID SessionID, WORD type) {
@@ -321,12 +304,10 @@ void CChatServer::PacketProc(Packet *pPacket, SESSION_ID SessionID, WORD type) {
 		PacketProcChatRequire(pPacket, SessionID);
 		break;
 	case CHAT_PACKET_TYPE::ON_CLIENT_LEAVE:
-		InterlockedIncrement(&_LoginCalc);
+		InterlockedIncrement(&_LeaveCalc);
 		RemovePlayer(SessionID);
 		break;
 	case CHAT_PACKET_TYPE::ON_TIME_OUT:
-		wsprintf(errmsg, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
-		CLogger::_Log(dfLOG_LEVEL_ERROR, errmsg);
 		DisconnectSession(SessionID);
 		break;
 	case CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_HEARTBEAT:
@@ -554,16 +535,12 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
 		DisconnectSession(SessionID);
 		return;
 	}
-	PRO_END(L"ChatRequire");
 	Packet *pResPacket = Packet::AllocAddRef();
-
-	PRO_BEGIN(L"ChatBroadcast");
 	MakePacketResponseMessage(pResPacket, pSender->_AccountNo, pSender->_ID, pSender->_NickName, msgLen, message);
-	//BroadcastSector(pResPacket, pSender->_SectorX, pSender->_SectorY, nullptr);
 	BroadcastSectorAround(pResPacket, pSender->_SectorX, pSender->_SectorY, nullptr);
-	PRO_END(L"ChatBroadcast");
 
 	pResPacket->SubRef(11);
+	PRO_END(L"ChatRequire");
 }
 void CChatServer::PacketProcHeartBeat(Packet *pPacket, SESSION_ID sessionID) {
 	Player *pPlayer = FindPlayer(sessionID);
@@ -599,7 +576,7 @@ void CChatServer::MakePacketResponseMessage(Packet *pPacket, ACCOUNT_NO account_
 void CChatServer::BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer = nullptr) {
 	pPacket->AddRef(15);
 
-	__SECTOR_LOCK(sectorX, sectorY);
+	SectorSLock(sectorX, sectorY);
 	{
 		SECTOR *pSector = &_sector[sectorY][sectorX];
 		for (auto iter = pSector->_playerSet.begin(); iter != pSector->_playerSet.end(); ++iter) {
@@ -610,7 +587,7 @@ void CChatServer::BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, P
 			InterlockedIncrement64(&_totalSectorAroundSend);
 		}
 	}
-	__SECTOR_UNLOCK(sectorX, sectorY);
+	SectorSUnlock(sectorX, sectorY);
 
 	InterlockedIncrement64(&_SectorAroundCount);
 
@@ -618,31 +595,6 @@ void CChatServer::BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, P
 }
 
 void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer = nullptr) {
-	/*int beginX = sectorX - 1;
-	int beginY = sectorY - 1;
-
-	pPacket->AddRef();
-
-	for (int dy = 0; dy < 3; dy++) {
-		if (((beginY + dy) < 0) || (beginY + dy) >= 50) continue;
-		for (int dx = 0; dx < 3; dx++) {
-			if (((beginX + dx) < 0) || ((beginX + dx) >= 50)) continue;
-			SECTOR *pSector = &_sector[beginY + dy][beginX + dx];
-			for (auto iter = pSector->_playerSet.begin(); iter != pSector->_playerSet.end(); ++iter) {
-				Player *pPlayer = (*iter);
-				if (pPlayer == exPlayer) continue;
-				SendPacket(pPlayer->_SessionID, pPacket);
-				InterlockedIncrement(&_ChatSendCalc);
-				InterlockedIncrement64(&_totalSectorAroundSend);
-			}
-		}
-
-	}
-	pPacket->SubRef();
-	InterlockedIncrement64(&_SectorAroundCount);*/
-
-
-
 	WORD sx = sectorX <= 0 ? 0 : sectorX - 1;
 	WORD sy = sectorY <= 0 ? 0 : sectorY - 1;
 	WORD ex = sectorX >= SECTOR_X_SIZE - 1 ? SECTOR_X_SIZE - 1 : sectorX + 1;
@@ -668,7 +620,7 @@ void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sect
 				::unordered_set<Player *> *pSectorPlayerSet = &_sector[dy][dx]._playerSet;
 				for (auto iter = pSectorPlayerSet->begin(); iter != pSectorPlayerSet->end(); ++iter) {
 					Player *pPlayer = (*iter);
-					if (pPlayer == exPlayer) continue;
+					if (pPlayer == exPlayer || pPlayer->_isLogin == false) continue;
 					SendPacket(pPlayer->_SessionID, pPacket);
 					InterlockedIncrement(&_ChatSendCalc);
 					InterlockedIncrement64(&_totalSectorAroundSend);
@@ -744,64 +696,86 @@ Player *CChatServer::FindPlayer(ULONGLONG SessionID) {
 }
 
 void CChatServer::PrintMonitor(FILE *fp) {
+	tm curTimeFormat;
+	time_t curTime;
+	time(&curTime);
+	localtime_s(&curTimeFormat, &curTime);
 
 	MoniteringInfo monitor = GetMoniteringInfo();
 	fwprintf_s(fp, L"=============================INFO=====================================\n");
-	fwprintf_s(fp, L"Start Time [%02d/%02d/%02d %02d:%02d:%02d]\n",
-		_timeFormet.tm_mon + 1, _timeFormet.tm_mday, (_timeFormet.tm_year + 1900) % 100, _timeFormet.tm_hour, _timeFormet.tm_min, _timeFormet.tm_sec);
-	fwprintf_s(fp, L"Worker Thread Count[%d]\t\tRunning Thread Count[%d]\n",
+	fwprintf_s(fp, L"Start Time [%02d/%02d/%02d %02d:%02d:%02d] System Time [%02d/%02d/%02d %02d:%02d:%02d]\n",
+		_timeFormet.tm_mon + 1, _timeFormet.tm_mday, (_timeFormet.tm_year + 1900) % 100, _timeFormet.tm_hour, _timeFormet.tm_min, _timeFormet.tm_sec,
+		curTimeFormat.tm_mon + 1, curTimeFormat.tm_mday, (curTimeFormat.tm_year + 1900) % 100, curTimeFormat.tm_hour, curTimeFormat.tm_min, curTimeFormat.tm_sec);
+#ifdef df_SENDTHREAD
+	fwprintf_s(fp, L"Send Thread::[TRUE]\t");
+#else
+	fwprintf_s(fp, L"Send Thread::[FALSE]\t");
+#endif // sendthread
+
+#ifdef UPDATE_THREAD
+	fwprintf_s(fp, L"Update Thread::[TRUE]\n");
+#else
+	fwprintf_s(fp, L"Update Thread::[FALSE]\n");
+#endif // UPDATE_THREAD
+
+	fwprintf_s(fp, L"Worker Thread Count[%d]\tRunning Thread Count[%d]\n",
 		monitor._workerThreadCount, monitor._runningThreadCount);
-	fwprintf_s(fp, L"Packet Queue Size [%lld]\t Packet Queue AVG[%lld]\n",
-		monitor._queueSize, monitor._queueSizeAvg);
 	fwprintf_s(fp, L"Currnt Session Count[%lld]\n",
 		monitor._sessionCnt);
 	fwprintf_s(fp, L"\n\
------------------------------TPS--------------------------------------\n\
-Accept TPS\t[%lld]\n\
-send packet TPS\t[%lld]\trecv packet TPS\t[%lld]\n\
-seded packet TPS[%lld]\n\
-Update TPS\t[%d]\n\
-login TPS\t[%d]\tsector move TPS\t[%d]\n\
-chat recv TPS\t[%d]\tchat send TPS\t[%d]\n\
-",
-monitor._acceptPerSec, monitor._sendPacketPerSec, monitor._recvPacketPerSec, monitor._sendedPacketPerSec, _UpdateTPS, _LoginTPS, _SectorMoveTPS, _ChatRecvTPS, _ChatSendTPS);
-
+--------------------------------TPS-----------------------------------------\n\
+Accept TPS\t[%lld]\tsend packet TPS\t[%lld]\trecv packet TPS\t[%lld]\n\
+seded packet TPS[%lld]\trecved packet TPS[%lld]\n",
+monitor._acceptPerSec, monitor._sendPacketPerSec, monitor._recvPacketPerSec, 
+monitor._sendedPacketPerSec, monitor._recvPacketPerSec);
+#ifdef UPDATE_THREAD
 	fwprintf_s(fp, L"\n\
-----------------------------TOTAL-------------------------------------\n\
+Update TPS\t[%d]\tlogin TPS\t[%d]\tLeave TPS\t[%d]\n\
+sector move TPS\t[%d]\tchat recv TPS\t[%d]\tchat send TPS\t[%d]\n\
+",_UpdateTPS, _LoginTPS, _LeaveTPS,_SectorMoveTPS, _ChatRecvTPS, _ChatSendTPS);
+#else
+	fwprintf_s(fp, L"\n\
+login TPS\t[%d]\tLeave TPS\t[%d]\n\
+sector move TPS\t[%d]\tchat recv TPS\t[%d]\tchat send TPS\t[%d]\n\
+", _LoginTPS, _LeaveTPS,_SectorMoveTPS, _ChatRecvTPS, _ChatSendTPS);
+#endif
+	fwprintf_s(fp, L"\n\
+-------------------------------TOTAL----------------------------------------\n\
 packet\t\t[%lld]\tsended Byte\t[%lld]\n\
 accept Count\t[%lld]\tDisconnectSession Count[%lld]\n\
 SEND SECTOR AVG\t[%lld]\t\n",
 monitor._totalPacket, monitor._totalProecessedBytes, monitor._totalAcceptSession, monitor._totalReleaseSession,
 _SectorAroundCount == 0 ? 0 : _totalSectorAroundSend / _SectorAroundCount);
 	fwprintf_s(fp, L"\n\
-----------------------------MEMORY------------------------------------ \n\
+-------------------------------MEMORY--------------------------------------- \n\
 Available [%lluMb]\tNPPool\ [%lluMb] Private Mem\t[%lluKb]\n",
 _hardMoniter.AvailableMemoryMBytes(), _hardMoniter.NonPagedPoolMBytes(), _procMonitor.PrivateMemoryKBytes());
+
+	fwprintf_s(fp, L"Session Packet Queue Size [%lld]\tQueue AVG[%lld]\n",
+		monitor._queueSize, monitor._queueSizeAvg);
 #ifdef UPDATE_THREAD
-
-
 	fwprintf_s(fp, L"\
-Packet pool Capacity\t[%d]\tPacket pool size\t[%d]\n\
-JobMsgPool Capacity\t[%d]\tJobMsgPool size\t\t[%d]\n\
-Player Pool Capacity\t[%d]\tPlayer Pool size\t[%d]\n\
-JobQueue Capacity\t[%d]\tJobQueue Pool size\t[%d]\n\
-player map size\t\t[%lld]\tTotal Sector Container Size[%lld]\n",
+Packet pool Capacity\t[%d]\tsize\t[%d]\n\
+JobMsgPool Capacity\t[%d]\tsize\t[%d]\n\
+Player Pool Capacity\t[%d]\tsize\t[%d]\n\
+JobQueue Capacity\t[%d]\tsize\t[%d]\n\
+player map size\t\t[%lld]\n",
 Packet::_packetPool.GetCapacity(), Packet::_packetPool.GetSize(),
 _jobMsgPool.GetCapacity(), _jobMsgPool.GetSize(),
 _playerPool.GetCapacity(), _playerPool.GetSize(),
 _jobQueue.GetPoolCapacity(), _jobQueue.GetPoolSize(),
-_playerMap.size(), _TotalSectorSize);
+_playerMap.size());
 #else
 	fwprintf_s(fp, L"\
-Packet pool Capacity\t[%d]\tPacket pool size\t[%d]\n\
-Player Pool Capacity\t[%d]\tPlayer Pool size\t[%d]\n\
-player map size\t\t[%lld]\tTotal Sector Container Size[%lld]\n",
+Packet pool Capacity\t[%d]\tsize\t[%d]\n\
+Player Pool Capacity\t[%d]\tsize\t[%d]\n\
+player map size\t\t[%lld]\n",
 Packet::_packetPool.GetCapacity(), Packet::_packetPool.GetSize(),
 _playerPool.GetCapacity(), _playerPool.GetSize(),
-_playerMap.size(), _TotalSectorSize);
+_playerMap.size());
 #endif // UPDATE_THREAD
 	fwprintf_s(fp, L"\n\
----------------------------CORE USAGE--------------------------------- \n\
+------------------------------CORE USAGE------------------------------------ \n\
 PROCESS\t[T %.1llf%% K %.1llf%% U %.1llf%%]\tCPU\t[T %.1llf%% K %.1llf%% U %.1llf%%]\n",
 _procMonitor.ProcessTotal(), _procMonitor.ProcessKernel(), _procMonitor.ProcessUser(),
 _hardMoniter.ProcessorTotal(), _hardMoniter.ProcessorKernel(), _hardMoniter.ProcessorUser());

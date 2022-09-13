@@ -173,6 +173,7 @@
   <ItemGroup>
     <ClInclude Include="CMonitoringServer.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="SS_MoniteringProtocol.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
