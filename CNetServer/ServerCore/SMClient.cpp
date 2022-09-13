@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "SMClient.h"
 
-SMClient::SMClient() :CClient(false), _monitorServerID{ 0 }, _monitorServerIP{ 0 }, _monitorServerPort{0}{
+SMClient::SMClient() :CClient(false), _monitorServerID{ 0 }, _monitorServerIP{ 0 }, _monitorServerPort{ 0 }{
 	CClient::Start(1, 1, TRUE, 1);
 }
 
@@ -11,6 +11,10 @@ SMClient::~SMClient() {
 
 void SMClient::OnEnterServer(SESSION_ID sessionID) {
 	_monitorServerID = sessionID;
+	Packet *pPacket = Packet::AllocAddRef();
+	MaketPakcetLogin(pPacket, _serverNo);
+	SendPacket(_monitorServerID, pPacket);
+	pPacket->SubRef();
 }
 
 void SMClient::OnLeaveServer(SESSION_ID sessionID) {
@@ -39,22 +43,23 @@ void SMClient::MaketPakcetLogin(Packet *pPacket, int serverNo) {
 	*pPacket << type << serverNo;
 }
 
-void SMClient::MaketPakcetUpdate(Packet *pPacket, BYTE DataType, int DataValue, int TimeStamp) {
+void SMClient::MaketPakcetUpdate(Packet *pPacket, BYTE serverNo, BYTE DataType, int DataValue, int TimeStamp) {
 	WORD type = PACKET_TYPE::en_PACKET_SS_MONITOR_DATA_UPDATE;
-	*pPacket << type << DataType<<DataValue<<TimeStamp;
+	*pPacket << type << serverNo << DataType << DataValue << TimeStamp;
 }
 
 
 
-void SMClient::ConnectMonitorServer(const WCHAR *IP, USHORT port) {
+void SMClient::ConnectMonitorServer(const WCHAR *IP, USHORT port, int serverNo) {
 	wsprintf(_monitorServerIP, L"%s", IP);
 	_monitorServerPort = port;
 	Connect(_monitorServerIP, _monitorServerPort);
+	_serverNo = serverNo;
 }
 
-void SMClient::SendMonitorPacket(BYTE DataType, int DataValue, int TimeStamp) {
+void SMClient::SendMonitorPacket(BYTE serverNo, BYTE DataType, int DataValue, int TimeStamp) {
 	Packet *pPacket = Packet::AllocAddRef();
-	MaketPakcetUpdate(pPacket, DataType, DataValue, TimeStamp);
+	MaketPakcetUpdate(pPacket, serverNo, DataType, DataValue, TimeStamp);
 	SendPacket(_monitorServerID, pPacket);
 	pPacket->SubRef();
 }

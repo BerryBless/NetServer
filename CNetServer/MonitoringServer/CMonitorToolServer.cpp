@@ -52,11 +52,25 @@ void CMonitorToolServer::CommandWait() {
 	}
 }
 
+void CMonitorToolServer::BroadcastPacket(Packet *pPacket) {
+	for (auto iter = _clientMap.begin(); iter != _clientMap.end(); ++iter) {
+		MonitorClient *pConnection = iter->second;
+		SendPacket(pConnection->_id, pPacket);
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"//BroadcastPacket[%lld]", pConnection->_id);
+	}
+}
+
 bool CMonitorToolServer::OnConnectionRequest(WCHAR *IPstr, DWORD IP, USHORT Port) {
 	return _isRunning;
 }
 
 void CMonitorToolServer::OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, SESSION_ID sessionID) {
+	//TEMP
+	CLogger::_Log(dfLOG_LEVEL_ERROR, L"//OnClientJoin[%lld]", sessionID);
+	MonitorClient *pConnection = new MonitorClient;
+	pConnection->_id = sessionID;
+	pConnection->_isLogin = true;
+	InsertClient(sessionID, pConnection);
 }
 
 void CMonitorToolServer::OnClientLeave(SESSION_ID sessionID) {

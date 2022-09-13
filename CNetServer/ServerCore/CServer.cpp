@@ -174,7 +174,7 @@ bool CServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 	// 지워진(끊어진) 세션
 	//---------------------------
 	if (!InterlockedOr((LONG *) &pSession->_isAlive, 0)) {
-		//CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: Session is colsed..");
+		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: Session is colsed..");
 		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: Session is colsed..");
 		pPacket->SubRef();
 		return false;

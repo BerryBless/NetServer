@@ -214,6 +214,7 @@ void CClient::Startup() {
 	CreateIOCP();
 	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"///// CreateIOCP() Ok..");
 
+
 	//---------------------------
 	// 세션 컨테이너 생성
 	//---------------------------
@@ -960,6 +961,7 @@ bool CClient::ReleaseSession(SESSION *pSession, int logic) {
 	InterlockedExchange(&pSession->_IOFlag, FALSE);
 
 	PostClientLeave(ID);
+	//OnLeaveServer(ID);
 	USHORT idx = sessionIDtoIndex(ID);
 	if (idx == 0) CRASH();
 	_emptyIndex.push(idx);

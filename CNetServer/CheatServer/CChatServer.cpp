@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "CChatServer.h"
 #include "ChatServerProtocol.h"
+#include "SS_MoniteringProtocol.h"
 #include "Profiler.h"
 #include <conio.h>
 #include <time.h>
@@ -77,11 +78,13 @@ void CChatServer::BeginServer(const WCHAR *szConfigFile) {
 		return;
 	}
 #endif // UPDATE_THREAD
+	_monitorServerConnection.ConnectMonitorServer(L"127.0.0.1", 11600, SERVER_TYPE::CHAT_SERVER);
 
 	_isRunning = Start(szConfigFile);
 	time(&_startTime);
 	localtime_s(&_timeFormet, &_startTime);
 	BeginThread();
+
 }
 
 
@@ -173,7 +176,17 @@ bool CChatServer::MonitoringProc() {
 		_hardMoniter.UpdateHardWareTime();
 		_procMonitor.UpdateProcessTime();
 
-
+		DWORD curTime = timeGetTime();
+		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_ON_OFF, _isRunning, curTime);
+		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_CPU_USAGE, _hardMoniter.ProcessorTotal(), curTime);
+		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PRIVATE_BYTES, _ChatRecvTPS, curTime);
+		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_SESSION_COUNTS, _curSessionCount, curTime);
+		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PLAYER_COUNTS, _playerMap.size(), curTime);
+		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PACKET_POOL_USAGE, Packet::_packetPool.GetSize(), curTime);
+#ifdef UPDATE_THREAD
+		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_TPS, _UpdateTPS, curTime);
+		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_MSG_QUEUE_SIZE, _jobMsgPool.GetSize(), curTime);
+#endif // UPDATE_THREAD
 
 
 		// 5분마다 저장
@@ -199,7 +212,7 @@ void CChatServer::BeginThread() {
 			CChatServer *pServer = (CChatServer *) arg;
 			while (pServer->UpdateProc());
 		}
-		, this);
+	, this);
 #endif
 	// MonitorThread
 	_moinitorThrad.SetThreadName(L"CHAT SERVER Monitor Thread");
@@ -209,7 +222,7 @@ void CChatServer::BeginThread() {
 			while (pServer->MonitoringProc());
 		}
 	, this);
-	CLogger::_Log(dfLOG_LEVEL_NOTICE,L"ChatServer BeginThread OK.. ");
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"ChatServer BeginThread OK.. ");
 }
 
 bool CChatServer::OnConnectionRequest(WCHAR *IPStr, DWORD IP, USHORT Port) {
@@ -442,7 +455,7 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID) {
 			_sector[pPlayer->_SectorY][pPlayer->_SectorX]._playerSet.emplace(pPlayer);
 		}
 		__SECTOR_UNLOCK(sx, sy);
-	} else if(pPlayer->_SectorX != sx || pPlayer->_SectorY != sy){
+	} else if (pPlayer->_SectorX != sx || pPlayer->_SectorY != sy) {
 		// 섹터간의 이동
 		WORD cx = pPlayer->_SectorX;
 		WORD cy = pPlayer->_SectorY;
@@ -450,7 +463,7 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID) {
 		pPlayer->_SectorY = sy;
 		for (;;) {
 			// 두 섹터 락 시도
-			if(TrySectorLock(cx, cy) == false) continue;
+			if (TrySectorLock(cx, cy) == false) continue;
 			if (TrySectorLock(sx, sy) == false) {
 				SectorUnlock(cx, cy);
 				YieldProcessor();
@@ -723,18 +736,18 @@ void CChatServer::PrintMonitor(FILE *fp) {
 --------------------------------TPS-----------------------------------------\n\
 Accept TPS\t[%lld]\tsend packet TPS\t[%lld]\trecv packet TPS\t[%lld]\n\
 seded packet TPS[%lld]\trecved packet TPS[%lld]\n",
-monitor._acceptPerSec, monitor._sendPacketPerSec, monitor._recvPacketPerSec, 
+monitor._acceptPerSec, monitor._sendPacketPerSec, monitor._recvPacketPerSec,
 monitor._sendedPacketPerSec, monitor._recvPacketPerSec);
 #ifdef UPDATE_THREAD
 	fwprintf_s(fp, L"\n\
 Update TPS\t[%d]\tlogin TPS\t[%d]\tLeave TPS\t[%d]\n\
 sector move TPS\t[%d]\tchat recv TPS\t[%d]\tchat send TPS\t[%d]\n\
-",_UpdateTPS, _LoginTPS, _LeaveTPS,_SectorMoveTPS, _ChatRecvTPS, _ChatSendTPS);
+", _UpdateTPS, _LoginTPS, _LeaveTPS, _SectorMoveTPS, _ChatRecvTPS, _ChatSendTPS);
 #else
 	fwprintf_s(fp, L"\n\
 login TPS\t[%d]\tLeave TPS\t[%d]\n\
 sector move TPS\t[%d]\tchat recv TPS\t[%d]\tchat send TPS\t[%d]\n\
-", _LoginTPS, _LeaveTPS,_SectorMoveTPS, _ChatRecvTPS, _ChatSendTPS);
+", _LoginTPS, _LeaveTPS, _SectorMoveTPS, _ChatRecvTPS, _ChatSendTPS);
 #endif
 	fwprintf_s(fp, L"\n\
 -------------------------------TOTAL----------------------------------------\n\

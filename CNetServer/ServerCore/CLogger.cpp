@@ -92,18 +92,16 @@ void CLogger::_Log(int logLevel, const WCHAR *format, ...) {
 
 	FileLock();
 	do {
-		FILE *fp;
+		/*FILE *fp;
 
-		do {
-			_wfopen_s(&fp, fileName, L"a+");
-		} while (fp == nullptr);
-
+		_wfopen_s(&fp, fileName, L"a+");
+		if (fp == nullptr)break;
 		if (!bSpill)
 			fwprintf_s(fp, L"%s\n", log);
 		else
 			fwprintf_s(fp, L"[TRUNCATED LOG]%s\n", log);
 
-		fclose(fp);
+		fclose(fp);*/
 	} while (0);
 	FileUnlock();
 }

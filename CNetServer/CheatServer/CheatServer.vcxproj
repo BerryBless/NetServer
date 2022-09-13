@@ -171,6 +171,7 @@
     <ClInclude Include="JobMessage.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="SS_MoniteringProtocol.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CChatServer.cpp" />

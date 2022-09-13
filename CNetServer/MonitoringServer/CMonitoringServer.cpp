@@ -14,6 +14,7 @@ CMonitoringServer::~CMonitoringServer() {
 
 void CMonitoringServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
 	_isRunning = Start(IP, port, workerThreadCount, maxRunThreadCount, nagle, maxConnection);
+	_pMonitorToolServer->BeginServer(IP, 11601, workerThreadCount, maxRunThreadCount, nagle, maxConnection);
 }
 
 void CMonitoringServer::BeginServer(const WCHAR *szConfigFile) {
@@ -106,28 +107,98 @@ void CMonitoringServer::PacketProcMonitorLogin(Packet *pPacket, SESSION_ID sessi
 	pConnection->_id = sessionID;
 	pConnection->_serverNo = serverNo;
 	pConnection->_isLogin = true;
+	InsertServer(sessionID, pConnection);
 }
 
 void CMonitoringServer::PacketProcMonitorDataUpdate(Packet *pPacket, SESSION_ID sessionID) {
+	BYTE serverNo;
 	BYTE dataType;
 	int dataValue;
 	int timeStamp;
-	*pPacket >> dataType >> dataValue >> timeStamp;
+	*pPacket >> serverNo>> dataType >> dataValue >> timeStamp;
 	ServerConnect *pConnection = FindServer(sessionID);
-	ASSERT_CRASH(pConnection == nullptr);
+	ASSERT_CRASH(pConnection != nullptr);
 	if (pConnection->_isLogin == false) {
 		DisconnectSession(sessionID);
 	}
-	
 
 
+	switch (serverNo) {
+	case SERVER_TYPE::MONITORING_SERVER:
+		break;
+	case SERVER_TYPE::GAME_SERVER:
+		break;
+	case SERVER_TYPE::CHAT_SERVER:
+		DataUpdateChatServer(dataType, dataValue, timeStamp);
+		break;
+	case SERVER_TYPE::LOGIN_SERVER:
+		break;
+	default:
+		break;
+	}
+
+	Packet *pSendPacket = Packet::AllocAddRef();
+	MakePacketMonitorDataUpdate(pSendPacket, serverNo, dataType, dataValue, timeStamp);
+
+	_pMonitorToolServer->BroadcastPacket(pSendPacket);
+	pSendPacket->SubRef();
+
+}
+
+void CMonitoringServer::ResetChatServerData() {
+	this->_C_RunningFlag = false;
+	memmove_s(this->_C_CPU, sizeof(_Template), _Template, sizeof(_Template));
+	memmove_s(this->_C_PrivateBytes, sizeof(_Template), _Template, sizeof(_Template));
+	memmove_s(this->_C_PacketPoolSize, sizeof(_Template), _Template, sizeof(_Template));
+	memmove_s(this->_C_SessionCount, sizeof(_Template), _Template, sizeof(_Template));
+	memmove_s(this->_C_PlayerCount, sizeof(_Template), _Template, sizeof(_Template));
+	memmove_s(this->_C_UpdateTPS, sizeof(_Template), _Template, sizeof(_Template));
+	memmove_s(this->_C_JobQueue, sizeof(_Template), _Template, sizeof(_Template));
+}
+
+void CMonitoringServer::DataUpdateChatServer(BYTE dataType, int dataValue, int timeStamp) {
+	ULONGLONG *target = nullptr;
+	switch (dataType) {
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_ON_OFF:	_C_RunningFlag = true; break;
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_CPU_USAGE:
+		target = _C_CPU;
+		break;
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PRIVATE_BYTES:
+		target = _C_PrivateBytes;
+		break;
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_SESSION_COUNTS:
+		target = _C_SessionCount;
+		break;
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PLAYER_COUNTS:
+		target = _C_PlayerCount;
+		break;
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_TPS:
+		target = _C_UpdateTPS;
+		break;
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PACKET_POOL_USAGE:
+		target = _C_PacketPoolSize;
+		break;
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_MSG_QUEUE_SIZE:
+		target = _C_JobQueue;
+		break;
+	default:
+		break;
+	}
+	if (target != nullptr) {
+		target[this->TOTAL] += dataValue;
+		target[this->MIN] = min(target[this->MIN], dataValue);
+		target[this->MAX] = max(target[this->MAX], dataValue);
+		++target[this->TICK];
+	}
 }
 
 void CMonitoringServer::MakePacketMonitorDataUpdate(Packet *pPacket, BYTE serverNo, BYTE dataType, int dataValue, int timeStamp) {
+	WORD type = PACKET_TYPE::en_PACKET_CS_MONITOR_TOOL_DATA_UPDATE;
+	*pPacket << type << serverNo << dataType << dataValue << timeStamp;
 }
 
-void CMonitoringServer::InsertServer(SESSION_ID sessionID, ServerConnect *pServer) {
-	_serverMap.emplace(::make_pair(sessionID, pServer));
+void CMonitoringServer::InsertServer(SESSION_ID sessionID, ServerConnect *pConnection) {
+	_serverMap.emplace(::make_pair(sessionID, pConnection));
 }
 
 void CMonitoringServer::RemoveServer(SESSION_ID sessionID) {
@@ -135,10 +206,10 @@ void CMonitoringServer::RemoveServer(SESSION_ID sessionID) {
 	if (iter == _serverMap.end()) {
 		return;
 	}
-	ServerConnect *pServer = iter->second;
+	ServerConnect *pConnection = iter->second;
 	_serverMap.erase(iter);
 
-	delete 	pServer;
+	delete 	pConnection;
 }
 
 CMonitoringServer::ServerConnect *CMonitoringServer::FindServer(SESSION_ID sessionID) {

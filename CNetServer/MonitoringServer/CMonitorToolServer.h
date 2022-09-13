@@ -25,6 +25,8 @@ public:
 		return _isRunning;
 	}
 	void CommandWait();
+
+	void BroadcastPacket(Packet *pPacket);
 private:
 	virtual bool OnConnectionRequest(WCHAR *IPstr, DWORD IP, USHORT Port); // TODO IP주소 string
 	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, SESSION_ID sessionID) ;

@@ -47,10 +47,9 @@ private:
 	void PacketProcMonitorLogin(Packet *packet, SESSION_ID sessionID);
 	void PacketProcMonitorDataUpdate(Packet *packet, SESSION_ID sessionID);
 	void MakePacketMonitorDataUpdate(Packet *packet, BYTE serverNo, BYTE dataType, int dataValue, int timeStamp);
-private:
 
-
-	void UpdateChatServerData(BYTE messageType, int data, int timeStamp);
+	void ResetChatServerData();
+	void DataUpdateChatServer(BYTE dataType, int dataValue, int timeStamp);
 
 private:
 	bool _isRunning;
@@ -61,7 +60,7 @@ private:
 	/// </summary>
 
 
-	void InsertServer(SESSION_ID sessionID, ServerConnect *pServer);
+	void InsertServer(SESSION_ID sessionID, ServerConnect *pConnection);
 	void RemoveServer(SESSION_ID sessionID);
 	ServerConnect *FindServer(SESSION_ID sessionID);
 
@@ -75,9 +74,13 @@ private:
 	CMonitorToolServer *_pMonitorToolServer; //외부와의 소통을 위한 서버
 
 private:
-	constexpr static int MAX_VALUE = 0x7fffffff;
-	constexpr static int MIN_VALUE = 0;
-	ULONGLONG								_Template[4] = { /* SUM */ 0, /* MAX */MAX_VALUE, /* MIN */MIN_VALUE, /* CALL */ 0};
+	constexpr static int					MAX_VALUE = 0x7fffffff;
+	constexpr static int					MIN_VALUE = 0;
+	constexpr static int					TOTAL = 0;
+	constexpr static int					MIN = 1;
+	constexpr static int					MAX = 2;
+	constexpr static int					TICK = 3;
+	ULONGLONG								_Template[4] = { /* TOTAL */ 0, /* MIN */MAX_VALUE, /* MAX */MIN_VALUE, /* TICK */ 0};
 	//---------------------------------------------------------------------
 	//HARD WARE DATA
 

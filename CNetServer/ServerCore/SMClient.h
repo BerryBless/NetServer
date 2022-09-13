@@ -21,13 +21,14 @@ public:
 	void PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type);
 	void PacketProcHeartBeat(Packet *pPacket);
 	void MaketPakcetLogin(Packet *pPacket, int ServerNo);
-	void MaketPakcetUpdate(Packet *pPacket, BYTE DataType, int DataValue, int TimeStamp);
+	void MaketPakcetUpdate(Packet *pPacket, BYTE serverNo, BYTE DataType, int DataValue, int TimeStamp);
 
 public:
-	void ConnectMonitorServer(const WCHAR *IP, USHORT port);
-	void SendMonitorPacket(BYTE DataType, int DataValue, int TimeStamp);
+	void ConnectMonitorServer(const WCHAR *IP, USHORT port, int serverNo);
+	void SendMonitorPacket(BYTE serverNo, BYTE DataType, int DataValue, int TimeStamp);
 private:
 	WCHAR _monitorServerIP[20];
 	USHORT _monitorServerPort;
+	int _serverNo;
 	SESSION_ID _monitorServerID;
 };

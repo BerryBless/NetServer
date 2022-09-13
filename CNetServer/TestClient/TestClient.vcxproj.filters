@@ -21,9 +21,7 @@
     <ClCompile Include="LanClient.cpp">
       <Filter>Main\Client</Filter>
     </ClCompile>
-    <ClCompile Include="NetClient.cpp">
-      <Filter>Main\Client</Filter>
-    </ClCompile>
+    <ClCompile Include="MornitoringClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -32,8 +30,6 @@
     <ClInclude Include="LanClient.h">
       <Filter>Main\Client</Filter>
     </ClInclude>
-    <ClInclude Include="NetClient.h">
-      <Filter>Main\Client</Filter>
-    </ClInclude>
+    <ClInclude Include="MornitoringClient.h" />
   </ItemGroup>
 </Project>

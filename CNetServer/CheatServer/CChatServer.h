@@ -121,7 +121,7 @@ private:
 	time_t _startTime;
 
 private:
-	SMClient							_monitorServerConnect;
+	SMClient							_monitorServerConnection;
 	HardWareMoniter						_hardMoniter;
 	ProcessMoniter						_procMonitor;
 
