@@ -27,26 +27,26 @@ void CEchoServer::OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG se
 	pPacket->SubRef(6666);
 }
 
-void CEchoServer::OnClientLeave(SESSION_ID SessionID) {
-	int idx = SessionID >> (8 * 6);
+void CEchoServer::OnClientLeave(SESSION_ID sessionID) {
+	int idx = sessionID >> (8 * 6);
 	//if (idx == 0) CRASH();
 }
 
-void CEchoServer::OnRecv(SESSION_ID SessionID, Packet *pPacket) {
+void CEchoServer::OnRecv(SESSION_ID sessionID, Packet *pPacket) {
 
-	EchoProc(SessionID, pPacket);
+	EchoProc(sessionID, pPacket);
 }
 
-void CEchoServer::OnSend(SESSION_ID SessionID) {
+void CEchoServer::OnSend(SESSION_ID sessionID) {
 }
 
 void CEchoServer::OnError(int errorcode, const WCHAR *log) {
 	//wprintf_s(L"%d :: %s", errorcode, log);
 }
 
-void CEchoServer::OnTimeout(SESSION_ID SessionID) {
-	printf_s("OnTimeout :: %lld\n", SessionID);
-	DisconnectSession(SessionID);
+void CEchoServer::OnTimeout(SESSION_ID sessionID) {
+	printf_s("OnTimeout :: %lld\n", sessionID);
+	DisconnectSession(sessionID);
 }
 
 bool CEchoServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {

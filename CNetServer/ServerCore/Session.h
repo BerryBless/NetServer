@@ -1,41 +1,54 @@
 #pragma once
-#ifndef __ECHO_SERVER_SESSION__
-#define __ECHO_SERVER_SESSION__
+#include "Types.h"
+#include "Queue.hpp"
+#include "SerializingBuffer.h"
+#include "RingBuffer.h"
+//#define df_LOGGING_SESSION_LOGIC 1000
+#define dfSESSION_SEND_PACKER_BUFFER_SIZE 200
 
-#include "CorePch.h"
-#include <unordered_map>
-#include <list>
+struct SESSION {
+	SESSION_ID _ID;
 
-#define SESSION_SEND_PACKER_BUFFER_SIZE 200
-    struct OverlappedEx {
-        OVERLAPPED _Overlapped{ 0 };
-        DWORD _IsRecv = false;
-    };
+	// IOCP Buffer
+	WSAOVERLAPPED _recvOverlapped;
+	WSAOVERLAPPED _sendOverlapped;
+	RingBuffer _recvQueue;
+	Queue<Packet *> _sendQueue;
+	Packet *_pSendPacketBufs[dfSESSION_SEND_PACKER_BUFFER_SIZE];
 
+	// session information
+	SOCKET _sock;
+	DWORD _IP;
+	USHORT _port;
+	WCHAR _IPStr[20];
 
-    struct Session {
-        Session() : _SessionID(0), _SendBufferCount(0), _SendPacketBuffer{ 0 }, _Sock(0), _SessionIP(0), _SessionPort(0), _SessionIPStr{ 0 }, _IOCounts(0x80000000), _IOFlag(0), _LastRecvdTime(0)
-        {
+	// session lock
+	SRWLOCK _lock;
 
-        }
-        //Read Only
-        ULONGLONG _SessionID;
-        SOCKET _Sock;
-        ULONG _SessionIP;
-        WCHAR _SessionIPStr[20];
-        USHORT _SessionPort;
+	// session state
+	DWORD _lastActiveTime;
+	alignas(64) DWORD _IOcount;
+	alignas(64) DWORD _IOFlag;
+	alignas(64) DWORD _sendPacketCnt;
+	alignas(64) DWORD _isAlive;
 
-        OverlappedEx _RecvJob;
-        DWORD _LastRecvdTime;
-        RingBuffer _RingBuffer;
-        OverlappedEx _SendJob;
-        Packet *_SendPacketBuffer[SESSION_SEND_PACKER_BUFFER_SIZE];
-        Queue<Packet *> _SendPacketQueue;
-        alignas(64) DWORD _SendBufferCount;
-        alignas(64) DWORD _IOCounts;
-        alignas(64) DWORD _IOFlag;
+#ifdef df_LOGGING_SESSION_LOGIC
+	alignas(64) DWORD _IncIndex;
+	alignas(64) DWORD _DecIndex;
+	int _IncLog[df_LOGGING_SESSION_LOGIC] = { 0 };
+	int _DecLog[df_LOGGING_SESSION_LOGIC] = { 0 };
+#endif // df_LOGGING_SESSION_LOGIC
 
-    };
-
-
-#endif // !__ECHO_SERVER_SESSION_
+	SESSION() {
+		_ID = 0;
+		_IOcount = 0x80000000;
+		_IOFlag = 0;
+		_sendPacketCnt = 0;
+		_sock = 0;
+		_IP = 0;
+		_port = 0;
+		_isAlive = 0;
+		ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
+		ZeroMemory(&_sendOverlapped, sizeof(WSAOVERLAPPED));
+	}
+};

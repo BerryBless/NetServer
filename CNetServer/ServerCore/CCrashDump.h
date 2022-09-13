@@ -16,7 +16,7 @@
 #ifndef ASSERT_CRASH
 #define ASSERT_CRASH(expr)	do{\
 								if (!(expr)) { CRASH();}\
-							}while()
+							}while(0)
 #endif // !ASSERT_CRASH
 
 

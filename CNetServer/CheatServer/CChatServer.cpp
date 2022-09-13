@@ -148,7 +148,7 @@ bool CChatServer::UpdateProc() {
 
 		while (_jobQueue.dequeue(job)) {
 			InterlockedIncrement(&_UpdateCalc);
-			PacketProc(job->_pPacket, job->_SessionID, job->_Type);
+			PacketProc(job->_pPacket, job->_sessionID, job->_Type);
 			if (job->_pPacket != nullptr)
 				job->_pPacket->SubRef(1);
 
@@ -224,23 +224,23 @@ bool CChatServer::OnConnectionRequest(WCHAR *IPStr, DWORD IP, USHORT Port) {
 void CChatServer::OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID) {
 }
 
-void CChatServer::OnClientLeave(SESSION_ID SessionID) {
-	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
+void CChatServer::OnClientLeave(SESSION_ID sessionID) {
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"ERROR :: Time Out Case sessionID : %I64u", sessionID);
 #ifdef UPDATE_THREAD
 	JobMessage *job = _jobMsgPool.Alloc();
-	job->_SessionID = SessionID;
+	job->_sessionID = sessionID;
 	job->_Type = CHAT_PACKET_TYPE::ON_CLIENT_LEAVE;
 	job->_pPacket = nullptr;
 
 	_jobQueue.enqueue(job);
 	SetEvent(_DequeueEvent);
 #else
-	PacketProc(nullptr, SessionID, CHAT_PACKET_TYPE::ON_CLIENT_LEAVE);
+	PacketProc(nullptr, sessionID, CHAT_PACKET_TYPE::ON_CLIENT_LEAVE);
 #endif // UPDATE_THREAD
 }
 
 
-void CChatServer::OnRecv(SESSION_ID SessionID, Packet *pPacket) {
+void CChatServer::OnRecv(SESSION_ID sessionID, Packet *pPacket) {
 	pPacket->AddRef(2);
 	WORD type;
 	(*pPacket) >> type;
@@ -248,7 +248,7 @@ void CChatServer::OnRecv(SESSION_ID SessionID, Packet *pPacket) {
 #ifdef UPDATE_THREAD
 	// jobQueue
 	JobMessage *job = _jobMsgPool.Alloc();
-	job->_SessionID = SessionID;
+	job->_sessionID = sessionID;
 	job->_Type = type;
 	job->_pPacket = pPacket;
 	pPacket->AddRef();
@@ -256,34 +256,34 @@ void CChatServer::OnRecv(SESSION_ID SessionID, Packet *pPacket) {
 	_jobQueue.enqueue(job);
 	SetEvent(_DequeueEvent);
 #else
-	PacketProc(pPacket, SessionID, type);
+	PacketProc(pPacket, sessionID, type);
 #endif // UPDATE_THREAD
 
 	pPacket->SubRef(2);
 }
-void CChatServer::OnSend(SESSION_ID SessionID) {
+void CChatServer::OnSend(SESSION_ID sessionID) {
 
 }
 void CChatServer::OnError(int errorcode, const WCHAR *log) {
 
 }
 
-void CChatServer::OnTimeout(SESSION_ID SessionID) {
-	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"ERROR :: Time Out Case SessionID : %I64u", SessionID);
+void CChatServer::OnTimeout(SESSION_ID sessionID) {
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"ERROR :: Time Out Case sessionID : %I64u", sessionID);
 #ifdef UPDATE_THREAD
 	JobMessage *job = _jobMsgPool.Alloc();
-	job->_SessionID = SessionID;
+	job->_sessionID = sessionID;
 	job->_Type = CHAT_PACKET_TYPE::ON_TIME_OUT;
 	job->_pPacket = nullptr;
 
 	//_jobQueue.enqueue(job);
 	//SetEvent(_DequeueEvent);
 #else
-	//PacketProc(nullptr,SessionID, CHAT_PACKET_TYPE::ON_TIME_OUT);
+	//PacketProc(nullptr,sessionID, CHAT_PACKET_TYPE::ON_TIME_OUT);
 #endif // UPDATE_THREAD
 }
 
-void CChatServer::PacketProc(Packet *pPacket, SESSION_ID SessionID, WORD type) {
+void CChatServer::PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type) {
 	if (pPacket != nullptr)
 		pPacket->AddRef(3);
 
@@ -293,30 +293,30 @@ void CChatServer::PacketProc(Packet *pPacket, SESSION_ID SessionID, WORD type) {
 	switch (type) {
 	case CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_LOGIN:
 		InterlockedIncrement(&_LoginCalc);
-		PacketProcRequestLogin(pPacket, SessionID);
+		PacketProcRequestLogin(pPacket, sessionID);
 		break;
 	case CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_SECTOR_MOVE:
 		InterlockedIncrement(&_SectorMoveCalc);
-		PacketProcMoveSector(pPacket, SessionID);
+		PacketProcMoveSector(pPacket, sessionID);
 		break;
 	case CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_MESSAGE:
 		InterlockedIncrement(&_ChatRecvCalc);
-		PacketProcChatRequire(pPacket, SessionID);
+		PacketProcChatRequire(pPacket, sessionID);
 		break;
 	case CHAT_PACKET_TYPE::ON_CLIENT_LEAVE:
 		InterlockedIncrement(&_LeaveCalc);
-		RemovePlayer(SessionID);
+		RemovePlayer(sessionID);
 		break;
 	case CHAT_PACKET_TYPE::ON_TIME_OUT:
-		DisconnectSession(SessionID);
+		DisconnectSession(sessionID);
 		break;
 	case CHAT_PACKET_TYPE::PACKET_CS_CHAT_REQ_HEARTBEAT:
-		//PacketProcHeartBeat(pPacket, SessionID);
+		//PacketProcHeartBeat(pPacket, sessionID);
 		break;
 	default:
-		wsprintf(errmsg, L"ERROR :: Session Default Case SessionID : %I64u", SessionID);
+		wsprintf(errmsg, L"ERROR :: Session Default Case sessionID : %I64u", sessionID);
 		CLogger::_Log(dfLOG_LEVEL_ERROR, errmsg);
-		DisconnectSession(SessionID);
+		DisconnectSession(sessionID);
 		break;
 	}
 	if (pPacket != nullptr)
@@ -324,7 +324,7 @@ void CChatServer::PacketProc(Packet *pPacket, SESSION_ID SessionID, WORD type) {
 }
 
 // PACKET_CS_CHAT_REQ_LOGIN
-void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID SessionID) {
+void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID sessionID) {
 	PRO_BEGIN(L"RequestLogin");
 	pPacket->AddRef(4);
 	BYTE status = FALSE;
@@ -332,16 +332,16 @@ void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID SessionID) 
 
 	if (pPacket->GetDataSize() < sizeof(ACCOUNT_NO)) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() < sizeof(ACCOUNT_NO)"); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		DisconnectSession(sessionID);
 	}
 	//(*pPacket).GetData((char *) &acno, sizeof(ACCOUNT_NO));
 	(*pPacket) >> acno;
 
 	if (pPacket->GetDataSize() != ID_MAX_SIZE + NICK_NAME_MAX_SIZE + TOKEN_KEY_SIZE) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() != ID_MAX_SIZE + NICK_NAME_MAX_SIZE + TOKEN_KEY_SIZE"); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		DisconnectSession(sessionID);
 	}
-	Player *pPlayer = FindPlayer(SessionID);
+	Player *pPlayer = FindPlayer(sessionID);
 	if (pPlayer == nullptr) {
 		// new Player
 		pPlayer = _playerPool.Alloc();
@@ -353,9 +353,9 @@ void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID SessionID) 
 		pPlayer->_AccountNo = acno;
 		pPlayer->_SectorX = -1;
 		pPlayer->_SectorY = -1;
-		pPlayer->_SessionID = SessionID;
+		pPlayer->_sessionID = sessionID;
 
-		InsertPlayer(SessionID, pPlayer);
+		InsertPlayer(sessionID, pPlayer);
 		pPlayer->_isLogin = TRUE;
 		status = TRUE;
 	}
@@ -364,10 +364,10 @@ void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID SessionID) 
 
 	Packet *pResLoginPacket = Packet::AllocAddRef();
 	MakePacketResponseLogin(pResLoginPacket, pPlayer->_AccountNo, status);
-	SendPacket(pPlayer->_SessionID, pResLoginPacket);
+	SendPacket(pPlayer->_sessionID, pResLoginPacket);
 	if (status == FALSE) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"status == FALSE"); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		DisconnectSession(sessionID);
 	}
 
 	InterlockedIncrement(&_LoginCalc);
@@ -377,7 +377,7 @@ void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID SessionID) 
 }
 
 // PACKET_CS_CHAT_REQ_SECTOR_MOVE
-void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID SessionID) {
+void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID) {
 	PRO_BEGIN(L"MoveSector");
 	ACCOUNT_NO no;
 	WORD sx;
@@ -387,7 +387,7 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID SessionID) {
 	pPacket->AddRef(5);
 	if (pPacket->GetDataSize() != (sizeof(no) + sizeof(sx) + sizeof(sy))) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() != (sizeof(no) + sizeof(sx) + sizeof(sy))"); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		DisconnectSession(sessionID);
 		pPacket->SubRef(5);
 		return;
 	}
@@ -396,25 +396,25 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID SessionID) {
 	pPacket->SubRef(6);
 	// 섹터 범위 초과
 	if (sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE", SessionID); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE", sessionID); // TODO ERROR MSG
+		DisconnectSession(sessionID);
 		return;
 	}
 
 
 	// 플레이어 무결성
-	Player *pPlayer = FindPlayer(SessionID);
+	Player *pPlayer = FindPlayer(sessionID);
 	if (pPlayer == nullptr) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  pPlayer == nullptr", SessionID); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  pPlayer == nullptr", sessionID); // TODO ERROR MSG
+		DisconnectSession(sessionID);
 		return;
 	}if (pPlayer->_isLogin == false) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  pPlayer->_isLogin == false", SessionID); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  pPlayer->_isLogin == false", sessionID); // TODO ERROR MSG
+		DisconnectSession(sessionID);
 		return;
 	}if (pPlayer->_AccountNo != no) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  _AccountNo == no", SessionID); // TODO ERROR MSG
-		DisconnectSession(SessionID);
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  _AccountNo == no", sessionID); // TODO ERROR MSG
+		DisconnectSession(sessionID);
 		return;
 	}
 
@@ -478,13 +478,13 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID SessionID) {
 	// Send RES_SECTOR_MOVE Msg
 	Packet *pResPacket = Packet::AllocAddRef();
 	MakePacketResponseSectorMove(pResPacket, pPlayer->_AccountNo, pPlayer->_SectorX, pPlayer->_SectorY);
-	SendPacket(pPlayer->_SessionID, pResPacket);
+	SendPacket(pPlayer->_sessionID, pResPacket);
 	pResPacket->SubRef(7);
 	PRO_END(L"MoveSector");
 }
 
 // PACKET_CS_CHAT_REQ_MESSAGE
-void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
+void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID sessionID) {
 	PRO_BEGIN(L"ChatRequire");
 	ACCOUNT_NO no;
 	WORD msgLen;
@@ -492,7 +492,7 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
 	pPacket->AddRef(6);
 
 	if (pPacket->GetDataSize() < sizeof(ACCOUNT_NO) + sizeof(msgLen)) {
-		DisconnectSession(SessionID);
+		DisconnectSession(sessionID);
 		pPacket->SubRef(8);
 		return;
 	}
@@ -500,7 +500,7 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
 	(*pPacket) >> no >> msgLen;
 
 	if (pPacket->GetDataSize() != msgLen) {
-		DisconnectSession(SessionID);
+		DisconnectSession(sessionID);
 		pPacket->SubRef(9);
 		return;
 	}
@@ -511,28 +511,28 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID SessionID) {
 
 
 	pPacket->SubRef(10);
-	Player *pSender = FindPlayer(SessionID);
+	Player *pSender = FindPlayer(sessionID);
 	if (pSender == nullptr) {
 		//TODO ERROR
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pSender == nullptr");
-		DisconnectSession(SessionID);
+		DisconnectSession(sessionID);
 		return;
 	}
 	if (pSender->_isLogin == false) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pSender->_isLogin == false");
-		DisconnectSession(SessionID);
+		DisconnectSession(sessionID);
 		return;
 	}
 	if (no != pSender->_AccountNo) {
 		//TODO ERROR
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"no != pSender->_AccountNo");
-		DisconnectSession(SessionID);
+		DisconnectSession(sessionID);
 		return;
 	}
 	if (pSender->_SectorX >= 50 || pSender->_SectorY >= 50) {
 		//TODO ERROR
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"pSender->_SectorX >= 50 || pSender->_SectorY >= 50");
-		DisconnectSession(SessionID);
+		DisconnectSession(sessionID);
 		return;
 	}
 	Packet *pResPacket = Packet::AllocAddRef();
@@ -582,7 +582,7 @@ void CChatServer::BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, P
 		for (auto iter = pSector->_playerSet.begin(); iter != pSector->_playerSet.end(); ++iter) {
 			Player *pPlayer = (*iter);
 			if (pPlayer == exPlayer) continue;
-			SendPacket(pPlayer->_SessionID, pPacket);
+			SendPacket(pPlayer->_sessionID, pPacket);
 			InterlockedIncrement(&_ChatSendCalc);
 			InterlockedIncrement64(&_totalSectorAroundSend);
 		}
@@ -621,7 +621,7 @@ void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sect
 				for (auto iter = pSectorPlayerSet->begin(); iter != pSectorPlayerSet->end(); ++iter) {
 					Player *pPlayer = (*iter);
 					if (pPlayer == exPlayer || pPlayer->_isLogin == false) continue;
-					SendPacket(pPlayer->_SessionID, pPacket);
+					SendPacket(pPlayer->_sessionID, pPacket);
 					InterlockedIncrement(&_ChatSendCalc);
 					InterlockedIncrement64(&_totalSectorAroundSend);
 				}
@@ -641,15 +641,15 @@ void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sect
 	pPacket->SubRef(16);
 }
 
-void CChatServer::InsertPlayer(ULONGLONG SessionID, Player *pPlayer) {
+void CChatServer::InsertPlayer(ULONGLONG sessionID, Player *pPlayer) {
 	__PLAYER_MAP_LOCK();
-	_playerMap.emplace(::make_pair(SessionID, pPlayer));
+	_playerMap.emplace(::make_pair(sessionID, pPlayer));
 	__PLAYER_MAP_UNLOCK();
 }
 
-void CChatServer::RemovePlayer(ULONGLONG SessionID) {
+void CChatServer::RemovePlayer(ULONGLONG sessionID) {
 	__PLAYER_MAP_LOCK();
-	auto iter = _playerMap.find(SessionID);
+	auto iter = _playerMap.find(sessionID);
 	if (iter == _playerMap.end()) {
 		__PLAYER_MAP_UNLOCK();
 		return;
@@ -674,7 +674,7 @@ void CChatServer::RemovePlayer(ULONGLONG SessionID) {
 
 	__SECTOR_LOCK(sx, sy);
 	for (auto iter = _sector[sy][sx]._playerSet.begin(); iter != _sector[sy][sx]._playerSet.end(); ++iter) {
-		if ((*iter)->_SessionID == SessionID) {
+		if ((*iter)->_sessionID == sessionID) {
 			_sector[sy][sx]._playerSet.erase(iter);
 			break;
 		}
@@ -684,9 +684,9 @@ void CChatServer::RemovePlayer(ULONGLONG SessionID) {
 	_playerPool.Free(pPlayer);
 }
 
-Player *CChatServer::FindPlayer(ULONGLONG SessionID) {
+Player *CChatServer::FindPlayer(ULONGLONG sessionID) {
 	__PLAYER_MAP_LOCK();
-	auto iter = _playerMap.find(SessionID);
+	auto iter = _playerMap.find(sessionID);
 	if (iter == _playerMap.end()) {
 		__PLAYER_MAP_UNLOCK();
 		return nullptr;

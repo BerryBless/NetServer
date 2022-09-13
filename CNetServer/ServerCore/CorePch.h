@@ -1,7 +1,7 @@
 
 /*
 프로젝트 설정
-1. General -> OutputD Directory -> $(SolutionDir)Binary\$(Configuration)\
+1. General -> Output Directory -> $(SolutionDir)Binary\$(Configuration)\
 2. pch 적용
 3. 최적화 컴파일 끄기
 4. VC++ Directories
@@ -28,6 +28,7 @@
 #include <WinSock2.h>
 #include <iostream>
 #include <timeapi.h>
+#include "Session.h"
 #include "RingBuffer.h"
 #include "CLogger.h"
 #include "ObjectPool.hpp"

@@ -103,11 +103,11 @@ private:
 
 
 private:
-	std::set<ULONGLONG>						_MoniteringSessionIDList;
+	std::set<ULONGLONG>						_MoniteringsessionIDList;
 
 	constexpr static int					SESSION_KEY_SIZE = 32;
 	char									_MonitoringSessionKey[33]{ "aaaaxxxxwwwwaaadhrrf!!!#ssdd6543" };
-	ULONGLONG								_MonitoringSessionID;
+	ULONGLONG								_MonitoringsessionID;
 
 	HardWareMoniter							_HardWareMonitor;
 	ProcessMoniter							_ProcessMonitor;
