@@ -17,6 +17,14 @@ class CMonitorToolServer : public CServer {
 public:
 	CMonitorToolServer();
 	~CMonitorToolServer();
+
+	void BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
+	void BeginServer(const WCHAR *szConfigFile);
+	void CloseServer();
+	bool isRunning() {
+		return _isRunning;
+	}
+	void CommandWait();
 private:
 	virtual bool OnConnectionRequest(WCHAR *IPstr, DWORD IP, USHORT Port); // TODO IP주소 string
 	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, SESSION_ID sessionID) ;
@@ -33,5 +41,7 @@ private:
 
 	unordered_map<SESSION_ID, MonitorClient *> _clientMap;
 
+private:
+	bool _isRunning;
 };
 

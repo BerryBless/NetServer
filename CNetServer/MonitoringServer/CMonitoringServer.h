@@ -16,12 +16,14 @@ class CMonitorToolServer;
 class CMonitoringServer : public CServer {
 	struct ServerConnect {
 		SESSION_ID _id = 0;
+		int _serverNo = 0;
 		bool _isLogin = false;
 	};
 public:
 	CMonitoringServer();
 	~CMonitoringServer();
 
+	void BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
 	void BeginServer(const WCHAR *szConfigFile);
 	void CloseServer();
 	bool isRunning() {
@@ -42,6 +44,7 @@ private:
 	virtual void OnTimeout(SESSION_ID sessionID);
 
 	void PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type);
+	void PacketProcMonitorLogin(Packet *packet, SESSION_ID sessionID);
 	void PacketProcMonitorDataUpdate(Packet *packet, SESSION_ID sessionID);
 	void MakePacketMonitorDataUpdate(Packet *packet, BYTE serverNo, BYTE dataType, int dataValue, int timeStamp);
 private:
@@ -74,10 +77,9 @@ private:
 private:
 	constexpr static int MAX_VALUE = 0x7fffffff;
 	constexpr static int MIN_VALUE = 0;
+	ULONGLONG								_Template[4] = { /* SUM */ 0, /* MAX */MAX_VALUE, /* MIN */MIN_VALUE, /* CALL */ 0};
 	//---------------------------------------------------------------------
 	//HARD WARE DATA
-
-	ULONGLONG								_Template[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
 
 	ULONGLONG								_H_CPU[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
 	ULONGLONG								_H_AvailableMemory[4] = { 0,MAX_VALUE,MIN_VALUE,0 };

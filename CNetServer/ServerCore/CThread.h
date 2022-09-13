@@ -43,7 +43,7 @@ private:
 	bool		_isRunning;
 	CTask		_task;
 	HANDLE		_hThread;
-	HANDLE		_hLaunchEvent; // 스레드당 하나냐 풀당 하나냐...
+	HANDLE		_hLaunchEvent; 
 	HANDLE		_hJoinEvent;
 
 	int _tid;

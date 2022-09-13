@@ -5,13 +5,13 @@
 typedef unsigned long long ACCOUNT_NO;
 
 struct Player {
-	Player() : _ID{ 0 }, _NickName{ 0 }, _TokenKey{0} {
+	Player() : _ID{ 0 }, _NickName{ 0 }, _TokenKey{ 0 } {
 		_sessionID = 0;
 
-		_isLogin =0;
-		_AccountNo =0;
+		_isLogin = 0;
+		_AccountNo = 0;
 		_SectorX = -1;
-		_SectorY  =-1;
+		_SectorY = -1;
 	};
 	Player(SESSION_ID sessionID, INT64 accountNo, WORD sectorX, WORD sectorY, const WCHAR *ID, const WCHAR *nickname) : _TokenKey{ 0 } {
 		_sessionID = sessionID;

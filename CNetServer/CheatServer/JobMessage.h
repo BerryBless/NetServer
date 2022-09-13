@@ -3,7 +3,7 @@
 #include "CorePch.h"
 
 struct JobMessage {
-	ULONGLONG _sessionID;
+	SESSION_ID _sessionID;
 	WORD _Type;
 	Packet *_pPacket;
 };

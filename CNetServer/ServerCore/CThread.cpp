@@ -29,7 +29,7 @@ unsigned int __stdcall CThread::Thread(LPVOID arg) {
 	SetEvent(pObject->_hLaunchEvent);
 
 
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"// %s::TID[%d] START", pObject->_name, pObject->_tid);
+	CLogger::_Log(dfLOG_LEVEL_ERROR, L"// %s::TID[%d] START", pObject->_name, pObject->_tid);
 	while (pObject->_isRunning) {
 		pObject->_isLaunching = false;
 
@@ -43,12 +43,12 @@ unsigned int __stdcall CThread::Thread(LPVOID arg) {
 		ResetEvent(pObject->_hJoinEvent);
 		pObject->_task.Clear();
 	}
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"// %s::TID[%d] CLOSED", pObject->_name, pObject->_tid);
+	CLogger::_Log(dfLOG_LEVEL_ERROR, L"// %s::TID[%d] CLOSED", pObject->_name, pObject->_tid);
 	return 0;
 }
 bool CThread::Launch(void(*pTask)(LPVOID), LPVOID arg) {
 	if (_isLaunching == true) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"// TID[%d] Launch() :: %s is already running", this->_tid, _name);
+		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"// TID[%d] Launch() :: %s is already running", this->_tid, _name);
 		return false;
 	}
 	_isLaunching = true;
