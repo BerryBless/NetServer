@@ -9,9 +9,6 @@
 #define dfCLIENT_LEAVE_CODE 0xFFFFFF00 // GQCS()에서 이게 오면 OnClientLeave 호출
 
 CLanServer::CLanServer() {
-
-
-
 	//---------------------------
 	// 세션 컨테이너 락 초기화
 	//---------------------------
@@ -33,7 +30,7 @@ CLanServer::CLanServer() {
 	_timeoutMillisec = 2000;
 
 	_isRunning = false;
-	_NumThreads = 0;
+	_numThreads = 0;
 
 	_hIOCP = INVALID_HANDLE_VALUE;
 	//_hThreads = nullptr;
@@ -64,22 +61,17 @@ bool CLanServer::Start(u_long IP, u_short prot, BYTE workerThreadCount, BYTE max
 		return false;
 	}
 
-
-
 	//---------------------------
 	// 서버 정보 넣기
 	//---------------------------
 	_Port = prot;
 	_bindIP = IP;
 	_workerThreadCount = workerThreadCount;
-	_maxRunThreadCount = min(workerThreadCount, maxRunThreadCount);
+	_maxRunThreadCount = max(workerThreadCount, maxRunThreadCount);
 	_isNagle = nagle;
 	_maxConnection = maxConnection;
 
-
 	Startup();
-
-
 	return _isRunning;
 }
 
@@ -125,28 +117,21 @@ void CLanServer::Quit() {
 	_isRunning = false;
 	PostQueuedCompletionStatus(_hIOCP, dfEXIT_CODE, dfEXIT_CODE, NULL);
 	closesocket(_listensock);
-
-	//---------------------------
-	// 서버 종료 기다리기
-	//---------------------------
-	/*for (int i = 0; i < _NumThreads; ++i) {
-		_threads[i].EndThread();
-	}*/
 	delete[] _tWorkers;
 }
 
-bool CLanServer::DisconnectSession(SESSION_ID SessionID) {
+bool CLanServer::DisconnectSession(SESSION_ID sessionID) {
 	//---------------------------
 	// 세션 끊기
 	//---------------------------
 	bool ret = false;
-	SESSION *pSession = AcquireSession(SessionID, dfLOGIC_DISCONNECT);
+	SESSION *pSession = AcquireSession(sessionID, dfLOGIC_DISCONNECT);
 	if (pSession == NULL) {
 		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//Disconnect ERROR :: can not find session..");
 		OnError(dfLOGIC_DISCONNECT, L"Disconnect ERROR :: can not find session..");
 		return false;
 	}
-	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//Disconnect id[%d]", SessionID);
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//Disconnect id[%d]", sessionID);
 
 	InterlockedExchange(&pSession->_isAlive, FALSE);
 	ret = CancelIoEx((HANDLE) pSession->_sock, nullptr);
@@ -156,14 +141,14 @@ bool CLanServer::DisconnectSession(SESSION_ID SessionID) {
 	return ret;
 }
 
-bool CLanServer::SendPacket(SESSION_ID SessionID, Packet *pPacket) {
+bool CLanServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 	if (pPacket == nullptr)
 		return false;
 	pPacket->AddRef();
 	//---------------------------
 	// 세션찾기
 	//---------------------------
-	SESSION *pSession = AcquireSession(SessionID, 664466);
+	SESSION *pSession = AcquireSession(sessionID, 664466);
 	if (pSession == NULL) {
 		//CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: can not find session..");
 		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: can not find session..");
@@ -231,7 +216,7 @@ void CLanServer::Startup() {
 	_wsetlocale(LC_ALL, L"korean");
 
 	//---------------------------
-	// 정말 1초로 카운팅
+	// 정말 1ms로 카운팅
 	//---------------------------
 	timeBeginPeriod(1);
 
@@ -1002,8 +987,7 @@ logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), p
 }
 
 
-
-CLanServer::SESSION *CLanServer::AcquireSession(SESSION_ID sessionID, int logic) {
+SESSION *CLanServer::AcquireSession(SESSION_ID sessionID, int logic) {
 	SESSION *pSession = FindSession(sessionID);
 #ifndef df_LOGGING_SESSION_LOGIC
 	if ((InterlockedIncrement(&pSession->_IOcount) & 0x80000000) != 0) {
@@ -1099,7 +1083,7 @@ bool CLanServer::ReleaseSession(SESSION *pSession, int logic) {
 	InterlockedExchange(&pSession->_IOFlag, FALSE);
 
 	PostClientLeave(ID);
-	USHORT idx = SessionIDtoIndex(ID);
+	USHORT idx = sessionIDtoIndex(ID);
 	if (idx == 0) CRASH();
 	_emptyIndex.push(idx);
 
@@ -1112,11 +1096,11 @@ bool CLanServer::ReleaseSession(SESSION *pSession, int logic) {
 }
 
 
-CLanServer::SESSION *CLanServer::CreateSession(SOCKET sock, sockaddr_in clientaddr) {
+SESSION *CLanServer::CreateSession(SOCKET sock, sockaddr_in clientaddr) {
 	//---------------------------
 	// ID생성
 	//---------------------------
-	SESSION_ID id = GenerateSessionID();
+	SESSION_ID id = GeneratesessionID();
 	if (id == 0) {
 		return nullptr;
 	}
@@ -1167,7 +1151,7 @@ CLanServer::SESSION *CLanServer::CreateSession(SOCKET sock, sockaddr_in clientad
 	return pSession;
 }
 
-SESSION_ID CLanServer::GenerateSessionID() {
+SESSION_ID CLanServer::GeneratesessionID() {
 	//---------------------------
 	// 	   Session ID 생성
 	//---------------------------
@@ -1189,7 +1173,7 @@ SESSION_ID CLanServer::GenerateSessionID() {
 	return id;
 }
 
-inline USHORT CLanServer::SessionIDtoIndex(SESSION_ID sessionID) {
+inline USHORT CLanServer::sessionIDtoIndex(SESSION_ID sessionID) {
 	USHORT idx = sessionID >> (8 * 6);
 	if (sessionID != 0 && idx == 0) CRASH();
 	return idx;
@@ -1201,8 +1185,8 @@ void CLanServer::InitializeIndex() {
 	}
 }
 
-inline CLanServer::SESSION *CLanServer::FindSession(SESSION_ID sessionID) {
-	int idx = SessionIDtoIndex(sessionID);
+inline SESSION *CLanServer::FindSession(SESSION_ID sessionID) {
+	int idx = sessionIDtoIndex(sessionID);
 	return &_sessionContainer[idx];
 }
 

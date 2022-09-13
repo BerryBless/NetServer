@@ -2,167 +2,156 @@
 #include "CLanClient.h"
 
 #define dfEXIT_CODE 0xFFFFFFFF // GQCS()에서 이게 오면 종료
+#define dfLEAVE_CODE 0xFFFFFF00 // GQCS()에서 이게 오면 OnClientLeave 호출
 
 CLanClient::CLanClient() {
-	setlocale(LC_ALL, "korean");
-	_wsetlocale(LC_ALL, L"korean");
-	timeBeginPeriod(1);
-
-
 	InitializeSRWLock(&_lock);
+
 	ResetMonitor();
-	_client._IOcount = 0x80000000;
-	_client._sock = INVALID_SOCKET;
+
+	_maxRunThreadCount = 0;
+	_workerThreadCount = 0;
+	_maxConnection = 0;
 	_isNagle = false;
-	SetThreadNum(1, 1);
+
+	_isRunning = false;
+	_numThreads = 0;
+
+	_hIOCP = INVALID_HANDLE_VALUE;
+	_tWorkers = nullptr;
+	_sessionContainer = nullptr;
+	_emptyIndex.Clear();
+
+	_IDGenerater = 1;
 }
 
 CLanClient::~CLanClient() {
+	if (_pConfigData != nullptr)
+		delete _pConfigData;
+	CloseHandle(_hIOCP);
 	WSACleanup();
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"===============================END CLIENT===============================");
 }
 
-bool CLanClient::Connect(const WCHAR *serverIP, USHORT serverPort) {
-	int ret;
-	while (ret = InterlockedCompareExchange(&_client._IOcount, 0, 0x80000000) != 0x80000000) {
-		//CRASH();
-	}
+bool CLanClient::Start( BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
+	_workerThreadCount = workerThreadCount;
+	_maxRunThreadCount = max(workerThreadCount, maxRunThreadCount);
+	_isNagle = nagle;
+	_maxConnection = maxConnection;
 
-		wcscpy_s(_serverIP, _countof(_serverIP), serverIP);
-	_serverPort = serverPort;
+	Startup();
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"///////////// Client Ready");
 
-	//InterlockedIncrement(&_client._IOcount);
-	//InterlockedAnd((long *) &_client._IOcount, 0x7fffffff);
-
-	IncrementIOCount(300);
-	Lock();
-	InterlockedExchange(&_client._IOFlag, FALSE);
-	_client._sock = INVALID_SOCKET;
-	_client._sendPacketCnt = 0;
-	_client._recvQueue.ClearBuffer();
-	_client._sendQueue.Clear();
-	Unlock();
-
-	if (ConnectServer()) {
-		OnEnterJoinServer();
-	} else {
-		return false;
-	}
-
-	DecrementIOCount(300);
-	InterlockedExchange(&_isRunning, TRUE);
 	return true;
 }
 
-bool CLanClient::Disconnect() {
-	if (InterlockedOr(&_isRunning, FALSE) == FALSE) return false;
-	bool ret = true;
-	IncrementIOCount(33);
-	ret = CancelIoEx((HANDLE) _client._sock, nullptr);
-	closesocket( _client._sock);
-	DecrementIOCount(33);
+bool CLanClient::Start(const wchar_t *sConfigFile) {
+	return Start(0,1,0,0);
+}
 
-	//Quit();
+void CLanClient::Quit() {
+	//---------------------------
+	// 서버 종료
+	// _isRunning = false로 모니터링 스레드 종료
+	// 종료코드를 완료통지에 넣어 워커 스레드 종료
+	//---------------------------
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"CLanServer Quit Start");
+	_isRunning = false;
+	PostQueuedCompletionStatus(_hIOCP, dfEXIT_CODE, dfEXIT_CODE, NULL);
+	delete[] _tWorkers;
+}
+
+SESSION_ID CLanClient::Connect(const WCHAR *serverIP, USHORT serverPort) {
+	SOCKET sock = CreateSocket();
+	SOCKADDR_IN	addr;
+
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(serverPort);
+	InetPton(AF_INET, serverIP, &addr.sin_addr);
+
+	if (TryConnectServer(sock, addr) == false) {
+		// 실패
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Fail Connect Server");
+		closesocket(sock);
+		return 0;
+	}
+
+	// 연결 완료
+	SESSION *pSession = CreateSession(sock, addr);
+	if (pSession == nullptr) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Full Connection!! [%d]", CLanClient::GetSessionCount());
+		return 0;
+	}
+	OnEnterServer(pSession->_ID);
+	RecvPost(pSession);
+	DecrementIOCount(pSession);
+
+	InterlockedIncrement(&_totalConnectSession);
+	InterlockedIncrement(&_curSessionCount);
+	InterlockedIncrement(&_connectCalc);
+
+	return pSession->_ID;
+}
+
+bool CLanClient::DisconnectSession(SESSION_ID sessionID) {
+	//---------------------------
+	// 세션 끊기
+	//---------------------------
+	bool ret = false;
+	SESSION *pSession = AcquireSession(sessionID);
+	if (pSession == NULL) {
+		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//Disconnect ERROR :: can not find session..");
+		// TODO ERRORCODE
+		OnError(111, L"Disconnect ERROR :: can not find session..");
+		return false;
+	}
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//Disconnect id[%d]", sessionID);
+
+	InterlockedExchange(&pSession->_isAlive, FALSE);
+	ret = CancelIoEx((HANDLE) pSession->_sock, nullptr);
+
+	ReturnSession(pSession);
 	return ret;
 }
 
-bool CLanClient::SendPacket(Packet *pPacket) {
-	//---------------------------
-	 // 페킷 포인터를 센드큐에
-	 //---------------------------
-	pPacket->SetLanHeader();
+bool CLanClient::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
+	if (pPacket == nullptr)
+		return false;
 	pPacket->AddRef();
-
-	_client._sendQueue.enqueue(pPacket);
+	//---------------------------
+	// 세션찾기
+	//---------------------------
+	SESSION *pSession = AcquireSession(sessionID, 664466);
+	if (pSession == NULL) {
+		//CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: can not find session..");
+		OnError(123, L"SendPacket ERROR :: can not find session..");
+		pPacket->SubRef();
+		return false;
+	}
+	//---------------------------
+	// 지워진(끊어진) 세션
+	//---------------------------
+	if (!InterlockedOr((LONG *) &pSession->_isAlive, FALSE)) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"//SendPacket ERROR :: Session is colsed..");
+		OnError(321, L"SendPacket ERROR :: Session is colsed..");
+		pPacket->SubRef();
+		return false;
+	}
+	//PRO_BEGIN(L"SendPacket");
+	//---------------------------
+	// 페킷 포인터를 센드큐에
+	//---------------------------
+	pPacket->SetLanHeader();
+	pSession->_sendQueue.enqueue(pPacket);
 	//---------------------------
 	// monitor
 	//---------------------------
 	InterlockedIncrement(&_sendPacketCalc);
-	return SendPost();
-}
-
-void CLanClient::SetThreadNum(BYTE worker, BYTE active) {
-	_workerThreadCount = worker;
-	_maxRunThreadCount = active;
-}
-
-bool CLanClient::Start() {
-	if (InterlockedOr(&_isRunning, FALSE) != FALSE)
-		return false;
-	Init();
-	BeginThreads();
-
+	SendPost(pSession);
+	ReturnSession(pSession, 446644);
+	//PRO_END(L"SendPacket");
 	return true;
 }
-
-void CLanClient::Quit() {
-	//_isRunning = false;
-	PostQueuedCompletionStatus(_hIOCP, dfEXIT_CODE, dfEXIT_CODE, NULL);
-
-	DWORD retval = WaitForMultipleObjects(_NumThreads, _hThreads, TRUE, INFINITE);
-	switch (retval) {
-	case WAIT_FAILED:
-		break;
-	case WAIT_TIMEOUT:
-		break;
-	default:
-		break;
-	}
-}
-
-bool CLanClient::ConnectServer() {
-	SOCKADDR_IN	addr;
-	timeval tval;
-	tval.tv_sec = 0;
-	tval.tv_usec = 200000;
-	int test = 0;
-	int err = 0;
-
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(_serverPort);
-	InetPton(AF_INET, _serverIP, &addr.sin_addr);
-
-	if (_client._sock == INVALID_SOCKET) {
-		CreateSocket();
-	}
-
-	int connectRet = connect(_client._sock, (SOCKADDR *) &addr, sizeof(addr));
-
-	if (connectRet == SOCKET_ERROR) {
-		int err = WSAGetLastError();
-
-		if (err == WSAEWOULDBLOCK) {
-			FD_ZERO(&_client._wset);
-			FD_ZERO(&_client._errset);
-
-			FD_SET(_client._sock, &_client._wset);
-			FD_SET(_client._sock, &_client._errset);
-
-
-			// 연결 실패시 한번더 대기
-			int retval = select(0, nullptr, &_client._wset, &_client._errset, &tval);
-
-			if (retval > 0) {
-				if (FD_ISSET(_client._sock, &_client._wset)) {
-					return RegisterIocp();
-				} else if (FD_ISSET(_client._sock, &_client._errset)) {
-					return false;
-				}
-			} else {
-				closesocket(_client._sock);
-			}
-
-			return false;
-		}
-
-		if (err != WSAEISCONN) {
-			CLogger::_Log(dfLOG_LEVEL_ERROR, L"Unusual Connect Error %d", err);
-		}
-	}
-
-
-	return RegisterIocp();
-}
-
 
 BOOL CLanClient::DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr) {
 	ADDRINFOW *pAddrInfo;	// IP정보
@@ -180,328 +169,383 @@ BOOL CLanClient::DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr) {
 	return TRUE;
 }
 
+void CLanClient::Startup() {
+	if (_isRunning == true) {
+		CLogger::_Log(dfLOG_LEVEL_NOTICE, L"///// Server Already Running");
+		return;
+	}
+	_isRunning = true;
+
+	int _ = _wmkdir(L"ClientLog");
+	_ = _wmkdir(L"ClientLog\\LibraryLog");
+	_ = _wmkdir(L"ClientLog\\MonitorLog");
+#ifdef dfPROFILER
+	_ = _wmkdir(L"ServerLog\\Profile");
+#endif // dfPROFILER
+	//---------------------------
+	// 문자열 로컬 세팅
+	//---------------------------
+	setlocale(LC_ALL, "korean");
+	_wsetlocale(LC_ALL, L"korean");
+
+	//---------------------------
+	// 정말 1ms로 카운팅
+	//---------------------------
+	timeBeginPeriod(1);
+
+	//---------------------------
+	// 로거 초기화
+	//---------------------------
+	CLogger::Initialize();
+	CLogger::SetDirectory(L"ClientLog\\LibraryLog");
+	CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);
+
+
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"==============================START CLIENT==============================");
+
+	//---------------------------
+	// 네트워크 초기화 
+	//---------------------------
+	SetWSAStartUp();
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"///// SetWSAStartUp() Ok..");
+	CreateIOCP();
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"///// CreateIOCP() Ok..");
+
+	//---------------------------
+	// 세션 컨테이너 생성
+	//---------------------------
+	_sessionContainer = new SESSION[(int) (_maxConnection + (u_short) 1)];
+
+	InitializeIndex();
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"///// Create Session Container Ok..");
+
+	//---------------------------
+	// 스레드 실행
+	//---------------------------
+	BeginThreads();
+	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"///// BeginThreads() Ok..");
+}
+
 void CLanClient::BeginThreads() {
-	BYTE i = 0;
-
-	_hThreads[i++] = (HANDLE) _beginthreadex(nullptr, 0, MonitorThread, this, 0, nullptr);
-
-	for (; i <= _workerThreadCount; ++i) {
-		_hThreads[i] = (HANDLE) _beginthreadex(nullptr, 0, WorkerThread, this, 0, nullptr);
+	// WORKER
+	_tWorkers = new CThread[_workerThreadCount]();
+	for (int i = 0; i < _workerThreadCount; i++) {
+		_tWorkers[i].SetThreadName(L"NetServer Worker Thread");
+		_tWorkers[i].Launch(
+			[](LPVOID arg) {
+				CLanClient *pClient = (CLanClient *) arg;
+				pClient->OnGQCS();
+			},
+			this);
 	}
 
-	_NumThreads = i;
-
-}
-
-unsigned int __stdcall CLanClient::WorkerThread(LPVOID arg) {
-	CLanClient *pClient = (CLanClient *) arg;
-	while (true) {
-		if (pClient->OnGQCS() == false) {
-			break;
-		}
-	}
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- Worker Thread IS Closed..\n");
-	return 0;
-}
-
-unsigned int __stdcall CLanClient::MonitorThread(LPVOID arg) {
-	CLanClient *pClient = (CLanClient *) arg;
-	while (true) {
-		if (pClient->NetMonitorProc() == false) {
-			break;
-		}
-	}
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"-- Monitor Thread IS Closed..\n");
-	return 0;
+	// MONITORING
+	_tMonitoring.Launch(
+		[](LPVOID arg) {
+			CLanClient *pClient = (CLanClient *) arg;
+			pClient->NetMonitorProc();
+		},
+		this);
 }
 
 bool CLanClient::OnGQCS() {
 	DWORD transferredSize = 0;
-	SESSION *completionKey = 0;
+	SESSION_ID completionKey = 0;
 	WSAOVERLAPPED *pOverlapped = nullptr;
+	SESSION *pSession = nullptr;
+	while (_isRunning) {
+		//---------------------------
+		// GQCS()
+		//---------------------------
+		BOOL GQCSRet = GetQueuedCompletionStatus(_hIOCP, &transferredSize, (PULONG_PTR) &completionKey, &pOverlapped, INFINITE);
 
-	//---------------------------
-	// GQCS()
-	//---------------------------
-	BOOL GQCSRet = GetQueuedCompletionStatus(_hIOCP, &transferredSize, (PULONG_PTR) &completionKey, &pOverlapped, INFINITE);
-
-	//---------------------------
-	// 완료통지 확인
-	//---------------------------
-	if (pOverlapped == NULL) {
-		if (transferredSize == dfEXIT_CODE && (long long) completionKey == dfEXIT_CODE) {
+		//---------------------------
+		// 완료통지 확인
+		//---------------------------
+		if (pOverlapped == NULL) {
+			if (transferredSize == dfEXIT_CODE && (long long) completionKey == dfEXIT_CODE) {
+				//---------------------------
+				// 종료코드로 정상 종료
+				//---------------------------
+				PostQueuedCompletionStatus(_hIOCP, dfEXIT_CODE, dfEXIT_CODE, NULL);
+				break;
+			}
 			//---------------------------
-			// 종료코드로 정상 종료
+			// 완료통지 실패
 			//---------------------------
-			PostQueuedCompletionStatus(_hIOCP, dfEXIT_CODE, dfEXIT_CODE, NULL);
-			return false;
+			DWORD err = WSAGetLastError();
+			CLogger::_Log(dfLOG_LEVEL_ERROR, L"overlapped is NULL ERROR CODE [%d]", err);
+			OnError(err, L"IOCP ERROR :: overlapped is NULL");
+			return true;
+		} else if (pOverlapped == (OVERLAPPED *) dfLEAVE_CODE) {
+			OnLeaveServer(completionKey);
+			continue;
 		}
+
 		//---------------------------
-		// 완료통지 실패
+		// completionKey(ID) 로 세션포인터 찾기
 		//---------------------------
-		DWORD err = WSAGetLastError();
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"overlapped is NULL ERROR CODE [%d]", err);
-		OnError(err, L"IOCP ERROR :: overlapped is NULL");
-		return true;
+		pSession = FindSession(completionKey);
+		if (pSession == NULL) {
+			continue;
+		}
+
+		//SESSION_LOCK(pSession);
+		do {
+			if (transferredSize > 0 && GQCSRet == TRUE) {
+				//---------------------------
+				// WSARecv가 완료됨
+				//---------------------------
+				if (pOverlapped == &pSession->_recvOverlapped) {
+					RecvProc(pSession, transferredSize);
+				}
+				//---------------------------
+				// WSASend가 완료됨
+				//---------------------------
+				else { //if (pOverlapped == &pSession->_sendOverlapped) {
+					SendProc(pSession, transferredSize);
+				}
+			}
+		} while (0);
+		//SESSION_UNLOCK(pSession);
+		//---------------------------
+		// 	   IOCount --
+		//---------------------------
+		DecrementIOCount(pSession);
+		//if (InterlockedDecrement(&pSession->_IOcount) == 0)
+		//	ReleaseSession(pSession, dfLOGIC_WORKER + dfLOGIC_DECREMENT_IO);
+
 	}
-
-
-	int log = 0;
-	if (transferredSize > 0 && GQCSRet == TRUE) {
-		//---------------------------
-		// WSARecv가 완료됨
-		//---------------------------
-		if (pOverlapped == &_client._recvOverlapped) {
-			RecvProc(transferredSize);
-			log = 10;
-		}
-		//---------------------------
-		// WSASend가 완료됨
-		//---------------------------
-		if (pOverlapped == &_client._sendOverlapped) {
-			SendProc(transferredSize);
-			log = 30;
-		}
-	}
-	//---------------------------
-	// 	   IOCount --
-	//---------------------------
-	DecrementIOCount(3000 + log);
-
-	return true;
+	return _isRunning;
 }
 
-bool CLanClient::SendProc(DWORD transferredSize) {
-	OnSend(transferredSize);
+bool CLanClient::SendProc(SESSION *pSession, DWORD transferredSize) {
+	if (pSession == NULL) {
+		CRASH();
+	}
 	//---------------------------
 	// 완료통지 온 패킷 지우기
 	//---------------------------
 	Packet *pPacket;
-	int sendedPacketCnt = _client._sendPacketCnt;
+	DWORD sendedPacketCnt = InterlockedExchange(&pSession->_sendPacketCnt, 0);
 
 	for (int i = 0; i < sendedPacketCnt; ++i) {
-		_client._sendQueue.dequeue(pPacket);
-		pPacket->SubRef(4);
+		pPacket = pSession->_pSendPacketBufs[i];
+		pPacket->SubRef();
 		pPacket = nullptr;
 	}
-
-	_client._sendPacketCnt = 0;
-
+	OnSend(pSession->_ID);
 	//---------------------------
 	// 	   Send가 끝났다
 	//---------------------------
-	//InterlockedExchange8((CHAR *) &_client._IOFlag, FALSE);
-	_client._IOFlag = false;
-
+	InterlockedExchange(&pSession->_IOFlag, FALSE);
+	InterlockedAdd64(&_sendedPacketCalc, sendedPacketCnt);
+	InterlockedAdd64(&_sendProcessedBytesCalc, transferredSize);
+	InterlockedAdd64(&_totalProcessedByte, transferredSize);
 
 	//---------------------------
 	// SendQ에 보낼것이 남아있으면 Send
 	//---------------------------
-	SendPost();
+	SendPost(pSession);
 	return true;
 }
 
-bool CLanClient::RecvProc(DWORD transferredSize) {
+bool CLanClient::RecvProc(SESSION *pSession, DWORD transferredSize) {
 	//---------------------------
-// recv신호가 옴
-//---------------------------
+	// recv신호가 옴
+	//---------------------------
 
-//---------------------------
-// 온만큼 링버퍼 Rear빼주기
-//---------------------------
-	int movRet = _client._recvQueue.MoveRear(transferredSize);
+	//---------------------------
+	// 온만큼 링버퍼 Rear빼주기
+	//---------------------------
+	int movRet = pSession->_recvQueue.MoveRear(transferredSize);
 	if (transferredSize != movRet) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L" RecvProc() :: transferredSize[%d] != movRet[%d]", transferredSize, movRet);
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L" ID[%lld] :: transferredSize[%d] != movRet[%d]", pSession->_ID, transferredSize, movRet);
 		CRASH();
 	}
-	DWORD msgByte = 0; // 메시지 처리된 바이트 수
 
-	// return val
-	int headerPeekRet;
-	int headerMoveRet;
-	int payloadDeqRet;
-	PACKET_LAN_HEADER header;
-
+	SetSessionActiveTimer(pSession);
 	//---------------------------
 	// 	   반복문 돌며 패킷 처리
 	//---------------------------
-	while (msgByte < transferredSize) {
-
-		//---------------------------
-		// 모니터링
-		//---------------------------
-		InterlockedIncrement(&_recvPacketCalc);
-
-		if (_client._recvQueue.GetUseSize() <= PACKET_LAN_HEADER_SIZE) {
-			//---------------------------
-			// 헤더보다 적음
-			//---------------------------
-			break;
-		}
-
-		//---------------------------
-		// 헤더는 읽을 수 있음
-		//---------------------------
-		headerPeekRet = _client._recvQueue.Peek((unsigned char *) &header, PACKET_LAN_HEADER_SIZE);
-		if (headerPeekRet != PACKET_LAN_HEADER_SIZE) {
-			// 무결성 검사
-			CRASH();
-		}
-
-		if (_client._recvQueue.GetUseSize() < (int) (PACKET_LAN_HEADER_SIZE + header.len)) {
-			//---------------------------
-			// 패킷 전체크기보다 적게 남아있음
-			//---------------------------
-			break;
-		}
-
-		//---------------------------
-		// 온전한 패킷이 온걸 확인
-		// 이미 알고있는 정보는 넘어가기
-		//---------------------------
-		headerMoveRet = _client._recvQueue.MoveFront(PACKET_LAN_HEADER_SIZE);
-		if (headerMoveRet != PACKET_LAN_HEADER_SIZE) {
-			CRASH();
-		}
-
-		//---------------------------
-		// 패킷 풀에서 하나 꺼내기
-		//---------------------------
+	for (;;) {
 		Packet *pPacket = Packet::AllocAddRef();
-		if (pPacket == NULL) {
-			CRASH();
+		if (TryGetRecvPacket(pSession, pPacket)) {
+			InterlockedIncrement(&_totalPacket);
+			InterlockedIncrement(&_recvPacketCalc);
+			OnRecv(pSession->_ID, pPacket);
+		} else {
+			pPacket->SubRef();
+			break;
 		}
-		pPacket->Clear();
-
-		//---------------------------
-		// 페이로드 크기를 알았으니 헤더는 제 역할을 다함
-		// 페이로드만 페킷에 넣어주기
-		//---------------------------
-		payloadDeqRet = _client._recvQueue.Dequeue(pPacket->GetWritePtr(), (int) header.len);
-		if (payloadDeqRet != header.len) {
-			//---------------------------
-			// 무결성 검사
-			//---------------------------
-			CRASH();
-		}
-		int MoveWritePosRet = pPacket->MoveWritePos(payloadDeqRet);
-		if (MoveWritePosRet != payloadDeqRet)
-			CRASH();
-		OnRecv(pPacket);
-
-		msgByte += (payloadDeqRet + PACKET_LAN_HEADER_SIZE);
-
-		//---------------------------
-		// 참조카운트 하나감소
-		//---------------------------
-		pPacket->SubRef(5000);
+		pPacket->SubRef();
 	}
 
 	//---------------------------
 	// RecvPost
 	//---------------------------
-	return RecvPost();
+	return RecvPost(pSession);
+}
+
+bool CLanClient::TryConnectServer(SOCKET &socket, sockaddr_in &addr) {
+	if (socket == INVALID_SOCKET) return false;
+
+	FD_SET wset;
+	FD_SET errset;
+
+	timeval tval;
+	tval.tv_sec = 0;
+	tval.tv_usec = 200000;
+
+	int connectRet = connect(socket, (SOCKADDR *) &addr, sizeof(addr));
+
+	if (connectRet == SOCKET_ERROR) {
+		int err = WSAGetLastError();
+
+		if (err == WSAEWOULDBLOCK) {
+			FD_ZERO(&wset);
+			FD_ZERO(&errset);
+
+			FD_SET(socket, &wset);
+			FD_SET(socket, &errset);
+
+
+			// 연결 실패시 slelect로 한번더 대기
+			int retval = select(0, nullptr, &wset, &errset, &tval);
+
+			if (retval > 0) {
+				if (FD_ISSET(socket, &wset)) {
+					return true;
+				} else if (FD_ISSET(socket, &errset)) {
+					CLogger::_Log(dfLOG_LEVEL_ERROR, L"Select Connect Error %d", err);
+					return false;
+				}
+			}
+			CLogger::_Log(dfLOG_LEVEL_ERROR, L"Unusual Connect Error %d", err);
+			return false;
+		}
+
+		if (err != WSAEISCONN) {
+			CLogger::_Log(dfLOG_LEVEL_ERROR, L"Unusual Connect Error %d", err);
+		}
+	}
+
+	return true;
 }
 
 bool CLanClient::NetMonitorProc() {
 	//---------------------------
 	// 1초마다 TPS계산
 	//---------------------------
-	Sleep(1000);
+	while (_isRunning) {
 
-	CalcTPS();
-
-	return true;
-}
-
-bool CLanClient::RegisterIocp() {
-	if (_client._sock == INVALID_SOCKET) return false;
-
-	HANDLE hResult = CreateIoCompletionPort((HANDLE) _client._sock, _hIOCP, 0, 0);
-
-	if (hResult == NULL) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"CreateIoCompletionPort [Error: %d]", WSAGetLastError());
-		closesocket(_client._sock);
-
-		return false;
+		Sleep(1000);
+		CalcTPS();
 	}
 
-	IncrementIOCount(1000);
-	RecvPost(true);
-	DecrementIOCount(1000);
-	return true;
+	return _isRunning;
 }
 
-bool CLanClient::SendPost() {
+bool CLanClient::SendPost(SESSION *pSession, int logic) {
+	if (pSession == NULL) {
+		CRASH();
+	}
+	if (InterlockedOr((long *) &pSession->_isAlive, FALSE) == FALSE) {
+		return false;
+	}
 	//---------------------------
 	// 	   Send중인지 확인
 	//---------------------------
-	BOOL isSend = InterlockedExchange8((CHAR *) &_client._IOFlag, TRUE);
+	BOOL isSend = InterlockedExchange(&pSession->_IOFlag, TRUE);
 	if (isSend == TRUE) {
 		return FALSE;
 	}
 	//---------------------------
 	// 	   Send가능한데 보낼게 없는지 확인
 	//---------------------------
-	if (_client._sendQueue.GetSize() == 0) {
-		if (InterlockedExchange8((CHAR *) &_client._IOFlag, FALSE) == FALSE) {
-			CLogger::_Log(dfLOG_LEVEL_ERROR, L"SendPost() _isSend Exchange false to false");
+	if (pSession->_sendQueue.GetSize() <= 0) {
+		if (InterlockedExchange(&pSession->_IOFlag, FALSE) == FALSE) {
+			CLogger::_Log(dfLOG_LEVEL_ERROR, L"SendPost(%d) _IOFlag Exchange false to false", logic);
 			CRASH();
 		}
 		return FALSE;
 	}
+	//PRO_BEGIN(L"SendPost");
+
 
 	//---------------------------
 	// 보낼게 있음
 	// 
 	// WSABUF 셋팅
 	//---------------------------
-	WSABUF bufferSet[100];
-	DWORD byteSends;
+	WSABUF bufferSet[dfSESSION_SEND_PACKER_BUFFER_SIZE] = { 0 };
 
-	SetWSABuffer(bufferSet, FALSE);
+	SetWSABuffer(bufferSet, pSession, FALSE, logic );
 
-	//---------------------------
-	// IOCount ++
-	//---------------------------
-	IncrementIOCount(4000);
+
 
 	//---------------------------
 	// 오버랩 초기화
 	//---------------------------
-	memset(&_client._sendOverlapped, 0, sizeof(_client._sendOverlapped));
+	memset(&pSession->_sendOverlapped, 0, sizeof(pSession->_sendOverlapped));
+
+	//---------------------------
+	// IOCount ++
+	//---------------------------
+	IncrementIOCount(pSession, logic );
+	//InterlockedIncrement(&pSession->_IOcount);
+
 	//---------------------------
 	// WSASend()
 	//---------------------------
-	int sendRet = WSASend(_client._sock, bufferSet, _client._sendPacketCnt, &byteSends, 0, &_client._sendOverlapped, nullptr);
+	SOCKET sock = InterlockedOr64((LONG64 *) &pSession->_sock, 0);
+	LONG sendPacketCnt = InterlockedOr((LONG *) &pSession->_sendPacketCnt, 0); // TODO ?
+	int sendRet = WSASend(sock, bufferSet, sendPacketCnt, nullptr, 0, &pSession->_sendOverlapped, nullptr);
 	if (sendRet == SOCKET_ERROR) {
 		int err = WSAGetLastError();
 
 		if (err != WSA_IO_PENDING) {
-			if (err != 10054 && err != 10053) {
-				CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// WSASend() ERROR [%d]", err);
+			CancelIoEx((HANDLE) pSession->_sock, nullptr);
+			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
+				CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// WSASend(%d) ERROR [%d]", logic, err);
 				//CRASH();
 			}
 			//---------------------------
 			//	Error Fail WSASend
 			//  IOCount --
 			//---------------------------
-			DecrementIOCount(4000);
+			DecrementIOCount(pSession, logic );
+			//if (InterlockedDecrement(&pSession->_IOcount) == 0)
+			//	ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
+
+			//PRO_END(L"SendPost");
 			return false;
 		}
 		//CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// WSASend WSA_IO_PENDING [%d]", err);
 	}
+	//PRO_END(L"SendPost");
 
 	return true;
 }
 
-bool CLanClient::RecvPost(bool isAccept) {
+bool CLanClient::RecvPost(SESSION *pSession, int logic) {
+	if (pSession == NULL) {
+		CRASH();
+	}
+	if (InterlockedOr((long *) &pSession->_isAlive, FALSE) == FALSE) {
+		return false;
+	}
+	if (InterlockedOr64((LONG64 *) &pSession->_ID, 0) == 0) {
+		CRASH();
+	}
+	//PRO_BEGIN(L"RecvPost");
+
 
 	//---------------------------
 	// IOCount ++
 	//---------------------------
-	//if(isAccept == false)
-	IncrementIOCount(5000);
+	IncrementIOCount(pSession, logic );
+	//InterlockedIncrement(&pSession->_IOcount);
 
 	//---------------------------
 	// WSABUF 셋팅
@@ -511,256 +555,515 @@ bool CLanClient::RecvPost(bool isAccept) {
 	DWORD flag = 0;
 	DWORD byteRecvs;
 
-	SetWSABuffer(bufferSet, TRUE);
+	SetWSABuffer(bufferSet, pSession, TRUE, logic );
 
 	//---------------------------
 	// 오버랩 초기화
 	//---------------------------
+	memset(&pSession->_recvOverlapped, 0, sizeof(pSession->_recvOverlapped));
 
-	DWORD IOcount = _client._IOcount;
-	DWORD sock = _client._sock;
-
-	memset(&_client._recvOverlapped, 0, sizeof(_client._recvOverlapped));
 	//---------------------------
 	//WSARecv()
 	//---------------------------
-	int recvRet = WSARecv(_client._sock, bufferSet, 2, &byteRecvs, &flag, &_client._recvOverlapped, nullptr);
+	SOCKET sock = InterlockedOr64((LONG64 *) &pSession->_sock, 0);
+	int recvRet = WSARecv(sock, bufferSet, 2, &byteRecvs, &flag, &pSession->_recvOverlapped, nullptr);
 	if (recvRet == SOCKET_ERROR) {
 		int err = WSAGetLastError();
 
 		if (err != WSA_IO_PENDING) {
-			if (err != 10054 && err != 10053) {
-				CLogger::_Log(dfLOG_LEVEL_ERROR, L"////  :: WSARecv ERROR [%d]\n", err);
-				//CRASH();
+			CancelIoEx((HANDLE) pSession->_sock, nullptr);
+			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
+				CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// %d :: WSARecv ERROR [%d]\n", logic, err);
 
 			}
 			//---------------------------
 			//	Error : Fail WSARecv
 			//  IOCount --
 			//---------------------------
-			DecrementIOCount(5000);
-			//return false;
+			DecrementIOCount(pSession, logic );
+			//if (InterlockedDecrement(&pSession->_IOcount) == 0)
+			//	ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
+			//PRO_END(L"RecvPost");
+			return false;
 		}
 	}
+	//PRO_END(L"RecvPost");
 	return true;
 }
 
-bool CLanClient::SetWSABuffer(WSABUF *BufSets, bool isRecv) {
+void CLanClient::PostClientLeave(SESSION_ID sessionID) {
+	PostQueuedCompletionStatus(_hIOCP, 0, sessionID, (LPOVERLAPPED) dfLEAVE_CODE);
+}
+
+bool CLanClient::TryGetRecvPacket(SESSION *pSession, Packet *pPacket) {
+	PACKET_LAN_HEADER header;
+	pPacket->Clear();
+
+	if (pSession->_recvQueue.GetUseSize() < PACKET_LAN_HEADER_SIZE) {
+		return false;
+	}
+
+	int headerPeekRet = pSession->_recvQueue.Peek((unsigned char *) &header, PACKET_LAN_HEADER_SIZE);
+	if (headerPeekRet != PACKET_LAN_HEADER_SIZE) {
+		CRASH();
+		return false;
+	}
+	if (pSession->_recvQueue.GetUseSize() < (int) (PACKET_LAN_HEADER_SIZE + header.len)) {
+		return false;
+	}
+	int headMoveFront = pSession->_recvQueue.MoveFront(PACKET_LAN_HEADER_SIZE);
+	if (headMoveFront != PACKET_LAN_HEADER_SIZE) {
+		CRASH();
+	}
+
+	int recvPeekRet = pSession->_recvQueue.Dequeue(pPacket->GetWritePtr(), header.len);
+	if (recvPeekRet != header.len) {
+		DisconnectSession(pSession->_ID);
+		return false;
+	}
+	int MoveWritePosRet = pPacket->MoveWritePos(header.len);
+	if (MoveWritePosRet != header.len) {
+		pPacket->PrintPacket();
+		CRASH();
+		DisconnectSession(pSession->_ID);
+	}
+
+	return true;
+}
+
+bool CLanClient::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic) {
 	if (isRecv) {
 		//---------------------------
 		// recv버퍼에 넣기
 		//---------------------------
-
-		char *pBuf = _client._recvQueue.GetBufferPtr();
-		char *pRear = _client._recvQueue.GetRearBufferPtr();
-		int  enSize = _client._recvQueue.DirectEnqueueSize();
-		int  frSize = _client._recvQueue.GetFreeSize();
+		char *pBuf = pSession->_recvQueue.GetBufferPtr();
+		char *pRear = pSession->_recvQueue.GetRearBufferPtr();
+		int  enSize = pSession->_recvQueue.DirectEnqueueSize();
+		int  frSize = pSession->_recvQueue.GetFreeSize();
 		BufSets[0].buf = pRear;
 		BufSets[0].len = enSize;
 		BufSets[1].buf = pBuf;
 		BufSets[1].len = frSize - enSize;
+
 		//---------------------------
 		// 무결성 검사
 		//---------------------------
 		if (BufSets[0].len + BufSets[1].len != frSize) {
-			CLogger::_Log(dfLOG_LEVEL_ERROR, L"SetWSABuffer() :: BufSets[0].len + BufSets[1].len != FreeSize");
+			CLogger::_Log(dfLOG_LEVEL_ERROR, L"SetWSABuffer(%d) :: BufSets[0].len + BufSets[1].len != FreeSize", logic);
 			CRASH();
 		}
 	} else {
 		//---------------------------
 		// SendQ의 패킷을 WSABUF에 등록
 		//---------------------------
-		Packet *pPacketBufs[100];
 		//---------------------------
 		// 패킷을 얼마나 보낼지
 		//---------------------------
-		DWORD snapSize = _client._sendQueue.Peek(pPacketBufs, 100);
+		int numOfPacket = pSession->_sendQueue.GetSize();
+
+		DWORD snapSize = min(dfSESSION_SEND_PACKER_BUFFER_SIZE, numOfPacket + pSession->_sendPacketCnt);
+		Packet *pPacket = nullptr;
 
 
 		//---------------------------
 		// wsabuffer에 등록
 		//---------------------------
-		for (int i = 0; i < snapSize; ++i) {
-
-			BufSets[i].buf = (CHAR *)pPacketBufs[i]->GetSendPtr();
-			BufSets[i].len = pPacketBufs[i]->GetSendSize();
+		for (int i = pSession->_sendPacketCnt; i < snapSize; i++) {
+			pPacket = nullptr;
+			pSession->_sendQueue.dequeue(pPacket);
+			pSession->_pSendPacketBufs[i] = pPacket;
+			BufSets[i].buf = (char *) pPacket->GetSendPtr();
+			BufSets[i].len = pPacket->GetSendSize();
 		}
 
 		//---------------------------
 		// 처리한만큼 개수 저장
 		//---------------------------
-		_client._sendPacketCnt = snapSize;
+		InterlockedExchange(&pSession->_sendPacketCnt, snapSize);
 	}
 
 	return true;
-}
-
-
-bool CLanClient::IncrementIOCount(int logic) {
-	int idx = InterlockedIncrement(&incIdx);
-	if (idx >= 10000) idx = incIdx = 0;
-	incArr[idx] = logic;
-
-	if ((InterlockedIncrement(&_client._IOcount) & 0x80000000) != 0) {
-		if (InterlockedDecrement(&_client._IOcount) == 0)
-			this->ReleaseSessionProc(logic);
-		return false;
-	}
-	return true;
-}
-
-bool CLanClient::DecrementIOCount(int logic) {
-	int idx = InterlockedIncrement(&decIdx);
-	if (idx >= 10000) idx = decIdx = 0;
-	decArr[idx] = logic;
-
-
-	DWORD ret = InterlockedDecrement(&_client._IOcount);
-	if (ret < 0)
-		CRASH();
-
-	if (ret == 0)
-		ReleaseSessionProc(logic + 5000);
-
-	return true;
-}
-
-bool CLanClient::ReleaseSessionProc(int logic) {
-	if (_client._sock == INVALID_SOCKET) {
-		return false;
-	}
-	if (InterlockedCompareExchange(&_client._IOcount, 0x80000000, 0) != 0) {
-		return false;
-	}
-
-	Lock();
-	OnLeaveServer();
-	//closesocket(_client._sock);
-	_client._sock = INVALID_SOCKET;
-	InterlockedExchange(&_client._IOFlag, FALSE);
-	Packet *pPacket;
-	while (_client._sendQueue.dequeue(pPacket)) {
-		pPacket->SubRef(66);
-	}
-	_client._recvQueue.ClearBuffer();
-
-	if(InterlockedExchange(&_isRunning, FALSE) == FALSE) CRASH();
-	Unlock();
-	return false;
-}
-
-void CLanClient::Init() {
-	SetStartUp();
-
-	_hThreads = new HANDLE[(long long) _workerThreadCount + 1];
-
-	CreateIOCP();
-
-
 }
 
 void CLanClient::CreateIOCP() {
 	_hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, _maxRunThreadCount);
 	if (_hIOCP == NULL) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"CreateIoCompletionPort [Error: %d]", WSAGetLastError());
-
 	}
 }
 
-bool CLanClient::CreateSocket() {
-	_client._sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (_client._sock == INVALID_SOCKET) {
-		OnError(111, L"Create Socke Error");
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Create Socke Error[CODE : %d]\n", WSAGetLastError());
+bool CLanClient::SetWSAStartUp() {
+	WSADATA wsa;
+	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"\n////// WSAStartup() errcode[%d]\n", WSAGetLastError());
 		return false;
 	}
-	if (SetStartUp() == false)
+	return true;
+}
+
+SOCKET CLanClient::CreateSocket() {
+	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock == INVALID_SOCKET) {
+		OnError(111, L"Create Socke Error");
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"\n////// socket() errcode[%d]\n", WSAGetLastError());
 		return false;
-	if (SetTimeWaitZero() == false)
+	}
+
+	if (SetTimeWaitZero(sock) == false)
 		return false;
 
 	if (_isNagle)
-		SetNagle(_isNagle);
-	return true;
+		SetNagle(sock, _isNagle);
+	return sock;
 }
 
-bool CLanClient::SetStartUp() {
-	WSADATA			wsa;
-
-	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"WSAStartup [Error: %d]", WSAGetLastError());
-		return false;
-	}
-
-	return true;
-}
-
-bool CLanClient::SetTimeWaitZero() {
+bool CLanClient::SetTimeWaitZero(SOCKET sock) {
 	LINGER optval;
 
 	optval.l_onoff = 1;
 	optval.l_linger = 0;
 
-	int timeOutnRet = setsockopt(_client._sock, SOL_SOCKET, SO_LINGER, (char *) &optval, sizeof(optval));
+	int timeOutnRet = setsockopt(sock, SOL_SOCKET, SO_LINGER, (char *) &optval, sizeof(optval));
 	if (timeOutnRet == SOCKET_ERROR) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Client Socket Linger [Error: %d]", WSAGetLastError());
-		closesocket(_client._sock);
+		closesocket(sock);
 		return false;
 	}
 
 	return true;
 }
 
-bool CLanClient::SetNonBlockSocket() {
+bool CLanClient::SetNonBlockSocket(SOCKET sock) {
 	u_long on = 1;
 
-	int retval = ioctlsocket(_client._sock, FIONBIO, &on);
+	int retval = ioctlsocket(sock, FIONBIO, &on);
 
 	if (retval == SOCKET_ERROR) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Set NonBlock Socket [Error: %d]", WSAGetLastError());
-		closesocket(_client._sock);
+		closesocket(sock);
 		return false;
 	}
 
 	return true;
 }
 
-bool CLanClient::SetNagle(bool sw) {
+bool CLanClient::SetNagle(SOCKET sock, bool sw) {
 	BOOL optval = sw;
 
-	if (setsockopt(_client._sock, IPPROTO_TCP, TCP_NODELAY, (char *) &optval, sizeof(optval)) == SOCKET_ERROR) {
+	if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *) &optval, sizeof(optval)) == SOCKET_ERROR) {
 		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Socketopt Nagle [Error: %d]", WSAGetLastError());
-		closesocket(_client._sock);
+		closesocket(sock);
 
 		return true;
 	}
 	return false;
 }
 
+SESSION *CLanClient::AcquireSession(SESSION_ID sessionID, int logic) {
+	SESSION *pSession = FindSession(sessionID);
+#ifndef df_LOGGING_SESSION_LOGIC
+	if ((InterlockedIncrement(&pSession->_IOcount) & 0x80000000) != 0) {
+		if (InterlockedDecrement(&pSession->_IOcount) == 0)
+			this->ReleaseSession(pSession, logic);
+		return nullptr;
+	}
+#else
+	IncrementIOCount(pSession, logic);
+#endif // !df_LOGGING_SESSION_LOGIC
+
+	if (pSession->_ID != sessionID) {
+		if (InterlockedDecrement(&pSession->_IOcount) == 0)
+			this->ReleaseSession(pSession, logic);
+		return nullptr;
+	}
+
+	return pSession;
+}
+
+void CLanClient::ReturnSession(SESSION *pSession, int logic) {
+	if (pSession == NULL) CRASH();
+#ifndef df_LOGGING_SESSION_LOGIC
+	//---------------------------
+	// IOCount--
+	//---------------------------
+	DWORD IOcount = InterlockedDecrement(&pSession->_IOcount);
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]", pSession->_ID, logic, IOcount);
+
+	if (IOcount == 0) {
+		//---------------------------
+		// disconnect
+		//---------------------------
+		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]\t call ReleaseSession()", pSession->_ID, logic, IOcount);
+		ReleaseSession(pSession, logic );
+	}
+	if (IOcount < 0) {
+		//---------------------------
+		// ERROR
+		//---------------------------
+		CLogger::_Log(dfLOG_LEVEL_ERROR,
+			L"DecrementIOCount(%d) pSession->_IOcount [%d]\n\
+SOCK[%d] :: recv [%d]byte, send [%d]byte, IOCount[%d], _IOFlag [%d]",
+logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
+		CRASH();
+	}
+#else
+	DecrementIOCount(pSession, logic);
+#endif // !df_LOGGING_SESSION_LOGIC
+}
+
+inline bool CLanClient::IncrementIOCount(SESSION *pSession, int logic) {
+	//---------------------------
+	// IOCount++
+	//---------------------------
+	if (pSession == NULL) CRASH();
+	//DWORD retval = InterlockedIncrement(&pSession->_IOcount);
+	if ((InterlockedIncrement(&pSession->_IOcount) & 0x80000000) != 0) {
+		if (InterlockedDecrement(&pSession->_IOcount) == 0)
+			this->ReleaseSession(pSession, logic);
+		return false;
+	}
+
+#ifdef df_LOGGING_SESSION_LOGIC
+	int idx = InterlockedIncrement(&pSession->_IncIndex);
+	if (idx >= df_LOGGING_SESSION_LOGIC) pSession->_IncIndex = 0;
+	pSession->_IncLog[idx] = logic;
+#endif // df_LOGGING_SESSION_LOGIC
+
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"IncrementIOCount() ID[%lld] :: logic[%d]", pSession->_ID, logic);
+	return true;
+}
+
+inline bool CLanClient::DecrementIOCount(SESSION *pSession, int logic) {
+	//---------------------------
+	// IOCount--
+	//---------------------------
+	if (pSession == NULL) CRASH();
+	DWORD retval = InterlockedDecrement(&pSession->_IOcount);
+#ifdef df_LOGGING_SESSION_LOGIC
+	int idx = InterlockedIncrement(&pSession->_DecIndex);
+	if (idx >= df_LOGGING_SESSION_LOGIC) pSession->_DecIndex = 0;
+	pSession->_DecLog[idx] = logic;
+#endif // df_LOGGING_SESSION_LOGIC
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]", pSession->_ID, logic, retval);
+
+	if (retval == 0) {
+		//---------------------------
+		// disconnect
+		//---------------------------
+		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]\t call ReleaseSession()", pSession->_ID, logic, retval);
+		ReleaseSession(pSession, logic );
+		return false;
+	}
+	if (retval < 0) {
+		//---------------------------
+		// ERROR
+		//---------------------------
+		CLogger::_Log(dfLOG_LEVEL_ERROR,
+			L"DecrementIOCount(%d) pSession->_IOcount [%d]\n\
+SOCK[%d] :: recv [%d]byte, send [%d]byte, IOCount[%d], _IOFlag [%d]",
+logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
+		CRASH();
+	}
+	return true;
+}
+
+bool CLanClient::ReleaseSession(SESSION *pSession, int logic) {
+	//---------------------------
+	// Release Session
+	//---------------------------
+	if (pSession == NULL) {
+		CRASH();
+	}
+	SESSION_ID ID = pSession->_ID;
+	if (InterlockedCompareExchange(&pSession->_IOcount, 0x80000000, 0) != 0) {
+		return false;
+	}
+	LONG64 idRet = InterlockedExchange64((LONG64 *) &pSession->_ID, 0);
+	if (idRet != ID) {
+		CRASH();
+	}
+	InterlockedExchange(&pSession->_isAlive, FALSE);
+
+	closesocket(pSession->_sock);
+	//---------------------------
+	// Session관리 컨테이너에서 삭제
+	//---------------------------
+	int sockRet = InterlockedExchange((long *) &pSession->_sock, INVALID_SOCKET);
+	if (sockRet == INVALID_SOCKET) {
+		CRASH();
+	}
+
+	//---------------------------
+	// Sendq에 있던거 풀에 다시넣기
+	//---------------------------
+	DWORD sendedPacketCnt = InterlockedExchange(&pSession->_sendPacketCnt, 0);
+
+	Packet *pPacket = nullptr;
+	for (int i = 0; i < sendedPacketCnt; ++i) {
+		pPacket = pSession->_pSendPacketBufs[i];
+		pPacket->SubRef();
+	}
+	while (pSession->_sendQueue.dequeue(pPacket))
+		pPacket->SubRef();
+	pSession->_recvQueue.ClearBuffer();
+
+	InterlockedExchange(&pSession->_IOFlag, FALSE);
+
+	PostClientLeave(ID);
+	USHORT idx = sessionIDtoIndex(ID);
+	if (idx == 0) CRASH();
+	_emptyIndex.push(idx);
+
+	//---------------------------
+	// 	   모니터링
+	//---------------------------
+	InterlockedIncrement(&_totalDisconnectSession);
+	InterlockedDecrement(&_curSessionCount);
+	return true;
+}
+
+SESSION *CLanClient::CreateSession(SOCKET sock, sockaddr_in servAddr) {
+	//---------------------------
+	// ID생성
+	//---------------------------
+	SESSION_ID id = GeneratesessionID();
+	if (id == 0) {
+		return nullptr;
+	}
+	//---------------------------
+	// 할당
+	//---------------------------
+	SESSION *pSession = FindSession(id);
+
+	//---------------------------
+	// 초기화
+	//---------------------------
+	InitializeSRWLock(&pSession->_lock);
+	InterlockedExchange64((LONG64 *) &pSession->_ID, 0);
+	InterlockedIncrement(&pSession->_IOcount);
+	InterlockedAnd((long *) &pSession->_IOcount, 0x7fffffff);
+
+	InterlockedExchange(&pSession->_isAlive, TRUE);
+	InterlockedExchange(&pSession->_IOFlag, FALSE);
+	InterlockedExchange(&pSession->_sendPacketCnt, 0);
+
+	ZeroMemory(&pSession->_recvOverlapped, sizeof(WSAOVERLAPPED));
+	ZeroMemory(&pSession->_sendOverlapped, sizeof(WSAOVERLAPPED));
+	pSession->_recvQueue.ClearBuffer();
+	pSession->_sendQueue.Clear();
+
+	//---------------------------
+	// 정보 셋팅
+	//---------------------------
+	InterlockedExchange(&pSession->_ID, id);
+	InterlockedExchange(&pSession->_sock, sock);
+	ZeroMemory(&pSession->_IPStr, sizeof(pSession->_IPStr));
+	GetStringIP(pSession->_IPStr, servAddr);
+	pSession->_IP = ntohl(servAddr.sin_addr.S_un.S_addr);
+	pSession->_port = ntohs(servAddr.sin_port);
+	SetSessionActiveTimer(pSession);
+
+	//---------------------------
+	// IOCP
+	//---------------------------
+	HANDLE hResult = CreateIoCompletionPort((HANDLE) sock, _hIOCP, (ULONG_PTR) pSession->_ID, NULL);
+	if (hResult == NULL) {
+		int err = WSAGetLastError();
+		CLogger::_Log(dfLOG_LEVEL_ERROR, L"////// Connect CreateIoCompletionPort() errcode[%d]", err);
+		OnError(err, L"Connect CreateIoCompletionPort()");
+		return nullptr;
+	}
+
+	return pSession;
+}
+
+SESSION_ID CLanClient::GeneratesessionID() {
+	//---------------------------
+	// 	   Session ID 생성
+	//---------------------------
+	SESSION_ID id = 0;
+	USHORT idx;
+	do {
+		if (_emptyIndex.GetSize() == 0)
+			break;
+
+		_emptyIndex.pop(idx);
+		id = idx;
+		if (id == 0) CRASH();
+		id = id << (8 * 6);
+
+		id |= _IDGenerater;
+		++_IDGenerater;
+
+	} while (0);
+	return id;
+}
+
+inline USHORT CLanClient::sessionIDtoIndex(SESSION_ID sessionID) {
+	USHORT idx = sessionID >> (8 * 6);
+	if (sessionID != 0 && idx == 0) CRASH();
+	return idx;
+}
+
+inline SESSION *CLanClient::FindSession(SESSION_ID sessionID) {
+	int idx = sessionIDtoIndex(sessionID);
+	return &_sessionContainer[idx];
+}
+
+void CLanClient::InitializeIndex() {
+	for (USHORT i = _maxConnection; i > 0; i--) {
+		_emptyIndex.push(i);
+	}
+}
+
 void CLanClient::CalcTPS() {
+	_connectPerSec = InterlockedExchange(&_connectCalc, 0);
 	_recvPacketPerSec = InterlockedExchange(&_recvPacketCalc, 0);
 	_sendPacketPerSec = InterlockedExchange(&_sendPacketCalc, 0);
+	_sendProcessedBytesTPS = InterlockedExchange64(&_sendProcessedBytesCalc, 0);
+	_sendedPacketPerSec = InterlockedExchange64(&_sendedPacketCalc, 0);
 }
 
 CLanClient::MoniteringInfo CLanClient::GetMoniteringInfo() {
 	MoniteringInfo info;
 	info._workerThreadCount = _maxRunThreadCount;
 	info._runningThreadCount = _workerThreadCount;
+	info._connectPerSec = _connectPerSec;
 	info._recvPacketPerSec = _recvPacketPerSec;
 	info._sendPacketPerSec = _sendPacketPerSec;
+	info._totalConnectSession = _totalConnectSession;
 	info._totalPacket = _totalPacket;
-	info._totalProecessedBytes = _totalProcessedBytes;
+	info._sendBytePerSec = _sendProcessedBytesTPS;
+	info._sendedPacketPerSec = _sendedPacketPerSec;
+	info._totalProecessedBytes = _totalProcessedByte;
+	info._totalReleaseSession = _totalDisconnectSession;
+	info._sessionCnt = _curSessionCount;
+	//info._stackCapacity = 0;
+	info._stackSize = _emptyIndex.GetSize();
 	info._queueSize = 0;
-	info._queueSize = _client._sendQueue.GetSize();
+	//info._queueCapacity = 0;
+	//info._maxCapacity = 0;
+	for (int i = 1; i <= _maxConnection; i++)
+		info._queueSize += _sessionContainer[i]._sendQueue.GetSize();
+	info._queueSizeAvg = info._queueSize / _maxConnection;
 	return info;
 }
 
 void CLanClient::ResetMonitor() {
+	_curSessionCount = 0;
 	_totalPacket = 0;
 	_recvPacketCalc = 0;
 	_recvPacketPerSec = 0;
 	_sendPacketCalc = 0;
 	_sendPacketPerSec = 0;
-	_totalProcessedBytes = 0;
+	_sendedPacketCalc = 0;
+	_sendedPacketPerSec = 0;
+	_sendProcessedBytesCalc = 0;
+	_sendProcessedBytesTPS = 0;
+	_totalProcessedByte = 0;
 
+	_connectCalc = 0;
+	_connectPerSec = 0;
+	_totalConnectSession = 0;
+	_totalDisconnectSession = 0;
 }

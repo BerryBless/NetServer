@@ -17,8 +17,6 @@
 }while(0)
 #endif // !CRASH
 
-//#define df_LOGGING_SESSION_LOGIC 1000
-#define dfSESSION_SEND_PACKER_BUFFER_SIZE 200
 
 //#define df_SENDTHREAD
 
@@ -30,53 +28,6 @@
 
 class CLanServer {
 public:
-	struct SESSION {
-		SESSION_ID _ID;
-
-		// IOCP Buffer
-		WSAOVERLAPPED _recvOverlapped;
-		WSAOVERLAPPED _sendOverlapped;
-		RingBuffer _recvQueue;
-		Queue<Packet *> _sendQueue;
-		Packet *_pSendPacketBufs[dfSESSION_SEND_PACKER_BUFFER_SIZE];
-
-		// session information
-		SOCKET _sock;
-		DWORD _IP;
-		USHORT _port;
-		WCHAR _IPStr[20];
-
-		// session lock
-		SRWLOCK _lock;
-
-		// session state
-		DWORD _lastActiveTime;
-		alignas(64) DWORD _IOcount;
-		alignas(64) DWORD _IOFlag;
-		alignas(64) DWORD _sendPacketCnt;
-		alignas(64) DWORD _isAlive;
-
-#ifdef df_LOGGING_SESSION_LOGIC
-		alignas(64) DWORD _IncIndex;
-		alignas(64) DWORD _DecIndex;
-		int _IncLog[df_LOGGING_SESSION_LOGIC] = { 0 };
-		int _DecLog[df_LOGGING_SESSION_LOGIC] = { 0 };
-#endif // df_LOGGING_SESSION_LOGIC
-
-		SESSION() {
-			_ID = 0;
-			_IOcount = 0x80000000;
-			_IOFlag = 0;
-			_sendPacketCnt = 0;
-			_sock = 0;
-			_IP = 0;
-			_port = 0;
-			_isAlive = 0;
-			ZeroMemory(&_recvOverlapped, sizeof(WSAOVERLAPPED));
-			ZeroMemory(&_sendOverlapped, sizeof(WSAOVERLAPPED));
-		}
-	};
-public:
 	CLanServer();
 	~CLanServer();
 protected:
@@ -84,20 +35,20 @@ protected:
 	// Server Interface
 	// ==============================================
 	bool Start(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
-	bool Start(const wchar_t *wsConfigPath);
+	bool Start(const wchar_t *sConfigFile);
 	void Quit();
 	ULONGLONG GetSessionCount() { return _curSessionCount; }
-	bool DisconnectSession(SESSION_ID SessionID);
-	bool SendPacket(SESSION_ID SessionID, Packet *pPacket);
+	bool DisconnectSession(SESSION_ID sessionID);
+	bool SendPacket(SESSION_ID sessionID, Packet *pPacket);
 
 
 	virtual bool OnConnectionRequest(WCHAR *IPstr, DWORD IP, USHORT Port) = 0; // TODO IP주소 string
 	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, ULONGLONG sessionID) = 0;
-	virtual void OnClientLeave(SESSION_ID SessionID) = 0;
-	virtual void OnRecv(SESSION_ID SessionID, Packet *pPacket) = 0;
-	virtual void OnSend(SESSION_ID SessionID) = 0; //< 패킷 수신 완료 후
+	virtual void OnClientLeave(SESSION_ID sessionID) = 0;
+	virtual void OnRecv(SESSION_ID sessionID, Packet *pPacket) = 0;
+	virtual void OnSend(SESSION_ID sessionID) = 0; //< 패킷 수신 완료 후
 	virtual void OnError(int errorcode, const WCHAR *log) = 0;
-	virtual void OnTimeout(SESSION_ID SessionID) = 0;
+	virtual void OnTimeout(SESSION_ID sessionID) = 0;
 
 	BOOL DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr);
 	void SetTimeoutTime(DWORD ms) { _timeoutMillisec = ms; }
@@ -121,29 +72,29 @@ private:
 	bool SendThreadProc();
 #endif
 
-	bool SendPost(SESSION *pSession, int logic);
-	bool RecvPost(SESSION *pSession, int logic);
+	bool SendPost(SESSION *pSession, int logic = 0);
+	bool RecvPost(SESSION *pSession, int logic = 0);
 	void PostClientLeave(SESSION_ID sessionID); // leave 컨텐츠처리를 스레드 분리를 위한 함수
 	bool TryGetRecvPacket(SESSION *pSession, Packet *pPacket);
-	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic);
+	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic = 0);
 
 
 private:
 	// ==============================================
 	// Session Management
 	// ==============================================
-	SESSION *AcquireSession(SESSION_ID sessionID, int logic);
-	void ReturnSession(SESSION *pSession, int logic);
-	inline bool IncrementIOCount(SESSION *pSession, int logic);
-	inline bool DecrementIOCount(SESSION *pSession, int logic);
+	SESSION *AcquireSession(SESSION_ID sessionID, int logic = 0);
+	void ReturnSession(SESSION *pSession, int logic = 0);
+	inline bool IncrementIOCount(SESSION *pSession, int logic = 0);
+	inline bool DecrementIOCount(SESSION *pSession, int logic = 0);
 
-	bool ReleaseSession(SESSION *pSession, int logic);
+	bool ReleaseSession(SESSION *pSession, int logic = 0);
 
 	inline void SetSessionActiveTimer(SESSION *pSession) { InterlockedExchange(&pSession->_lastActiveTime, timeGetTime()); }
 
 	SESSION *CreateSession(SOCKET sock, sockaddr_in clientaddr);
-	SESSION_ID GenerateSessionID();
-	inline USHORT SessionIDtoIndex(SESSION_ID sessionID);
+	SESSION_ID GeneratesessionID();
+	inline USHORT sessionIDtoIndex(SESSION_ID sessionID);
 	inline SESSION *FindSession(SESSION_ID sessionID);
 	void InitializeIndex();
 
@@ -188,18 +139,22 @@ private:
 	// Network State
 	// ----------------------------------------------
 	bool _isRunning;	// 서버가 진행중인가?
-	BYTE _NumThreads;		// 몇개의 스레드가 생성되었는가
+	BYTE _numThreads;		// 몇개의 스레드가 생성되었는가
 
 	// ----------------------------------------------
 	// Handle
 	// ----------------------------------------------
 	HANDLE _hIOCP;				// IOCP핸들
+
+	// ----------------------------------------------
+	// THREAD
+	// ----------------------------------------------
 	CThread *_tWorkers;			// WorkerThread Handle
-	CThread _tAccept = CThread(L"NetServer Accept Thread");
-	CThread _tMonitoring = CThread(L"NetServer Monitoring Thread");
-	CThread _tTimeout = CThread(L"NetServer Time Out Thread");
+	CThread _tAccept = CThread(L"LanServer Accept Thread");
+	CThread _tMonitoring = CThread(L"LanServer Monitoring Thread");
+	CThread _tTimeout = CThread(L"LanServer Time Out Thread");
 #ifdef df_SENDTHREAD
-	CThread _tSend = CThread(L"NetServer Send Thread");
+	CThread _tSend = CThread(L"LanServer Send Thread");
 #endif // df_SENDTHREAD
 	// ----------------------------------------------
 	// Session Container 

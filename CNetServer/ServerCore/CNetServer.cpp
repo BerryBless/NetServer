@@ -135,18 +135,18 @@ void CNetServer::Quit() {
 	delete[] _tWorkers;
 }
 
-bool CNetServer::DisconnectSession(SESSION_ID SessionID) {
+bool CNetServer::DisconnectSession(SESSION_ID sessionID) {
 	//---------------------------
 	// 세션 끊기
 	//---------------------------
 	bool ret = false;
-	SESSION *pSession = AcquireSession(SessionID, dfLOGIC_DISCONNECT);
+	SESSION *pSession = AcquireSession(sessionID, dfLOGIC_DISCONNECT);
 	if (pSession == NULL) {
 		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//Disconnect ERROR :: can not find session..");
 		OnError(dfLOGIC_DISCONNECT, L"Disconnect ERROR :: can not find session..");
 		return false;
 	}
-	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//Disconnect id[%d]", SessionID);
+	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//Disconnect id[%d]", sessionID);
 
 	InterlockedExchange(&pSession->_isAlive, FALSE);
 	ret = CancelIoEx((HANDLE) pSession->_sock, nullptr);
@@ -156,14 +156,14 @@ bool CNetServer::DisconnectSession(SESSION_ID SessionID) {
 	return ret;
 }
 
-bool CNetServer::SendPacket(SESSION_ID SessionID, Packet *pPacket) {
+bool CNetServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 	if (pPacket == nullptr)
 		return false;
 	pPacket->AddRef();
 	//---------------------------
 	// 세션찾기
 	//---------------------------
-	SESSION *pSession = AcquireSession(SessionID, 664466);
+	SESSION *pSession = AcquireSession(sessionID, 664466);
 	if (pSession == NULL) {
 		//CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: can not find session..");
 		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: can not find session..");
@@ -1044,7 +1044,7 @@ logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), p
 
 
 
-CNetServer::SESSION *CNetServer::AcquireSession(SESSION_ID sessionID, int logic) {
+SESSION *CNetServer::AcquireSession(SESSION_ID sessionID, int logic) {
 	SESSION *pSession = FindSession(sessionID);
 #ifndef df_LOGGING_SESSION_LOGIC
 	if ((InterlockedIncrement(&pSession->_IOcount) & 0x80000000) != 0) {
@@ -1140,7 +1140,7 @@ bool CNetServer::ReleaseSession(SESSION *pSession, int logic) {
 	InterlockedExchange(&pSession->_IOFlag, FALSE);
 
 	PostClientLeave(ID);
-	USHORT idx = SessionIDtoIndex(ID);
+	USHORT idx = sessionIDtoIndex(ID);
 	if (idx == 0) CRASH();
 	_emptyIndex.push(idx);
 
@@ -1153,11 +1153,11 @@ bool CNetServer::ReleaseSession(SESSION *pSession, int logic) {
 }
 
 
-CNetServer::SESSION *CNetServer::CreateSession(SOCKET sock, sockaddr_in clientaddr) {
+SESSION *CNetServer::CreateSession(SOCKET sock, sockaddr_in clientaddr) {
 	//---------------------------
 	// ID생성
 	//---------------------------
-	SESSION_ID id = GenerateSessionID();
+	SESSION_ID id = GeneratesessionID();
 	if (id == 0) {
 		return nullptr;
 	}
@@ -1208,7 +1208,7 @@ CNetServer::SESSION *CNetServer::CreateSession(SOCKET sock, sockaddr_in clientad
 	return pSession;
 }
 
-SESSION_ID CNetServer::GenerateSessionID() {
+SESSION_ID CNetServer::GeneratesessionID() {
 	//---------------------------
 	// 	   Session ID 생성
 	//---------------------------
@@ -1230,7 +1230,7 @@ SESSION_ID CNetServer::GenerateSessionID() {
 	return id;
 }
 
-inline USHORT CNetServer::SessionIDtoIndex(SESSION_ID sessionID) {
+inline USHORT CNetServer::sessionIDtoIndex(SESSION_ID sessionID) {
 	USHORT idx = sessionID >> (8 * 6);
 	if (sessionID != 0 && idx == 0) CRASH();
 	return idx;
@@ -1242,8 +1242,8 @@ void CNetServer::InitializeIndex() {
 	}
 }
 
-inline CNetServer::SESSION *CNetServer::FindSession(SESSION_ID sessionID) {
-	int idx = SessionIDtoIndex(sessionID);
+inline SESSION *CNetServer::FindSession(SESSION_ID sessionID) {
+	int idx = sessionIDtoIndex(sessionID);
 	return &_sessionContainer[idx];
 }
 

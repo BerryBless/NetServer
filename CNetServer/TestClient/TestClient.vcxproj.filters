@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Util">
+      <UniqueIdentifier>{1f54290f-637f-49e0-99fe-1ae948b11e70}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{49f7b44b-3d9c-4bdc-8e0a-7f9037ee8d70}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Main\Client">
+      <UniqueIdentifier>{5caa143b-f166-4461-b143-8b4f6880bd41}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp">
+      <Filter>Util</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="LanClient.cpp">
+      <Filter>Main\Client</Filter>
+    </ClCompile>
+    <ClCompile Include="NetClient.cpp">
+      <Filter>Main\Client</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="LanClient.h">
+      <Filter>Main\Client</Filter>
+    </ClInclude>
+    <ClInclude Include="NetClient.h">
+      <Filter>Main\Client</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
