@@ -12,12 +12,39 @@ CMonitoringServer::~CMonitoringServer() {
 	delete _pMonitorToolServer;
 }
 
-void CMonitoringServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
-	_isRunning = Start(IP, port, workerThreadCount, maxRunThreadCount, nagle, maxConnection);
-	_pMonitorToolServer->BeginServer(IP, 11601, workerThreadCount, maxRunThreadCount, nagle, maxConnection);
+void CMonitoringServer::BeginServer(u_long IP,  u_short monitorSPort, u_short toolSPort, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
+	_isRunning = Start(IP, monitorSPort, workerThreadCount, maxRunThreadCount, nagle, maxConnection);
+	_pMonitorToolServer->BeginServer(IP, toolSPort, workerThreadCount, maxRunThreadCount, nagle, maxConnection);
 }
 
 void CMonitoringServer::BeginServer(const WCHAR *szConfigFile) {
+	int MSPort = 0; // Monitor server
+	int TSPort = 0; // Tool Server
+	int wThreadCount = 0;
+	int rThreadCount = 0;
+	bool isNagle = false;
+	int maxConnetion = 0;
+
+	_pConfigData = new CParser(szConfigFile);
+	// Server lib Config
+	_pConfigData->SetNamespace(L"MonitorServerLibConfig");
+	_pConfigData->TryGetValue(L"ServerPort", MSPort);
+	_pConfigData->TryGetValue(L"WorkerThreadCount", wThreadCount);
+	_pConfigData->TryGetValue(L"MaxRunningThreadCount", rThreadCount);
+	_pConfigData->TryGetValue(L"isNagle", isNagle);
+	_pConfigData->TryGetValue(L"MaxConnectionCount", maxConnetion);
+
+	// Monitor Server Connect Config
+	_pConfigData->SetNamespace(L"MonitorToolServerLibConfig");
+	_pConfigData->TryGetValue(L"ServerPort", TSPort);
+
+
+	// Start Chat Server
+	BeginServer(INADDR_ANY, MSPort, TSPort, wThreadCount, rThreadCount, isNagle, maxConnetion);
+
+	// Set StartTime
+	time(&_startTime);
+	localtime_s(&_timeFormet, &_startTime);
 }
 
 void CMonitoringServer::CloseServer() {
@@ -32,25 +59,25 @@ void CMonitoringServer::CommandWait() {
 		char cmd = _getch();
 		if (cmd == 'Q' || cmd == 'q') {
 			//MemProfiler::Instance().PrintInfo();
-			CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Close Server from Cmd");
+			_LOG(dfLOG_LEVEL_NOTICE, L"Close Server from Cmd");
 			CloseServer();
 			break;
 		}
 		if (cmd == 'C' || cmd == 'c') {
-			CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Crash Server from Cmd");
+			_LOG(dfLOG_LEVEL_NOTICE, L"Crash Server from Cmd");
 			CRASH();
 		}
 		if (cmd == '1') {
 			wprintf_s(L"CHANGE LOG LEVEL :: DEBUG\n");
-			CLogger::SetLogLevel(dfLOG_LEVEL_DEBUG);
+			_SET_LOG_LEVEL(dfLOG_LEVEL_DEBUG);
 		}
 		if (cmd == '2') {
 			wprintf_s(L"CHANGE LOG LEVEL :: ERROR\n");
-			CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);
+			_SET_LOG_LEVEL(dfLOG_LEVEL_ERROR);
 		}
 		if (cmd == '3') {
 			wprintf_s(L"CHANGE LOG LEVEL :: NOTICE\n");
-			CLogger::SetLogLevel(dfLOG_LEVEL_NOTICE);
+			_SET_LOG_LEVEL(dfLOG_LEVEL_NOTICE);
 		}
 	}
 }
@@ -60,11 +87,11 @@ bool CMonitoringServer::OnConnectionRequest(WCHAR *IPstr, DWORD IP, USHORT Port)
 }
 
 void CMonitoringServer::OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, SESSION_ID sessionID) {
-	CLogger::_Log(dfLOG_LEVEL_ERROR, L"Join Server : ipStr[%s:%hd] %I64u", ipStr, ip, sessionID);
+	_LOG(dfLOG_LEVEL_ERROR, L"Join Server : ipStr[%s:%hd] %I64u", ipStr, ip, sessionID);
 }
 
 void CMonitoringServer::OnClientLeave(SESSION_ID sessionID) {
-	CLogger::_Log(dfLOG_LEVEL_ERROR, L"Leave Server : %I64u", sessionID);
+	_LOG(dfLOG_LEVEL_ERROR, L"Leave Server : %I64u", sessionID);
 }
 
 void CMonitoringServer::OnRecv(SESSION_ID sessionID, Packet *pPacket) {

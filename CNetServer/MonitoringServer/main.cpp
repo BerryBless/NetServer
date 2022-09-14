@@ -8,7 +8,7 @@
 
 int main() {
 	CMonitoringServer monitor;
-	monitor.BeginServer(INADDR_ANY, dfPORT, dfWORKERTHREAD, dfRUNTHREAD, FALSE, MAX_SESSION_COUNT);
+	monitor.BeginServer(L"MonitoringConfig.ini");
 	monitor.CommandWait();
 	return 0;
 }

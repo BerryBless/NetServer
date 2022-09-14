@@ -11,7 +11,7 @@
 
 #ifndef CRASH
 #define CRASH() do{\
-	CLogger::_Log(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
+	_LOG(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
 	int *nptr = nullptr; *nptr = 1;\
 }while(0)
 #endif // !CRASH
@@ -32,9 +32,8 @@ public:
 
 protected:
 	bool Start(BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
-	bool Start(const wchar_t *sConfigFile);
 	void Quit();
-	SESSION_ID  Connect(const WCHAR *serverIP, USHORT serverPort);
+	bool  Connect(const WCHAR *serverIP, USHORT serverPort);
 
 	BOOL DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr);
 

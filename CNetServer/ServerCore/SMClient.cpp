@@ -35,6 +35,8 @@ void SMClient::PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type) {
 	}
 }
 void SMClient::PacketProcHeartBeat(Packet *pPacket) {
+	// TODO
+	WORD type = PACKET_TYPE::en_PACKET_SS_MONITOR_LOGIN;
 	SendPacket(_monitorServerID, pPacket);
 }
 
@@ -50,11 +52,11 @@ void SMClient::MaketPakcetUpdate(Packet *pPacket, BYTE serverNo, BYTE DataType, 
 
 
 
-void SMClient::ConnectMonitorServer(const WCHAR *IP, USHORT port, int serverNo) {
+bool SMClient::ConnectMonitorServer(const WCHAR *IP, USHORT port, int serverNo) {
 	wsprintf(_monitorServerIP, L"%s", IP);
 	_monitorServerPort = port;
-	Connect(_monitorServerIP, _monitorServerPort);
 	_serverNo = serverNo;
+	return Connect(_monitorServerIP, _monitorServerPort);
 }
 
 void SMClient::SendMonitorPacket(BYTE serverNo, BYTE DataType, int DataValue, int TimeStamp) {

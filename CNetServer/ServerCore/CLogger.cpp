@@ -9,11 +9,15 @@
 #include <direct.h>
 
 #define dfLOG_BUF_SIZE 512 // 로그 버퍼 사이즈
+CLogger g_sysLogger;
 
-int CLogger::_logLevel = dfLOG_LEVEL_DEBUG;
-DWORD CLogger::_logCount = 0;
-SRWLOCK CLogger::_lock;
-WCHAR CLogger::_filePath[MAX_PATH];
+CLogger::CLogger() : _logLevel{ 0 }, _filePath{ 0 }, _logCount{0}{
+	CLogger::Initialize();
+	CLogger::SetDirectory(L"Log\\LibraryLog");
+	CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);
+}
+CLogger::~CLogger() {
+}
 
 void CLogger::_Log(int logLevel, const WCHAR *format, ...) {
 	if (_logLevel > logLevel) return;
@@ -92,7 +96,7 @@ void CLogger::_Log(int logLevel, const WCHAR *format, ...) {
 
 	FileLock();
 	do {
-		/*FILE *fp;
+		FILE *fp;
 
 		_wfopen_s(&fp, fileName, L"a+");
 		if (fp == nullptr)break;
@@ -101,15 +105,23 @@ void CLogger::_Log(int logLevel, const WCHAR *format, ...) {
 		else
 			fwprintf_s(fp, L"[TRUNCATED LOG]%s\n", log);
 
-		fclose(fp);*/
+		fclose(fp);
 	} while (0);
 	FileUnlock();
 }
 
 void CLogger::Initialize() {
-	ZeroMemory(_filePath, MAX_PATH);
-	setlocale(LC_ALL, ""); // 로컬 문자 지원
+	int _ = _wmkdir(L"Log");
+	_ = _wmkdir(L"Log\\LibraryLog");
+	_ = _wmkdir(L"Log\\MonitorLog");
+#ifdef dfPROFILER
+	_ = _wmkdir(L"Log\\Profile");
+#endif // dfPROFILER
+	//---------------------------
+	// 로거 초기화
+	//---------------------------
 	InitializeSRWLock(&_lock);
+	ZeroMemory(_filePath, MAX_PATH);
 }
 
 void CLogger::SetDirectory(const WCHAR *path) {

@@ -20,6 +20,13 @@ private:
 	virtual void OnSend(SESSION_ID sessionID) {} //< 패킷 송신 완료 후
 	virtual void OnError(int errorcode, const WCHAR *) {}//< 에러났을때 // TODO errorcode
 
+
+	void PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type);
+	void PacketProcMonitorToolResLogin(Packet *pPacket, SESSION_ID sessionID);
+	void PacketProcMonitorToolDataUpdate(Packet *pPacket, SESSION_ID sessionID);
+
+	void MakePacketMonitorToolResLogin(Packet *pPacket, const char *loginSessionKey);
+	
 private:
 	// Client Management
 	void InsertClient(SESSION_ID sessionID, Client *pClient);
@@ -28,5 +35,6 @@ private:
 
 private:
 	unordered_map<SESSION_ID, Client *> _ClientMap;
+	char	_loginSessionKey[MONITOR_LOGIN_SESSION_KEY_SIZE + 1]{ "ajfw@!cv980dSZ[fje#@fdj123948djf" };
 };
 

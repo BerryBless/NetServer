@@ -51,7 +51,7 @@ CServer::~CServer() {
 		delete _pConfigData;
 	CloseHandle(_hIOCP);
 	WSACleanup();
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"===============================END SERVER===============================");
+	_LOG(dfLOG_LEVEL_NOTICE, L"===============================END SERVER===============================");
 }
 
 bool CServer::Start(u_long IP, u_short prot, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
@@ -59,7 +59,7 @@ bool CServer::Start(u_long IP, u_short prot, BYTE workerThreadCount, BYTE maxRun
 		//---------------------------
 		// 이미 실행중일
 		//---------------------------
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Network is already running\n");
+		_LOG(dfLOG_LEVEL_ERROR, L"Network is already running\n");
 		OnError(111, L"Network is already running");
 		return false;
 	}
@@ -84,35 +84,6 @@ bool CServer::Start(u_long IP, u_short prot, BYTE workerThreadCount, BYTE maxRun
 }
 
 
-bool CServer::Start(const wchar_t *wsConfigPath) {
-	if (_isRunning == true) {
-		//---------------------------
-		// 이미 실행중일
-		//---------------------------
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"Network is already running\n");
-		OnError(111, L"Network is already running");
-		return false;
-	}
-	int port = 0;
-	int wThreadCount = 0;
-	int rThreadCount = 0;
-	bool isNagle = false;
-	int maxConnetion = 0;
-
-	_pConfigData = new CParser(wsConfigPath);
-	_pConfigData->SetNamespace(L"NetServerConfig");
-
-	_pConfigData->TryGetValue(L"ServerPort", port);
-	_pConfigData->TryGetValue(L"WorkerThreadCount", wThreadCount);
-	_pConfigData->TryGetValue(L"MaxRunningThreadCount", rThreadCount);
-	_pConfigData->TryGetValue(L"isNagle", isNagle);
-	_pConfigData->TryGetValue(L"MaxConnectionCount", maxConnetion);
-
-	PRO_INIT(30);
-
-	return Start(INADDR_ANY, port, wThreadCount, rThreadCount, isNagle, maxConnetion);
-}
-
 
 void CServer::Quit() {
 	//---------------------------
@@ -121,7 +92,7 @@ void CServer::Quit() {
 	// 종료코드를 완료통지에 넣어 워커 스레드 종료
 	// _listensock을 닫아 어셉트 스레드 종료
 	//---------------------------
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"CServer Quit Start");
+	_LOG(dfLOG_LEVEL_NOTICE, L"CServer Quit Start");
 	_isRunning = false;
 	PostQueuedCompletionStatus(_hIOCP, dfEXIT_CODE, dfEXIT_CODE, NULL);
 	closesocket(_listensock);
@@ -142,11 +113,11 @@ bool CServer::DisconnectSession(SESSION_ID sessionID) {
 	bool ret = false;
 	SESSION *pSession = AcquireSession(sessionID, dfLOGIC_DISCONNECT);
 	if (pSession == NULL) {
-		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//Disconnect ERROR :: can not find session..");
+		_LOG(dfLOG_LEVEL_DEBUG, L"//Disconnect ERROR :: can not find session..");
 		OnError(dfLOGIC_DISCONNECT, L"Disconnect ERROR :: can not find session..");
 		return false;
 	}
-	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//Disconnect id[%d]", sessionID);
+	_LOG(dfLOG_LEVEL_DEBUG, L"//Disconnect id[%d]", sessionID);
 
 	InterlockedExchange(&pSession->_isAlive, FALSE);
 	ret = CancelIoEx((HANDLE) pSession->_sock, nullptr);
@@ -165,7 +136,7 @@ bool CServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 	//---------------------------
 	SESSION *pSession = AcquireSession(sessionID, 664466);
 	if (pSession == NULL) {
-		//CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: can not find session..");
+		//_LOG(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: can not find session..");
 		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: can not find session..");
 		pPacket->SubRef();
 		return false;
@@ -174,7 +145,7 @@ bool CServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 	// 지워진(끊어진) 세션
 	//---------------------------
 	if (!InterlockedOr((LONG *) &pSession->_isAlive, 0)) {
-		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: Session is colsed..");
+		_LOG(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: Session is colsed..");
 		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: Session is colsed..");
 		pPacket->SubRef();
 		return false;
@@ -218,15 +189,10 @@ BOOL CServer::DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr) {
 
 void CServer::Startup() {
 	if (_isRunning == true) {
-		CLogger::_Log(dfLOG_LEVEL_NOTICE, L"///// Server Already Running");
+		_LOG(dfLOG_LEVEL_NOTICE, L"///// Server Already Running");
 		return;
 	}
-	int _ = _wmkdir(L"ServerLog");
-	_ = _wmkdir(L"ServerLog\\LibraryLog");
-	_ = _wmkdir(L"ServerLog\\MonitorLog");
-#ifdef dfPROFILER
-	_ = _wmkdir(L"ServerLog\\Profile");
-#endif // dfPROFILER
+	
 	//---------------------------
 	// 문자열 로컬 세팅
 	//---------------------------
@@ -238,15 +204,9 @@ void CServer::Startup() {
 	//---------------------------
 	timeBeginPeriod(1);
 
-	//---------------------------
-	// 로거 초기화
-	//---------------------------
-	CLogger::Initialize();
-	CLogger::SetDirectory(L"ServerLog\\LibraryLog");
-	CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);
+	
 
-
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"==============================START SERVER==============================");
+	_LOG(dfLOG_LEVEL_NOTICE, L"==============================START SERVER==============================");
 
 
 	//---------------------------
@@ -256,7 +216,7 @@ void CServer::Startup() {
 		//---------------------------
 		// 리슨 소켓 생성 실패
 		//---------------------------
-		CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Failed Create Listen Socket");
+		_LOG(dfLOG_LEVEL_NOTICE, L"Failed Create Listen Socket");
 		return;
 	}
 
@@ -281,20 +241,20 @@ bool CServer::CreateListenSocket() {
 	// 윈속 초기화
 	//---------------------------
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"\n////// WSAStartup() errcode[%d]\n", WSAGetLastError());
+		_LOG(dfLOG_LEVEL_ERROR, L"\n////// WSAStartup() errcode[%d]\n", WSAGetLastError());
 		return false;
 	}
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"WSAStartup OK..");
+	_LOG(dfLOG_LEVEL_NOTICE, L"WSAStartup OK..");
 
 	//---------------------------
 	// socket()
 	//---------------------------
 	_listensock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (_listensock == INVALID_SOCKET) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"\n////// socket() errcode[%d]\n", WSAGetLastError());
+		_LOG(dfLOG_LEVEL_ERROR, L"\n////// socket() errcode[%d]\n", WSAGetLastError());
 		return FALSE;
 	}
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"socket() OK ..");
+	_LOG(dfLOG_LEVEL_NOTICE, L"socket() OK ..");
 
 
 	//---------------------------
@@ -304,23 +264,23 @@ bool CServer::CreateListenSocket() {
 	l.l_onoff = 1;
 	l.l_linger = 0;
 	setsockopt(this->_listensock, SOL_SOCKET, SO_LINGER, (const char *) &l, sizeof(l));
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Linger Option Off");
+	_LOG(dfLOG_LEVEL_NOTICE, L"Linger Option Off");
 
 
 	BOOL keepAliveFlag = 0;
 	setsockopt(this->_listensock, SOL_SOCKET, SO_KEEPALIVE, (const char *) &keepAliveFlag, sizeof(BOOL));
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Keep Alive Option Off");
+	_LOG(dfLOG_LEVEL_NOTICE, L"Keep Alive Option Off");
 
 
 	DWORD sendBufferSize = 1024 * 64;
 	setsockopt(this->_listensock, SOL_SOCKET, SO_SNDBUF, (const char *) &sendBufferSize, sizeof(DWORD));
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Set Send Buffer 64K");
+	_LOG(dfLOG_LEVEL_NOTICE, L"Set Send Buffer 64K");
 	setsockopt(this->_listensock, SOL_SOCKET, SO_RCVBUF, (const char *) &sendBufferSize, sizeof(DWORD));
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Set Recv Buffer 64K");
+	_LOG(dfLOG_LEVEL_NOTICE, L"Set Recv Buffer 64K");
 
 
 	setsockopt(this->_listensock, IPPROTO_TCP, TCP_NODELAY, (const char *) &_isNagle, sizeof(_isNagle));
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Nagle Option Off");
+	_LOG(dfLOG_LEVEL_NOTICE, L"Nagle Option Off");
 
 
 	//---------------------------
@@ -333,22 +293,22 @@ bool CServer::CreateListenSocket() {
 
 	int bindRet = bind(_listensock, (SOCKADDR *) &addr, sizeof(addr));
 	if (bindRet == SOCKET_ERROR) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"\n////// bind() errcode[%d]", WSAGetLastError());
+		_LOG(dfLOG_LEVEL_ERROR, L"\n////// bind() errcode[%d]", WSAGetLastError());
 		closesocket(_listensock);
 		return false;
 	}
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"bind() OK ..");
+	_LOG(dfLOG_LEVEL_NOTICE, L"bind() OK ..");
 
 	//---------------------------
 	// listen()
 	//---------------------------
 	int listenRet = listen(_listensock, SOMAXCONN);
 	if (listenRet == SOCKET_ERROR) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"\n////// listen() errcode[%d]", WSAGetLastError());
+		_LOG(dfLOG_LEVEL_ERROR, L"\n////// listen() errcode[%d]", WSAGetLastError());
 		closesocket(_listensock);
 		return false;
 	}
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"listen() OK ..");
+	_LOG(dfLOG_LEVEL_NOTICE, L"listen() OK ..");
 
 
 	//---------------------------
@@ -356,11 +316,11 @@ bool CServer::CreateListenSocket() {
 	//---------------------------
 	_hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, _maxRunThreadCount);
 	if (_hIOCP == NULL) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"\n////// CreateIoCompletionPort() errcode[%d]", WSAGetLastError());
+		_LOG(dfLOG_LEVEL_ERROR, L"\n////// CreateIoCompletionPort() errcode[%d]", WSAGetLastError());
 		closesocket(_listensock);
 		return false;
 	}
-	CLogger::_Log(dfLOG_LEVEL_NOTICE, L"CreateIoCompletionPort() OK ..");
+	_LOG(dfLOG_LEVEL_NOTICE, L"CreateIoCompletionPort() OK ..");
 	return true;
 }
 
@@ -369,12 +329,13 @@ void CServer::BeginThreads() {
 	_tWorkers = new CThread[_workerThreadCount]();
 	for (int i = 0; i < _workerThreadCount; i++) {
 		_tWorkers[i].SetThreadName(L"NetServer Worker Thread");
-		_tWorkers[i].Launch(
+		bool ret = _tWorkers[i].Launch(
 			[](LPVOID arg) {
 				CServer *pServer = (CServer *) arg;
 				pServer->OnGQCS();
 			},
 			this);
+		if (ret == false)CRASH();
 	}
 
 	// ACCEPT
@@ -439,7 +400,7 @@ bool CServer::OnGQCS() {
 			// 완료통지 실패
 			//---------------------------
 			DWORD err = WSAGetLastError();
-			CLogger::_Log(dfLOG_LEVEL_ERROR, L"overlapped is NULL ERROR CODE [%d]", err);
+			_LOG(dfLOG_LEVEL_ERROR, L"overlapped is NULL ERROR CODE [%d]", err);
 			OnError(err, L"IOCP ERROR :: overlapped is NULL");
 			return true;
 		} else if (pOverlapped == (OVERLAPPED *) dfCLIENT_LEAVE_CODE) {
@@ -527,7 +488,7 @@ bool CServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 	//---------------------------
 	int movRet = pSession->_recvQueue.MoveRear(transferredSize);
 	if (transferredSize != movRet) {
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L" ID[%lld] :: transferredSize[%d] != movRet[%d]", pSession->_ID, transferredSize, movRet);
+		_LOG(dfLOG_LEVEL_ERROR, L" ID[%lld] :: transferredSize[%d] != movRet[%d]", pSession->_ID, transferredSize, movRet);
 		CRASH();
 	}
 
@@ -567,14 +528,14 @@ bool CServer::TryAccept(SOCKET &clientSocket, sockaddr_in &clientAddr) {
 			PostQueuedCompletionStatus(_hIOCP, dfEXIT_CODE, dfEXIT_CODE, NULL);
 			return false;
 		}
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"TryAccept [Error: %d]", err);
+		_LOG(dfLOG_LEVEL_ERROR, L"TryAccept [Error: %d]", err);
 		OnError(err, L"Socket Accept");
 	}
 
 	clientSocket = sock;
 	if (_emptyIndex.GetSize() == 0) {
 		closesocket(sock);
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"TryAccept _emptyIndex.GetSize() == 0");
+		_LOG(dfLOG_LEVEL_ERROR, L"TryAccept _emptyIndex.GetSize() == 0");
 		OnError(001, L"Socket Accept _emptyIndex.GetSize() == 0"); // TODO errorcode
 	}
 	return true;
@@ -606,7 +567,7 @@ bool CServer::AcceptProc() {
 			//---------------------------
 			WCHAR IP[16] = { 0, };
 			InetNtop(AF_INET, &clientaddr.sin_addr.S_un.S_addr, IP, 16);
-			CLogger::_Log(dfLOG_LEVEL_ERROR, L"Socket Accept Denied IP[%s] Port[%u]\n", IP, ntohs(clientaddr.sin_port));
+			_LOG(dfLOG_LEVEL_ERROR, L"Socket Accept Denied IP[%s] Port[%u]\n", IP, ntohs(clientaddr.sin_port));
 			closesocket(clientsock);
 		}
 		//---------------------------
@@ -616,7 +577,7 @@ bool CServer::AcceptProc() {
 			BOOL optval = _isNagle;
 			int optRet = setsockopt(clientsock, IPPROTO_TCP, TCP_NODELAY, (char *) &optval, sizeof(optval));
 			if (optRet == SOCKET_ERROR) {
-				CLogger::_Log(dfLOG_LEVEL_ERROR, L"Socketopt Nagle Error[%d]\n", WSAGetLastError());
+				_LOG(dfLOG_LEVEL_ERROR, L"Socketopt Nagle Error[%d]\n", WSAGetLastError());
 				closesocket(clientsock);
 				break;
 			}
@@ -628,7 +589,7 @@ bool CServer::AcceptProc() {
 		SESSION *pSession = CreateSession(clientsock, clientaddr);
 		if (pSession == nullptr) {
 			::closesocket(clientsock);
-			CLogger::_Log(dfLOG_LEVEL_ERROR, L"Accept :: Cannot Create Session");
+			_LOG(dfLOG_LEVEL_ERROR, L"Accept :: Cannot Create Session");
 			continue;
 		}
 
@@ -728,7 +689,7 @@ bool CServer::SendPost(SESSION *pSession, int logic) {
 	//---------------------------
 	if (pSession->_sendQueue.GetSize() <= 0) {
 		if (InterlockedExchange(&pSession->_IOFlag, FALSE) == FALSE) {
-			CLogger::_Log(dfLOG_LEVEL_ERROR, L"SendPost(%d) _IOFlag Exchange false to false", logic);
+			_LOG(dfLOG_LEVEL_ERROR, L"SendPost(%d) _IOFlag Exchange false to false", logic);
 			CRASH();
 		}
 		return FALSE;
@@ -770,7 +731,7 @@ bool CServer::SendPost(SESSION *pSession, int logic) {
 		if (err != WSA_IO_PENDING) {
 			CancelIoEx((HANDLE) pSession->_sock, nullptr);
 			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
-				CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// WSASend(%d) ERROR [%d]", logic, err);
+				_LOG(dfLOG_LEVEL_ERROR, L"//// WSASend(%d) ERROR [%d]", logic, err);
 				//CRASH();
 			}
 			//---------------------------
@@ -784,7 +745,7 @@ bool CServer::SendPost(SESSION *pSession, int logic) {
 			//PRO_END(L"SendPost");
 			return false;
 		}
-		//CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// WSASend WSA_IO_PENDING [%d]", err);
+		//_LOG(dfLOG_LEVEL_ERROR, L"//// WSASend WSA_IO_PENDING [%d]", err);
 	}
 	//PRO_END(L"SendPost");
 
@@ -836,7 +797,7 @@ bool CServer::RecvPost(SESSION *pSession, int logic) {
 		if (err != WSA_IO_PENDING) {
 			CancelIoEx((HANDLE) pSession->_sock, nullptr);
 			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
-				CLogger::_Log(dfLOG_LEVEL_ERROR, L"//// %d :: WSARecv ERROR [%d]\n", logic, err);
+				_LOG(dfLOG_LEVEL_ERROR, L"//// %d :: WSARecv ERROR [%d]\n", logic, err);
 
 			}
 			//---------------------------
@@ -950,7 +911,7 @@ bool CServer::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int 
 		// 무결성 검사
 		//---------------------------
 		if (BufSets[0].len + BufSets[1].len != frSize) {
-			CLogger::_Log(dfLOG_LEVEL_ERROR, L"SetWSABuffer(%d) :: BufSets[0].len + BufSets[1].len != FreeSize", logic);
+			_LOG(dfLOG_LEVEL_ERROR, L"SetWSABuffer(%d) :: BufSets[0].len + BufSets[1].len != FreeSize", logic);
 			CRASH();
 		}
 	} else {
@@ -1004,7 +965,7 @@ inline bool CServer::IncrementIOCount(SESSION *pSession, int logic) {
 	pSession->_IncLog[idx] = logic;
 #endif // df_LOGGING_SESSION_LOGIC
 
-	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"IncrementIOCount() ID[%lld] :: logic[%d]", pSession->_ID, logic);
+	_LOG(dfLOG_LEVEL_DEBUG, L"IncrementIOCount() ID[%lld] :: logic[%d]", pSession->_ID, logic);
 	return true;
 }
 
@@ -1019,13 +980,13 @@ inline bool CServer::DecrementIOCount(SESSION *pSession, int logic) {
 	if (idx >= df_LOGGING_SESSION_LOGIC) pSession->_DecIndex = 0;
 	pSession->_DecLog[idx] = logic;
 #endif // df_LOGGING_SESSION_LOGIC
-	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]", pSession->_ID, logic, retval);
+	_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]", pSession->_ID, logic, retval);
 
 	if (retval == 0) {
 		//---------------------------
 		// disconnect
 		//---------------------------
-		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]\t call ReleaseSession()", pSession->_ID, logic, retval);
+		_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]\t call ReleaseSession()", pSession->_ID, logic, retval);
 		ReleaseSession(pSession, logic + dfLOGIC_RELEASE_SESSION);
 		return false;
 	}
@@ -1033,7 +994,7 @@ inline bool CServer::DecrementIOCount(SESSION *pSession, int logic) {
 		//---------------------------
 		// ERROR
 		//---------------------------
-		CLogger::_Log(dfLOG_LEVEL_ERROR,
+		_LOG(dfLOG_LEVEL_ERROR,
 			L"DecrementIOCount(%d) pSession->_IOcount [%d]\n\
 SOCK[%d] :: recv [%d]byte, send [%d]byte, IOCount[%d], _IOFlag [%d]",
 logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
@@ -1072,20 +1033,20 @@ void CServer::ReturnSession(SESSION *pSession, int logic) {
 	// IOCount--
 	//---------------------------
 	DWORD IOcount = InterlockedDecrement(&pSession->_IOcount);
-	CLogger::_Log(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]", pSession->_ID, logic, IOcount);
+	_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]", pSession->_ID, logic, IOcount);
 
 	if (IOcount == 0) {
 		//---------------------------
 		// disconnect
 		//---------------------------
-		CLogger::_Log(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]\t call ReleaseSession()", pSession->_ID, logic, IOcount);
+		_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]\t call ReleaseSession()", pSession->_ID, logic, IOcount);
 		ReleaseSession(pSession, logic + dfLOGIC_RELEASE_SESSION);
 	}
 	if (IOcount < 0) {
 		//---------------------------
 		// ERROR
 		//---------------------------
-		CLogger::_Log(dfLOG_LEVEL_ERROR,
+		_LOG(dfLOG_LEVEL_ERROR,
 			L"DecrementIOCount(%d) pSession->_IOcount [%d]\n\
 SOCK[%d] :: recv [%d]byte, send [%d]byte, IOCount[%d], _IOFlag [%d]",
 logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
@@ -1200,7 +1161,7 @@ SESSION *CServer::CreateSession(SOCKET sock, sockaddr_in clientaddr) {
 	HANDLE hResult = CreateIoCompletionPort((HANDLE) sock, _hIOCP, (ULONG_PTR) pSession->_ID, NULL);
 	if (hResult == NULL) {
 		int err = WSAGetLastError();
-		CLogger::_Log(dfLOG_LEVEL_ERROR, L"////// Accept CreateIoCompletionPort() errcode[%d]", err);
+		_LOG(dfLOG_LEVEL_ERROR, L"////// Accept CreateIoCompletionPort() errcode[%d]", err);
 		OnError(err, L"Accept CreateIoCompletionPort()");
 		return nullptr;
 	}

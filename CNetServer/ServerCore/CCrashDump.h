@@ -9,13 +9,13 @@
 
 #ifndef CRASH
 #define CRASH() do{\
-					CLogger::_Log(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
+					_LOG(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
 					CCrashDump::Crash();\
 				}while(0)
 #endif // !CRASH
 #ifndef ASSERT_CRASH
 #define ASSERT_CRASH(expr)	do{\
-								if (!(expr)) { CRASH();}\
+								if ((expr) == FALSE) { CRASH();}\
 							}while(0)
 #endif // !ASSERT_CRASH
 

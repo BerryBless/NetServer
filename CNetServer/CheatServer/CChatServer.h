@@ -3,7 +3,7 @@
 #include "CServer.h"
 #include "SMClient.h"
 #include "JobMessage.h"
-
+#include "CParser.h"
 
 #define INVALID_PLAYER_SECTOR	51
 #define SECTOR_X_SIZE			50
@@ -99,12 +99,17 @@ private:
 private:
 	DWORD									_isRunning;
 
-	//HANDLE									_hThread[2];
+	// ConfigData
+	CParser									*_pConfigData;
+	WCHAR									_monitorServerIP[20];
+	INT										_monitorServerPort;
+
+	//HANDLE								
 	CThread									_moinitorThrad = CThread(L"Chat Server Monitorting Thread");;
 
 #ifdef UPDATE_THREAD
 	CThread									_updateThread = CThread(L"Chat Server Update Thread");
-	Queue <JobMessage *>						_jobQueue;
+	Queue <JobMessage *>					_jobQueue;
 	HANDLE									_DequeueEvent;
 	ObjectPool_TLS <JobMessage>				_jobMsgPool;
 #endif // UPDATE_THREAD

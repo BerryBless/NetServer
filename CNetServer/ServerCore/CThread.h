@@ -30,6 +30,7 @@ public:
 
 	static unsigned int __stdcall Thread(LPVOID arg);
 public:
+	inline bool isRunning() { return _isRunning; };
 	bool Launch(void (*pTask)(LPVOID), LPVOID arg);
 	void Join();
 

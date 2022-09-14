@@ -3,6 +3,6 @@
 int main() {
 	MornitoringClient monitor;
 	monitor.ConnectMonitor();
-	while (1);
+	Sleep(INFINITE);
 	return 0;
 }

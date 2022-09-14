@@ -49,7 +49,7 @@ using namespace std;
 
 #ifndef CRASH
 #define CRASH() do{\
-					CLogger::_Log(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
+					_LOG(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
 					CCrashDump::Crash();\
 				}while(0)
 #endif // !CRASH
@@ -60,6 +60,10 @@ using namespace std;
 							}while()
 #endif // !ASSERT_CRASH
 
+
+// 암호화된 패킷 - 생성자호출에서 꼭 바꿔야함
+#define ENCRYPTED_PACKET true
+#define MONITOR_LOGIN_SESSION_KEY_SIZE 32
 
 void HelloWorld();
 

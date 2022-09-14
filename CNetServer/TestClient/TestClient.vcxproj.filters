@@ -18,18 +18,16 @@
     <ClCompile Include="main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="LanClient.cpp">
+    <ClCompile Include="MornitoringClient.cpp">
       <Filter>Main\Client</Filter>
     </ClCompile>
-    <ClCompile Include="MornitoringClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="LanClient.h">
+    <ClInclude Include="MornitoringClient.h">
       <Filter>Main\Client</Filter>
     </ClInclude>
-    <ClInclude Include="MornitoringClient.h" />
   </ItemGroup>
 </Project>

@@ -81,15 +81,15 @@ void CEchoServer::KeyCheck() {
 			}
 			if (cmd == '1') {
 				wprintf_s(L"CHANGE LOG LEVEL :: DEBUG\n");
-				CLogger::SetLogLevel(dfLOG_LEVEL_DEBUG);
+				_SET_LOG_LEVEL(dfLOG_LEVEL_DEBUG);
 			}
 			if (cmd == '2') {
 				wprintf_s(L"CHANGE LOG LEVEL :: ERROR\n");
-				CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);
+				_SET_LOG_LEVEL(dfLOG_LEVEL_ERROR);
 			}
 			if (cmd == '3') {
 				wprintf_s(L"CHANGE LOG LEVEL :: NOTICE\n");
-				CLogger::SetLogLevel(dfLOG_LEVEL_NOTICE);
+				_SET_LOG_LEVEL(dfLOG_LEVEL_NOTICE);
 			}
 		}
 		// Monitor

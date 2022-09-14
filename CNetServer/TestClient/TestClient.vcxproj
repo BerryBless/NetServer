@@ -161,12 +161,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="LanClient.h" />
     <ClInclude Include="MornitoringClient.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LanClient.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MornitoringClient.cpp" />
     <ClCompile Include="pch.cpp">

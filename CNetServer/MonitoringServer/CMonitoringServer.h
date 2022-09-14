@@ -5,6 +5,7 @@
 #include "SS_MoniteringProtocol.h"
 #include <unordered_map>
 #include "CMonitorToolServer.h"
+#include "CParser.h"
 
 
 // 내부에서 데이터를 받을 서버
@@ -23,7 +24,7 @@ public:
 	CMonitoringServer();
 	~CMonitoringServer();
 
-	void BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
+	void BeginServer(u_long IP, u_short monitorSPort, u_short toolSPort, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
 	void BeginServer(const WCHAR *szConfigFile);
 	void CloseServer();
 	bool isRunning() {
@@ -54,6 +55,9 @@ private:
 private:
 	bool _isRunning;
 
+	// server start timestemp
+	tm _timeFormet;
+	time_t _startTime;
 private:
 	/// <summary>
 	/// 모니터링 할 서버 관리
@@ -72,7 +76,7 @@ private:
 /// </summary>
 private:
 	CMonitorToolServer *_pMonitorToolServer; //외부와의 소통을 위한 서버
-
+	CParser *_pConfigData; // 서버 설정 파일
 private:
 	constexpr static int					MAX_VALUE = 0x7fffffff;
 	constexpr static int					MIN_VALUE = 0;
@@ -92,24 +96,6 @@ private:
 	//---------------------------------------------------------------------
 
 	//---------------------------------------------------------------------
-	//GAME SERVER DATA
-	DWORD									_G_RunningFlag = false;
-	ULONGLONG								_G_CPU[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_G_PrivateBytes[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_G_SessionCount[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_G_AuthCount[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_G_PlayerCount[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_G_AcceptTPS[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_G_RecvTPS[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_G_SendTPS[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_G_DBWrite[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_G_DBQueue[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_G_AuthFPS[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_G_GameFPS[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_G_PacketPoolSize[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	//---------------------------------------------------------------------
-
-	//---------------------------------------------------------------------
 	//CHAT SERVER DATA
 	DWORD									_C_RunningFlag = false;
 	ULONGLONG								_C_CPU[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
@@ -119,16 +105,6 @@ private:
 	ULONGLONG								_C_PlayerCount[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
 	ULONGLONG								_C_UpdateTPS[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
 	ULONGLONG								_C_JobQueue[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	//---------------------------------------------------------------------
-
-	//---------------------------------------------------------------------
-	//CHAT SERVER DATA
-	DWORD									_L_RunningFlag = false;
-	ULONGLONG								_L_CPU[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_L_PrivateBytes[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_L_PacketPoolSize[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_L_SessionCount[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_L_AuthTPS[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
 	//---------------------------------------------------------------------
 
 };

@@ -7,8 +7,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ServerCore", "ServerCore\Se
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ChatServer", "CheatServer\CheatServer.vcxproj", "{38DF5689-5040-496C-BDF9-CFDA51AADDBA}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EchoServer", "EchoServer\EchoServer.vcxproj", "{CEEECFC6-996F-471D-9258-D34060866E15}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MonitoringServer", "MonitoringServer\MonitoringServer.vcxproj", "{A5FC284C-6CBD-43A4-99FA-F59DB3A5BDE5}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestClient", "TestClient\TestClient.vcxproj", "{A2C9376B-5D06-4173-AD19-EF8C715AB9A6}"
@@ -37,14 +35,6 @@ Global
 		{38DF5689-5040-496C-BDF9-CFDA51AADDBA}.Release|x64.Build.0 = Release|x64
 		{38DF5689-5040-496C-BDF9-CFDA51AADDBA}.Release|x86.ActiveCfg = Release|Win32
 		{38DF5689-5040-496C-BDF9-CFDA51AADDBA}.Release|x86.Build.0 = Release|Win32
-		{CEEECFC6-996F-471D-9258-D34060866E15}.Debug|x64.ActiveCfg = Debug|x64
-		{CEEECFC6-996F-471D-9258-D34060866E15}.Debug|x64.Build.0 = Debug|x64
-		{CEEECFC6-996F-471D-9258-D34060866E15}.Debug|x86.ActiveCfg = Debug|Win32
-		{CEEECFC6-996F-471D-9258-D34060866E15}.Debug|x86.Build.0 = Debug|Win32
-		{CEEECFC6-996F-471D-9258-D34060866E15}.Release|x64.ActiveCfg = Release|x64
-		{CEEECFC6-996F-471D-9258-D34060866E15}.Release|x64.Build.0 = Release|x64
-		{CEEECFC6-996F-471D-9258-D34060866E15}.Release|x86.ActiveCfg = Release|Win32
-		{CEEECFC6-996F-471D-9258-D34060866E15}.Release|x86.Build.0 = Release|Win32
 		{A5FC284C-6CBD-43A4-99FA-F59DB3A5BDE5}.Debug|x64.ActiveCfg = Debug|x64
 		{A5FC284C-6CBD-43A4-99FA-F59DB3A5BDE5}.Debug|x64.Build.0 = Debug|x64
 		{A5FC284C-6CBD-43A4-99FA-F59DB3A5BDE5}.Debug|x86.ActiveCfg = Debug|Win32

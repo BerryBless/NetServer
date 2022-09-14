@@ -7,6 +7,8 @@
 #include <set>
 #include <vector>
 
+// 외부에서 전용 클라이언트로 접속
+
 class CMonitorToolServer : public CServer {
 	friend class CMonitoringServer;
 
@@ -36,6 +38,13 @@ private:
 	virtual void OnError(int errorcode, const WCHAR *log);
 	virtual void OnTimeout(SESSION_ID sessionID) ;
 
+
+	void PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type);
+	void PacketProcMonitorToolReqLogin(Packet *packet, SESSION_ID sessionID);
+	void MakePacketMonitorToolReqLogin(Packet *packet, BYTE state);
+
+private:
+	char	_loginSessionKey[MONITOR_LOGIN_SESSION_KEY_SIZE + 1]{ "ajfw@!cv980dSZ[fje#@fdj123948djf" };
 private:
 	void InsertClient(SESSION_ID sessionID, MonitorClient *pClient);
 	void RemoveClient(SESSION_ID sessionID);

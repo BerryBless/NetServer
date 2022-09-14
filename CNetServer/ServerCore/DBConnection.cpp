@@ -131,7 +131,7 @@ void DBConnection::HandleError(SQLRETURN ret) {
 		if (errorRet != SQL_SUCCESS && errorRet != SQL_SUCCESS_WITH_INFO)
 			break;
 
-		CLogger::_Log(dfLOG_LEVEL_ERROR, errMsg);
+		_LOG(dfLOG_LEVEL_ERROR, errMsg);
 
 		index++;
 	}

@@ -12,7 +12,7 @@
 
 #ifndef CRASH
 #define CRASH() do{\
-	CLogger::_Log(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
+	_LOG(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
 	int *nptr = nullptr; *nptr = 1;\
 }while(0)
 #endif // !CRASH
@@ -34,7 +34,6 @@ protected:
 	// Server Interface
 	// ==============================================
 	bool Start(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
-	bool Start(const wchar_t *wsConfigPath);
 	void Quit();
 	ULONGLONG GetSessionCount() { return _curSessionCount; }
 	bool DisconnectSession(SESSION_ID sessionID);

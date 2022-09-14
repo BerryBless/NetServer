@@ -24,7 +24,7 @@ public:
 	void MaketPakcetUpdate(Packet *pPacket, BYTE serverNo, BYTE DataType, int DataValue, int TimeStamp);
 
 public:
-	void ConnectMonitorServer(const WCHAR *IP, USHORT port, int serverNo);
+	bool ConnectMonitorServer(const WCHAR *IP, USHORT port, int serverNo);
 	void SendMonitorPacket(BYTE serverNo, BYTE DataType, int DataValue, int TimeStamp);
 private:
 	WCHAR _monitorServerIP[20];

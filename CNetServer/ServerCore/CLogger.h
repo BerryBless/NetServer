@@ -5,23 +5,31 @@
 #define dfLOG_LEVEL_ERROR 1
 #define dfLOG_LEVEL_NOTICE 2
 #define dfLOG_LEVEL_OFF 3
+	
+#define _LOG(logLevel, format, ...) g_sysLogger._Log(logLevel, format, __VA_ARGS__)
+#define _SET_LOG_LEVEL(logLevel) g_sysLogger.SetLogLevel(logLevel)
+
 
 class CLogger {
 public:
-	static void _Log(int logLevel, const WCHAR *format, ...);
-	static void Initialize();
-	static void SetDirectory(const WCHAR *path);
-	static void SetLogLevel(int level) { _logLevel = level; }
-	static int getLogLevel() { return _logLevel; }
+	CLogger();
+	~CLogger();
+public:
+	void _Log(int logLevel, const WCHAR *format, ...);
+	void Initialize();
+	void SetDirectory(const WCHAR *path);
+	void SetLogLevel(int level) { _logLevel = level; }
+	int getLogLevel() { return _logLevel; }
 private:
-	static void FileLock();
-	static void FileUnlock();
+	void FileLock();
+	void FileUnlock();
 
 private:
-	static int _logLevel;
-	static SRWLOCK _lock;
-	static WCHAR _filePath[MAX_PATH];
-	static DWORD _logCount;
+	int _logLevel;
+	SRWLOCK _lock;
+	WCHAR _filePath[MAX_PATH];
+	DWORD _logCount;
 
 };
 
+extern CLogger g_sysLogger;
