@@ -401,8 +401,8 @@ bool CServer::OnGQCS() {
 			//---------------------------
 			DWORD err = WSAGetLastError();
 			_LOG(dfLOG_LEVEL_ERROR, L"overlapped is NULL ERROR CODE [%d]", err);
-			OnError(err, L"IOCP ERROR :: overlapped is NULL");
-			return true;
+			//OnError(err, L"IOCP ERROR :: overlapped is NULL");
+			break;
 		} else if (pOverlapped == (OVERLAPPED *) dfCLIENT_LEAVE_CODE) {
 			OnClientLeave(completionKey);
 			continue;

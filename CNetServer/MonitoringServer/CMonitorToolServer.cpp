@@ -8,6 +8,7 @@ CMonitorToolServer::CMonitorToolServer() : CServer(ENCRYPTED_PACKET), _isRunning
 }
 
 CMonitorToolServer::~CMonitorToolServer() {
+	CloseServer();
 }
 
 void CMonitorToolServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
@@ -23,13 +24,12 @@ void CMonitorToolServer::CloseServer() {
 }
 
 void CMonitorToolServer::CommandWait() {
-	int printTick = 0;
 
 	for (;;) {
 		char cmd = _getch();
 		if (cmd == 'Q' || cmd == 'q') {
 			//MemProfiler::Instance().PrintInfo();
-			_LOG(dfLOG_LEVEL_NOTICE, L"Close Server from Cmd");
+			_LOG(dfLOG_LEVEL_NOTICE, L"Close Tool Server from Cmd");
 			CloseServer();
 			break;
 		}

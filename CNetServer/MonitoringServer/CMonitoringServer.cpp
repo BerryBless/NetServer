@@ -9,7 +9,6 @@ CMonitoringServer::CMonitoringServer() :CServer (false){
 }
 
 CMonitoringServer::~CMonitoringServer() {
-	delete _pMonitorToolServer;
 }
 
 void CMonitoringServer::BeginServer(u_long IP,  u_short monitorSPort, u_short toolSPort, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
@@ -49,6 +48,7 @@ void CMonitoringServer::BeginServer(const WCHAR *szConfigFile) {
 
 void CMonitoringServer::CloseServer() {
 	_isRunning = false;
+	delete _pMonitorToolServer;
 	CServer::Quit();
 }
 
