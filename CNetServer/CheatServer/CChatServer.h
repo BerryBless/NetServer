@@ -59,6 +59,7 @@ private:
 	virtual void OnSend(SESSION_ID sessionID); //< 패킷 수신 완료 후
 	virtual void OnError(int errorcode, const WCHAR *log); // 에러 발생시 유저한테 알려줄곳
 	virtual void OnTimeout(SESSION_ID sessionID);
+	virtual void OnMonitoringPerSec(); // 1 초마다 갱신되는 모니터링
 
 	void PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type);
 
@@ -104,9 +105,6 @@ private:
 	WCHAR									_monitorServerIP[20];
 	INT										_monitorServerPort;
 
-	//HANDLE								
-	CThread									_moinitorThrad = CThread(L"Chat Server Monitorting Thread");;
-
 #ifdef UPDATE_THREAD
 	CThread									_updateThread = CThread(L"Chat Server Update Thread");
 	Queue <JobMessage *>					_jobQueue;
@@ -124,6 +122,9 @@ private:
 	// server start timestemp
 	tm _timeFormet;
 	time_t _startTime;
+
+	DWORD								_curLogTimer;
+	DWORD								_preLogTimer;
 
 private:
 	SMClient							_monitorServerConnection;

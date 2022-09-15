@@ -45,6 +45,8 @@ CChatServer::CChatServer() : CServer(ENCRYPTED_PACKET), _startTime{ 0 }, _timeFo
 	_totalSectorAroundSend = 0;
 	_SectorAroundCount = 0;
 
+	_curLogTimer = _preLogTimer = timeGetTime();
+
 	InitializeSRWLock(&_playerMapLock);
 
 }
@@ -186,49 +188,7 @@ bool CChatServer::UpdateProc() {
 #endif // UPDATE_THREAD
 }
 
-bool CChatServer::MonitoringProc() {
-	int PrintMonitorCount = 0;
-	while (_isRunning) {
-
-		Sleep(1000);
-		if (_isRunning == false) break;
-		_SectorMoveTPS = InterlockedExchange(&_SectorMoveCalc, 0);
-		_ChatRecvTPS = InterlockedExchange(&_ChatRecvCalc, 0);
-		_ChatSendTPS = InterlockedExchange(&_ChatSendCalc, 0);
-		_LoginTPS = InterlockedExchange(&_LoginCalc, 0);
-		_LeaveTPS = InterlockedExchange(&_LeaveCalc, 0);
-		_UpdateTPS = InterlockedExchange(&_UpdateCalc, 0);
-		_hardMoniter.UpdateHardWareTime();
-		_procMonitor.UpdateProcessTime();
-
-		DWORD curTime = timeGetTime();
-		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_ON_OFF, _isRunning, curTime);
-		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_CPU_USAGE, _hardMoniter.ProcessorTotal(), curTime);
-		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PRIVATE_BYTES, _ChatRecvTPS, curTime);
-		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_SESSION_COUNTS, _curSessionCount, curTime);
-		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PLAYER_COUNTS, _playerMap.size(), curTime);
-		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PACKET_POOL_USAGE, Packet::_packetPool.GetSize(), curTime);
-#ifdef UPDATE_THREAD
-		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_TPS, _UpdateTPS, curTime);
-		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_MSG_QUEUE_SIZE, _jobMsgPool.GetSize(), curTime);
-#endif // UPDATE_THREAD
-
-
-		// 5분마다 저장
-		if (PrintMonitorCount >= 300) {
-			PrintFileMonitor();
-			PrintMonitorCount = 0;
-		} else {
-			PrintMonitor(stdout);
-		}
-		++PrintMonitorCount;
-	}
-
-	return _isRunning;
-}
-
 void CChatServer::BeginThread() {
-	int i = 0;
 #ifdef UPDATE_THREAD
 	// Update (jobQ Thread)
 	_updateThread.SetThreadName(L"CHAT SERVER Update Thread");
@@ -239,20 +199,9 @@ void CChatServer::BeginThread() {
 		}
 	, this);
 #endif
-	// MonitorThread
-	_moinitorThrad.SetThreadName(L"CHAT SERVER Monitor Thread");
-	_moinitorThrad.Launch(
-		[](LPVOID arg) {
-			CChatServer *pServer = (CChatServer *) arg;
-			while (pServer->MonitoringProc());
-		}
-	, this);
-	_LOG(dfLOG_LEVEL_NOTICE, L"ChatServer BeginThread OK.. ");
 }
 
 bool CChatServer::OnConnectionRequest(WCHAR *IPStr, DWORD IP, USHORT Port) {
-
-
 	return _isRunning;
 }
 
@@ -316,6 +265,39 @@ void CChatServer::OnTimeout(SESSION_ID sessionID) {
 #else
 	//PacketProc(nullptr,sessionID, CHAT_PACKET_TYPE::ON_TIME_OUT);
 #endif // UPDATE_THREAD
+}
+
+void CChatServer::OnMonitoringPerSec() {
+	_SectorMoveTPS = InterlockedExchange(&_SectorMoveCalc, 0);
+	_ChatRecvTPS = InterlockedExchange(&_ChatRecvCalc, 0);
+	_ChatSendTPS = InterlockedExchange(&_ChatSendCalc, 0);
+	_LoginTPS = InterlockedExchange(&_LoginCalc, 0);
+	_LeaveTPS = InterlockedExchange(&_LeaveCalc, 0);
+	_UpdateTPS = InterlockedExchange(&_UpdateCalc, 0);
+	_hardMoniter.UpdateHardWareTime();
+	_procMonitor.UpdateProcessTime();
+
+	DWORD curTime = timeGetTime();
+	_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_ON_OFF, _isRunning, curTime);
+	_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_CPU_USAGE, _hardMoniter.ProcessorTotal(), curTime);
+	_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PRIVATE_BYTES, _ChatRecvTPS, curTime);
+	_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_SESSION_COUNTS, _curSessionCount, curTime);
+	_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PLAYER_COUNTS, _playerMap.size(), curTime);
+	_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PACKET_POOL_USAGE, Packet::_packetPool.GetSize(), curTime);
+#ifdef UPDATE_THREAD
+	_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_TPS, _UpdateTPS, curTime);
+	_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_MSG_QUEUE_SIZE, _jobMsgPool.GetSize(), curTime);
+#endif // UPDATE_THREAD
+
+	// Print Monitor
+	_curLogTimer = timeGetTime();
+	if (_curLogTimer - _preLogTimer >= 30000) {
+		_preLogTimer = _curLogTimer;
+		PrintFileMonitor();
+	} else {
+		PrintMonitor(stdout);
+	}
+
 }
 
 void CChatServer::PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type) {

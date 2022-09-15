@@ -90,6 +90,9 @@ void CMonitorToolServer::OnError(int errorcode, const WCHAR *log) {
 void CMonitorToolServer::OnTimeout(SESSION_ID sessionID) {
 }
 
+void CMonitorToolServer::OnMonitoringPerSec() {
+}
+
 void CMonitorToolServer::PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type) {
 	switch (type) {
 	case PACKET_TYPE::en_PACKET_CS_MONITOR_TOOL_REQ_LOGIN:

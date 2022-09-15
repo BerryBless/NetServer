@@ -43,6 +43,7 @@ private:
 	virtual void OnSend(SESSION_ID sessionID);
 	virtual void OnError(int errorcode, const WCHAR *log) ;
 	virtual void OnTimeout(SESSION_ID sessionID);
+	virtual void OnMonitoringPerSec(); // 1 초마다 갱신되는 모니터링
 
 	void PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type);
 	void PacketProcMonitorLogin(Packet *packet, SESSION_ID sessionID);

@@ -47,6 +47,7 @@ protected:
 	virtual void OnSend(SESSION_ID sessionID) = 0; 
 	virtual void OnError(int errorcode, const WCHAR *log) = 0;
 	virtual void OnTimeout(SESSION_ID sessionID) = 0;
+	virtual void OnMonitoringPerSec() = 0; // 1 초마다 갱신되는 모니터링
 
 	BOOL DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr);
 	void SetTimeoutTime(DWORD ms) { _timeoutMillisec = ms; }

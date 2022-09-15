@@ -625,9 +625,10 @@ bool CServer::NetMonitorProc() {
 	//---------------------------
 	// 1초마다 TPS계산
 	//---------------------------
-	while (_isRunning) {
 
+	while (_isRunning) {
 		Sleep(1000);
+		OnMonitoringPerSec();
 		CalcTPS();
 	}
 

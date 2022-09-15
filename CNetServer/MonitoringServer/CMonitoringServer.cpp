@@ -114,6 +114,9 @@ void CMonitoringServer::OnError(int errorcode, const WCHAR *log) {
 void CMonitoringServer::OnTimeout(SESSION_ID sessionID) {
 }
 
+void CMonitoringServer::OnMonitoringPerSec() {
+}
+
 void CMonitoringServer::PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type) {
 	switch (type) {
 	case PACKET_TYPE::en_PACKET_SS_MONITOR_LOGIN:
