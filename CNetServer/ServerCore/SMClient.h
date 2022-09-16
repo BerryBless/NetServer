@@ -17,6 +17,7 @@ public:
 	virtual void OnRecv(SESSION_ID sessionID, Packet *pPacket);//< 패킷 수신 완료 후
 	virtual void OnSend(SESSION_ID sessionID) {} //< 패킷 송신 완료 후
 	virtual void OnError(int errorcode, const WCHAR *);//< 에러났을때 // TODO errorcode
+	virtual void OnMonitoringPerSec() {};
 
 	void PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type);
 	void PacketProcHeartBeat(Packet *pPacket);

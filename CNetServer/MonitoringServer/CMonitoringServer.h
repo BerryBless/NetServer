@@ -11,7 +11,6 @@
 // 내부에서 데이터를 받을 서버
 
 
-class DBConnectionPool;
 class CMonitorToolServer;
 
 class CMonitoringServer : public CServer {
@@ -54,22 +53,36 @@ private:
 	void DataUpdateChatServer(BYTE dataType, int dataValue, int timeStamp);
 
 private:
-	bool _isRunning;
-
-	// server start timestemp
-	tm _timeFormet;
-	time_t _startTime;
-private:
 	/// <summary>
 	/// 모니터링 할 서버 관리
 	/// </summary>
-
-
 	void InsertServer(SESSION_ID sessionID, ServerConnect *pConnection);
 	void RemoveServer(SESSION_ID sessionID);
 	ServerConnect *FindServer(SESSION_ID sessionID);
 
 	unordered_map<SESSION_ID, ServerConnect *>		_serverMap;
+private:
+	// DB
+
+	void QueryDataBase(int serverNo, const WCHAR *dataType, ULONGLONG total, ULONGLONG min, ULONGLONG max, ULONGLONG tick);
+
+	DBConnectionPool _DBPool;
+	WCHAR _QUERY_FORMAT[20][512]{
+		L"INSERT INTO LOG_CHAT_%.2d%.2d(LOGTIME, DATATYPE, TOTAL, MIN, MAX, TICK) VALUES(NOW(),\"%s\",%d,%d,%d,%d)",
+		L"CREATE TABLE LOG_CHAT_%.2d%.2d(ID INT NOT NULL PRIMARY KEY AUTO_INCREMENT,LOGTIME DATETIME NOT NULL,DATATYPE VARCHAR(32) NOT NULL,TOTAL BIGINT NOT NULL,MIN BIGINT NOT NULL,MAX BIGINT NOT NULL,TICK BIGINT NOT NULL)"
+	};
+
+	// 10분마다 db저장
+	DWORD			_curLogTimer;
+	DWORD			_preLogTimer;
+
+private:
+	bool _isRunning;
+
+	// server start timestemp
+	tm _timeFormet;
+	time_t _startTime;
+
 
 
 /// <summary>

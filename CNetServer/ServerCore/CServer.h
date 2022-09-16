@@ -17,7 +17,7 @@
 }while(0)
 #endif // !CRASH
 
-//#define df_SENDTHREAD
+//#define df_SENDTHREAD // 센드 스레드 적용
 
 // ----------------------------------------------
 // SESSION_ID
@@ -38,8 +38,10 @@ protected:
 	ULONGLONG GetSessionCount() { return _curSessionCount; }
 	bool DisconnectSession(SESSION_ID sessionID);
 	bool SendPacket(SESSION_ID sessionID, Packet *pPacket);
+	void SetTimeoutTime(DWORD ms) { _timeoutMillisec = ms; }
 
-
+protected:
+	// virtual
 	virtual bool OnConnectionRequest(WCHAR *IPstr, DWORD IP, USHORT Port) = 0; 
 	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, SESSION_ID sessionID) = 0;
 	virtual void OnClientLeave(SESSION_ID sessionID) = 0;
@@ -49,12 +51,9 @@ protected:
 	virtual void OnTimeout(SESSION_ID sessionID) = 0;
 	virtual void OnMonitoringPerSec() = 0; // 1 초마다 갱신되는 모니터링
 
-	BOOL DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr);
-	void SetTimeoutTime(DWORD ms) { _timeoutMillisec = ms; }
-
 private:
 	// ==============================================
-	// Server IOCP Framework
+	// Server Framework
 	// ==============================================
 	void Startup();
 	bool CreateListenSocket();
@@ -104,8 +103,6 @@ private:
 	// ==============================================
 	// LOCK
 	// ==============================================
-
-
 	inline void SessionLock(SESSION *pSession);
 	inline void SessionUnlock(SESSION *pSession);
 
@@ -120,49 +117,49 @@ private:
 	// ----------------------------------------------
 	// Listen Socket Info
 	// ----------------------------------------------
-	u_short _Port;
-	u_long _bindIP;
-	SOCKET _listensock;
+	u_short									_Port;
+	u_long									_bindIP;
+	SOCKET									_listensock;
 
 	// ----------------------------------------------
 	// Option
 	// ----------------------------------------------
-	CParser *_pConfigData;
-	BYTE _maxRunThreadCount;	// 최대 동시 실행 스레드 수
-	BYTE _workerThreadCount;	// 생성할 스레드 수
-	u_short _maxConnection;		// 최대 동접자 수
-	bool _isNagle;
-	DWORD _timeoutMillisec;
+	CParser									*_pConfigData;
+	BYTE									_maxRunThreadCount;	// 최대 동시 실행 스레드 수
+	BYTE									_workerThreadCount;	// 생성할 스레드 수
+	u_short									_maxConnection;		// 최대 동접자 수
+	bool									_isNagle;
+	DWORD									_timeoutMillisec;
 
 	// ----------------------------------------------
 	// Network State
 	// ----------------------------------------------
-	bool _isRunning;	// 서버가 진행중인가?
-	bool _isEncryptionPacket; // 패킷 암호화
-	BYTE _NumThreads;		// 몇개의 스레드가 생성되었는가
+	bool									_isRunning;	// 서버가 진행중인가?
+	bool									_isEncryptionPacket; // 패킷 암호화
+	BYTE									_NumThreads;		// 몇개의 스레드가 생성되었는가
 
 	// ----------------------------------------------
 	// Handle
 	// ----------------------------------------------
-	HANDLE _hIOCP;				// IOCP핸들
-	CThread *_tWorkers;			// WorkerThread Handle
-	CThread _tAccept = CThread(L"NetServer Accept Thread");
-	CThread _tMonitoring = CThread(L"NetServer Monitoring Thread");
-	CThread _tTimeout = CThread(L"NetServer Time Out Thread");
+	HANDLE									_hIOCP;				// IOCP핸들
+	CThread									*_tWorkers;			// WorkerThread Handle
+	CThread									_tAccept = CThread(L"NetServer Accept Thread");
+	CThread									_tMonitoring = CThread(L"NetServer Monitoring Thread");
+	CThread									_tTimeout = CThread(L"NetServer Time Out Thread");
 #ifdef df_SENDTHREAD
-	CThread _tSend = CThread(L"NetServer Send Thread");
+	CThread									_tSend = CThread(L"NetServer Send Thread");
 #endif // df_SENDTHREAD
 	// ----------------------------------------------
 	// Session Container 
 	// ----------------------------------------------
-	SESSION *_sessionContainer;
-	Stack<USHORT> _emptyIndex;
-	SESSION_ID _IDGenerater;	// 세션 ID생성기, 0 : 삭제된 세션의 ID
-	SRWLOCK	_sessionContainerLock;
+	SESSION									*_sessionContainer;
+	Stack<USHORT>							_emptyIndex;
+	SESSION_ID								_IDGenerater;	// 세션 ID생성기, 0 : 삭제된 세션의 ID
+	SRWLOCK									_sessionContainerLock;
 
 protected:
 	// ==============================================
-	// 모니터링
+	// Monitering
 	// ==============================================
 	struct MoniteringInfo {
 		DWORD								_workerThreadCount;
@@ -187,21 +184,21 @@ protected:
 
 
 	// 모니터링 변수
-	alignas(64) ULONGLONG					_curSessionCount;
-	alignas(64) ULONGLONG					_totalPacket;
-	alignas(64) ULONGLONG					_recvPacketCalc;
-	alignas(64) ULONGLONG					_recvPacketPerSec;
-	alignas(64) LONGLONG					_sendedPacketCalc;
-	alignas(64) LONGLONG					_sendedPacketPerSec;
-	alignas(64) ULONGLONG					_sendPacketCalc;
-	alignas(64) ULONGLONG					_sendPacketPerSec;
+	volatile alignas(64) ULONGLONG			_curSessionCount;
+	volatile alignas(64) ULONGLONG			_totalPacket;
+	volatile alignas(64) ULONGLONG			_recvPacketCalc;
+	volatile alignas(64) ULONGLONG			_recvPacketPerSec;
+	volatile alignas(64) LONGLONG			_sendedPacketCalc;
+	volatile alignas(64) LONGLONG			_sendedPacketPerSec;
+	volatile alignas(64) ULONGLONG			_sendPacketCalc;
+	volatile alignas(64) ULONGLONG			_sendPacketPerSec;
 	volatile alignas(64) LONG64				_sendProcessedBytesCalc;
 	volatile alignas(64) LONG64				_sendProcessedBytesTPS;
 	volatile alignas(64) LONG64				_totalProcessedByte;
-	alignas(64) ULONGLONG					_acceptCalc;
-	alignas(64) ULONGLONG					_acceptPerSec;
-	alignas(64) ULONGLONG					_totalAcceptSession;
-	alignas(64) ULONGLONG					_totalDisconnectSession;
+	volatile alignas(64) ULONGLONG			_acceptCalc;
+	volatile alignas(64) ULONGLONG			_acceptPerSec;
+	volatile alignas(64) ULONGLONG			_totalAcceptSession;
+	volatile alignas(64) ULONGLONG			_totalDisconnectSession;
 
 	void CalcTPS();
 	MoniteringInfo GetMoniteringInfo();

@@ -16,7 +16,7 @@
 #define MASSAGE_MAX_LEN			512
 #define MASSAGE_MAX_SIZE		1024
 
-//#define UPDATE_THREAD
+//#define UPDATE_THREAD // 업데이트 스레드 적용
 
 class CChatServer : public CServer {
 
@@ -34,22 +34,16 @@ public:
 	CChatServer();
 	~CChatServer();
 
-	//	void BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
 	void BeginServer(const WCHAR *szConfigFile);
 	void CloseServer();
 	bool isRunning() {
 		return _isRunning;
 	}
-
 	void CommandWait();
 private:
 	// Thtread
-
 	bool UpdateProc();
-	bool MonitoringProc();
-
 	void BeginThread();
-
 private:
 	// virtual
 	virtual bool OnConnectionRequest(WCHAR *IPStr, DWORD IP, USHORT Port); //< accept 직후
@@ -60,7 +54,8 @@ private:
 	virtual void OnError(int errorcode, const WCHAR *log); // 에러 발생시 유저한테 알려줄곳
 	virtual void OnTimeout(SESSION_ID sessionID);
 	virtual void OnMonitoringPerSec(); // 1 초마다 갱신되는 모니터링
-
+private:
+	// paket
 	void PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type);
 
 	void PacketProcRequestLogin(Packet *pPacket, SESSION_ID sessionID);
@@ -73,6 +68,7 @@ private:
 	void MakePacketResponseMessage(Packet *pPacket, ACCOUNT_NO account_no, const WCHAR *ID, const WCHAR *nickName, WORD msgLen, const WCHAR *message);
 
 private:
+	// Send
 	void BroadcastSector(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer);
 	void BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sectorY, Player *exPlayer);
 
@@ -112,7 +108,7 @@ private:
 	ObjectPool_TLS <JobMessage>				_jobMsgPool;
 #endif // UPDATE_THREAD
 
-
+	// player
 	SECTOR **_sector;
 	unordered_map<SESSION_ID, Player *>		_playerMap;
 	SRWLOCK									_playerMapLock;
@@ -127,6 +123,7 @@ private:
 	DWORD								_preLogTimer;
 
 private:
+	// Monitor
 	SMClient							_monitorServerConnection;
 	HardWareMoniter						_hardMoniter;
 	ProcessMoniter						_procMonitor;

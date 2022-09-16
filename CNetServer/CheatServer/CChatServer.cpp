@@ -47,6 +47,8 @@ CChatServer::CChatServer() : CServer(ENCRYPTED_PACKET), _startTime{ 0 }, _timeFo
 
 	_curLogTimer = _preLogTimer = timeGetTime();
 
+	SetTimeoutTime(40000);
+
 	InitializeSRWLock(&_playerMapLock);
 
 }
@@ -54,21 +56,6 @@ CChatServer::CChatServer() : CServer(ENCRYPTED_PACKET), _startTime{ 0 }, _timeFo
 CChatServer::~CChatServer() {
 }
 
-/*void CChatServer::BeginServer(u_long IP, u_short port, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
-	if (_isRunning == true) return;
-	_DequeueEvent = nullptr;
-	_DequeueEvent = CreateEvent(nullptr, false, false, nullptr);
-	if (_DequeueEvent == nullptr) {
-		_LOG(dfLOG_LEVEL_ERROR, L"_DequeueEvent == nullptr");
-		return;
-	}
-
-
-	_isRunning = Start(IP, port, workerThreadCount, maxRunThreadCount, nagle, maxConnection);
-	time(&_startTime);
-	localtime_s(&_timeFormet, &_startTime);
-	BeginThread();
-}*/
 
 void CChatServer::BeginServer(const WCHAR *szConfigFile) {
 	if (_isRunning == true) return;
@@ -808,13 +795,13 @@ void CChatServer::PrintFileMonitor() {
 	localtime_s(&t, &now);
 #ifdef dfPROFILER
 	// PROFILE
-	swprintf_s(FILENAME, 128, L"ServerLog/Profile/%02d%02d%02d_%02d%02d%02d_CHAT_PROFILE.log",
+	swprintf_s(FILENAME, 128, L"Log/Profile/%02d%02d%02d_%02d%02d%02d_CHAT_PROFILE.log",
 		t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
 		t.tm_hour, t.tm_min, t.tm_sec);
 	PRO_PRINT(FILENAME);
 #endif // dfPROFILER
 
-	swprintf_s(FILENAME, 128, L"ServerLog/MonitorLog/%02d%02d%02d_%02d%02d%02d_CHAT_SERVER_MONITOR.log",
+	swprintf_s(FILENAME, 128, L"Log/MonitorLog/%02d%02d%02d_%02d%02d%02d_CHAT_SERVER_MONITOR.log",
 		t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
 		t.tm_hour, t.tm_min, t.tm_sec);
 	FILE *fp = stdout;

@@ -150,7 +150,7 @@ bool CServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 		pPacket->SubRef();
 		return false;
 	}
-	//PRO_BEGIN(L"SendPacket");
+	PRO_BEGIN(L"SendPacket");
 	//---------------------------
 	// 페킷 포인터를 센드큐에
 	//---------------------------
@@ -167,24 +167,8 @@ bool CServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 	SendPost(pSession, dfLOGIC_SEND_PACKET);
 #endif // !df_SENDTHREAD
 	ReturnSession(pSession, 446644);
-	//PRO_END(L"SendPacket");
+	PRO_END(L"SendPacket");
 	return true;
-}
-
-BOOL CServer::DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr) {
-	ADDRINFOW *pAddrInfo;	// IP정보
-	SOCKADDR_IN *pSockAddr;
-
-	// pAddrInfo 에 도메인을 IP로 변환한것을 "리스트로 변환 해줌" (이중포인터)
-	// 외부에서 반드시 해재 해줘야함!
-	if (GetAddrInfo(szDomain, L"0", NULL, &pAddrInfo) != 0) {
-		return FALSE;
-	}
-	pSockAddr = (SOCKADDR_IN *) pAddrInfo->ai_addr;
-	*pAddr = pSockAddr->sin_addr;
-
-	FreeAddrInfo(pAddrInfo); // pAddrInfo 리스트 할당 해재!!!!!!
-	return TRUE;
 }
 
 void CServer::Startup() {

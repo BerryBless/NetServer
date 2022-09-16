@@ -6,6 +6,7 @@
 
 CMonitoringServer::CMonitoringServer() :CServer (false){
 	_pMonitorToolServer = new CMonitorToolServer;
+	_preLogTimer = _curLogTimer = timeGetTime();
 }
 
 CMonitoringServer::~CMonitoringServer() {
@@ -37,6 +38,11 @@ void CMonitoringServer::BeginServer(const WCHAR *szConfigFile) {
 	_pConfigData->SetNamespace(L"MonitorToolServerLibConfig");
 	_pConfigData->TryGetValue(L"ServerPort", TSPort);
 
+	// DVConnect Config
+	WCHAR connectstring[512];
+	_pConfigData->SetNamespace(L"DB");
+	_pConfigData->TryGetValue(L"ConnectString", connectstring);
+	ASSERT_CRASH(_DBPool.Connect(1, connectstring));
 
 	// Start Chat Server
 	BeginServer(INADDR_ANY, MSPort, TSPort, wThreadCount, rThreadCount, isNagle, maxConnetion);
@@ -115,6 +121,11 @@ void CMonitoringServer::OnTimeout(SESSION_ID sessionID) {
 }
 
 void CMonitoringServer::OnMonitoringPerSec() {
+	/*_curLogTimer = timeGetTime();
+	if (_curLogTimer - _preLogTimer >= 60000) {
+
+	}*/
+	printf_s("RUNNING SERVER...\n");
 }
 
 void CMonitoringServer::PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type) {
@@ -188,28 +199,36 @@ void CMonitoringServer::ResetChatServerData() {
 
 void CMonitoringServer::DataUpdateChatServer(BYTE dataType, int dataValue, int timeStamp) {
 	ULONGLONG *target = nullptr;
+	WCHAR dataName[20];
 	switch (dataType) {
 	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_ON_OFF:	_C_RunningFlag = true; break;
 	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_CPU_USAGE:
 		target = _C_CPU;
+		swprintf_s(dataName, L"CPU_USAGE");
 		break;
 	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PRIVATE_BYTES:
 		target = _C_PrivateBytes;
+		swprintf_s(dataName, L"PRIVATE_BYTES");
 		break;
 	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_SESSION_COUNTS:
 		target = _C_SessionCount;
+		swprintf_s(dataName, L"SESSION_COUNTS");
 		break;
 	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PLAYER_COUNTS:
+		swprintf_s(dataName, L"PLAYER_COUNTS");
 		target = _C_PlayerCount;
 		break;
 	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_TPS:
 		target = _C_UpdateTPS;
+		swprintf_s(dataName, L"UPDATE_TPS");
 		break;
 	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PACKET_POOL_USAGE:
 		target = _C_PacketPoolSize;
+		swprintf_s(dataName, L"POOL_USAGE");
 		break;
 	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_MSG_QUEUE_SIZE:
 		target = _C_JobQueue;
+		swprintf_s(dataName, L"QUEUE_SIZE");
 		break;
 	default:
 		break;
@@ -219,6 +238,7 @@ void CMonitoringServer::DataUpdateChatServer(BYTE dataType, int dataValue, int t
 		target[this->MIN] = min(target[this->MIN], dataValue);
 		target[this->MAX] = max(target[this->MAX], dataValue);
 		++target[this->TICK];
+	QueryDataBase(SERVER_TYPE::CHAT_SERVER, dataName, target[this->TOTAL], target[this->MIN], target[this->MAX], target[this->TICK]);
 	}
 }
 
@@ -248,4 +268,30 @@ CMonitoringServer::ServerConnect *CMonitoringServer::FindServer(SESSION_ID sessi
 		return nullptr;
 	}
 	return iter->second;
+}
+
+void CMonitoringServer::QueryDataBase(int serverNo, const WCHAR *dataType, ULONGLONG total, ULONGLONG min, ULONGLONG max, ULONGLONG tick) {
+	DBConnection *dbConn = _DBPool.Pop();
+	time_t now = time(nullptr);
+	tm t;
+	localtime_s(&t, &now);
+	WCHAR query[512]; 
+	int idx = -1;
+	switch (serverNo) {
+	case SERVER_TYPE::CHAT_SERVER:
+		idx = 0;
+		break;
+	default:
+		break;
+	}
+	swprintf_s(query, _QUERY_FORMAT[idx], t.tm_year % 100, t.tm_mon + 1, dataType, total, min, max, tick);
+	if (dbConn->Execute(query) == false) {
+		wprintf_s(L"%s", query);
+		swprintf_s(query, _QUERY_FORMAT[idx+1], t.tm_year % 100, t.tm_mon + 1);
+		ASSERT_CRASH(dbConn->Execute(query));
+
+		swprintf_s(query, _QUERY_FORMAT[idx], t.tm_year % 100, t.tm_mon + 1, dataType, total, min, max, tick);
+		ASSERT_CRASH(dbConn->Execute(query));
+	}
+	_DBPool.Push(dbConn);
 }

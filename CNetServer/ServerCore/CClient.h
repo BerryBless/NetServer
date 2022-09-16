@@ -16,16 +16,14 @@
 }while(0)
 #endif // !CRASH
 
-//#define MONITOR_THREAD
-
 class CClient {
 public:
 	CClient(bool isEncryption = false);
 	~CClient();
+protected:
 	// ==============================================
 	// Client Interface
 	// ==============================================
-
 	ULONGLONG GetSessionCount() { return _curSessionCount; }
 	bool DisconnectSession(SESSION_ID sessionID);
 	bool SendPacket(SESSION_ID sessionID, Packet *pPacket);
@@ -33,23 +31,24 @@ public:
 protected:
 	bool Start(BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection);
 	void Quit();
-	bool  Connect(const WCHAR *serverIP, USHORT serverPort);
+	bool Connect(const WCHAR *serverIP, USHORT serverPort);
 
 	BOOL DomainToIP(const WCHAR *szDomain, IN_ADDR *pAddr);
 
 protected:
+	// tirtual
 	virtual void OnEnterServer(SESSION_ID sessionID) = 0; //< 서버와의 연결 성공 후
 	virtual void OnLeaveServer(SESSION_ID sessionID) = 0; //< 서버와의 연결이 끊어졌을 때
 	virtual void OnRecv(SESSION_ID sessionID, Packet *pPacket) = 0;//< 패킷 수신 완료 후
 	virtual void OnSend(SESSION_ID sessionID) = 0; //< 패킷 송신 완료 후
 	virtual void OnError(int errorcode, const WCHAR *) = 0;//< 에러났을때 // TODO errorcode
-
+	virtual void OnMonitoringPerSec() = 0;
 
 
 
 private:
 	// ==============================================
-	// Client IOCP Framework
+	// Client Framework
 	// ==============================================
 	void Startup();
 	void BeginThreads();
@@ -113,39 +112,37 @@ private:
 	// ----------------------------------------------
 	// Network State
 	// ----------------------------------------------
-	long _isRunning = 0;		// 서버가 진행중인가?
-	bool _isEncryptionPacket ;
-	BYTE _numThreads = 0;		// 몇개의 스레드가 생성되었는가
+	long									_isRunning = 0;		// 서버가 진행중인가?
+	bool									_isEncryptionPacket ;
+	BYTE									_numThreads = 0;		// 몇개의 스레드가 생성되었는가
 
 	// ----------------------------------------------
 	// Option
 	// ----------------------------------------------
-	CParser *_pConfigData;
-	BYTE _maxRunThreadCount = 0;	// 최대 동시 실행 스레드 수
-	BYTE _workerThreadCount = 0;	// 생성할 스레드 수
-	BYTE _maxConnection = 0;
-	bool _isNagle = false;
+	CParser									*_pConfigData;
+	BYTE									_maxRunThreadCount = 0;	// 최대 동시 실행 스레드 수
+	BYTE									_workerThreadCount = 0;	// 생성할 스레드 수
+	BYTE									_maxConnection = 0;
+	bool									_isNagle = false;
 
 	// ----------------------------------------------
 	// Handle
 	// ----------------------------------------------
-	HANDLE _hIOCP;				// IOCP핸들
+	HANDLE									_hIOCP;				// IOCP핸들
 
 	// ----------------------------------------------
 	// THREAD
 	// ----------------------------------------------
-	CThread *_tWorkers;
-#ifdef MONITOR_THREAD
-	CThread _tMonitoring = CThread(L"LanClient Monitoring Thread");
-#endif // MONITOR_THREAD
+	CThread									*_tWorkers;
+	CThread									_tMonitoring = CThread(L"LanClient Monitoring Thread");
 
 	// ----------------------------------------------
 	// Session Container 
 	// ----------------------------------------------
-	SESSION *_sessionContainer;
-	Stack<USHORT> _emptyIndex;
-	SESSION_ID _IDGenerater;	// 세션 ID생성기, 0 : 삭제된 세션의 ID
-	SRWLOCK	_sessionContainerLock;
+	SESSION									*_sessionContainer;
+	Stack<USHORT>							_emptyIndex;
+	SESSION_ID								_IDGenerater;	// 세션 ID생성기, 0 : 삭제된 세션의 ID
+	SRWLOCK									_sessionContainerLock;
 protected:
 	// ==============================================
 	// 모니터링
@@ -173,21 +170,21 @@ protected:
 
 
 	// 모니터링 변수
-	alignas(64) ULONGLONG					_curSessionCount;
-	alignas(64) ULONGLONG					_totalPacket;
-	alignas(64) ULONGLONG					_recvPacketCalc;
-	alignas(64) ULONGLONG					_recvPacketPerSec;
-	alignas(64) LONGLONG					_sendedPacketCalc;
-	alignas(64) LONGLONG					_sendedPacketPerSec;
-	alignas(64) ULONGLONG					_sendPacketCalc;
-	alignas(64) ULONGLONG					_sendPacketPerSec;
+	volatile alignas(64) ULONGLONG			_curSessionCount;
+	volatile alignas(64) ULONGLONG			_totalPacket;
+	volatile alignas(64) ULONGLONG			_recvPacketCalc;
+	volatile alignas(64) ULONGLONG			_recvPacketPerSec;
+	volatile alignas(64) LONGLONG			_sendedPacketCalc;
+	volatile alignas(64) LONGLONG			_sendedPacketPerSec;
+	volatile alignas(64) ULONGLONG			_sendPacketCalc;
+	volatile alignas(64) ULONGLONG			_sendPacketPerSec;
 	volatile alignas(64) LONG64				_sendProcessedBytesCalc;
 	volatile alignas(64) LONG64				_sendProcessedBytesTPS;
 	volatile alignas(64) LONG64				_totalProcessedByte;
-	alignas(64) ULONGLONG					_connectCalc;
-	alignas(64) ULONGLONG					_connectPerSec;
-	alignas(64) ULONGLONG					_totalConnectSession;
-	alignas(64) ULONGLONG					_totalDisconnectSession;
+	volatile alignas(64) ULONGLONG			_connectCalc;
+	volatile alignas(64) ULONGLONG			_connectPerSec;
+	volatile alignas(64) ULONGLONG			_totalConnectSession;
+	volatile alignas(64) ULONGLONG			_totalDisconnectSession;
 
 	void CalcTPS();
 	MoniteringInfo GetMoniteringInfo();

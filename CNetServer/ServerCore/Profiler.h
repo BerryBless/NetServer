@@ -25,7 +25,7 @@ void f3() {
 #include <Windows.h>
 
 
-#define dfPROFILER // 프로파일링을 끄고싶다면 주석처리
+//#define dfPROFILER // 프로파일링을 끄고싶다면 주석처리
 
 #ifdef dfPROFILER
 
