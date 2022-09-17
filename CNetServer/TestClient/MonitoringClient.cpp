@@ -1,20 +1,28 @@
 #include "pch.h"
-#include "MornitoringClient.h"
+#include "MonitoringClient.h"
 #include "CommonProtocol.h"
 
-MornitoringClient::MornitoringClient() : CClient(ENCRYPTED_PACKET) {
+MonitoringClient::MonitoringClient(const WCHAR *szConfigFile) : CClient(ENCRYPTED_PACKET) {
 	CClient::Start(1, 1, FALSE, 3);
+	_pConfigData = new CParser(szConfigFile);
+	_pConfigData->SetNamespace(L"MonitorClientConfig");
+
+	// Monitor Server Connect Config
+	_pConfigData->SetNamespace(L"MonitorServerConnect");
+	_pConfigData->TryGetValue(L"MonitorServerIP", _monitorServerIP);
+	_pConfigData->TryGetValue(L"MonitorServerPort", _monitorServerPort);
+
 }
 
-MornitoringClient::~MornitoringClient() {
+MonitoringClient::~MonitoringClient() {
 	CClient::Quit();
 }
 
-void MornitoringClient::ConnectMonitor() {
-	CClient::Connect(L"127.0.0.1", 11600);
+void MonitoringClient::ConnectMonitor() {
+	CClient::Connect(_monitorServerIP, _monitorServerPort);
 }
 
-void MornitoringClient::OnEnterServer(SESSION_ID sessionID) {
+void MonitoringClient::OnEnterServer(SESSION_ID sessionID) {
 	_LOG(dfLOG_LEVEL_ERROR, L"//OnEnterServer[%lld]", sessionID);
 	Packet *pPacket = Packet::AllocAddRef();
 	MakePacketMonitorToolResLogin(pPacket, _loginSessionKey);
@@ -22,11 +30,11 @@ void MornitoringClient::OnEnterServer(SESSION_ID sessionID) {
 	pPacket->SubRef();
 }
 
-void MornitoringClient::OnLeaveServer(SESSION_ID sessionID) {
+void MonitoringClient::OnLeaveServer(SESSION_ID sessionID) {
 	_LOG(dfLOG_LEVEL_ERROR, L"//OnLeaveServer[%lld]", sessionID);
 }
 
-void MornitoringClient::OnRecv(SESSION_ID sessionID, Packet *pPacket) {
+void MonitoringClient::OnRecv(SESSION_ID sessionID, Packet *pPacket) {
 	_LOG(dfLOG_LEVEL_DEBUG, L"//OnRecv");
 	pPacket->AddRef();
 	WORD type;
@@ -37,7 +45,7 @@ void MornitoringClient::OnRecv(SESSION_ID sessionID, Packet *pPacket) {
 	pPacket->SubRef();
 }
 
-void MornitoringClient::PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type) {
+void MonitoringClient::PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type) {
 	switch (type) {
 	case PACKET_TYPE::en_PACKET_CS_MONITOR_TOOL_DATA_UPDATE:
 		PacketProcMonitorToolDataUpdate(pPacket, sessionID);
@@ -52,7 +60,7 @@ void MornitoringClient::PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD t
 	}
 }
 
-void MornitoringClient::PacketProcMonitorToolResLogin(Packet *pPacket, SESSION_ID sessionID) {
+void MonitoringClient::PacketProcMonitorToolResLogin(Packet *pPacket, SESSION_ID sessionID) {
 	BYTE state;
 	*pPacket >> state;
 	switch (state) {
@@ -77,7 +85,7 @@ void MornitoringClient::PacketProcMonitorToolResLogin(Packet *pPacket, SESSION_I
 	}
 }
 
-void MornitoringClient::PacketProcMonitorToolDataUpdate(Packet *pPacket, SESSION_ID sessionID) {
+void MonitoringClient::PacketProcMonitorToolDataUpdate(Packet *pPacket, SESSION_ID sessionID) {
 	// TODO 그래프로 보여주기
 
 	BYTE serverNo;
@@ -88,17 +96,17 @@ void MornitoringClient::PacketProcMonitorToolDataUpdate(Packet *pPacket, SESSION
 	printf_s("serverNo[%d], dataType[%d], dataValue[%d] timeStamp[%d]\n", serverNo, dataType, dataValue, timeStamp);
 }
 
-void MornitoringClient::MakePacketMonitorToolResLogin(Packet *pPacket, const char *loginSessionKey) {
+void MonitoringClient::MakePacketMonitorToolResLogin(Packet *pPacket, const char *loginSessionKey) {
 	WORD type = PACKET_TYPE::en_PACKET_CS_MONITOR_TOOL_REQ_LOGIN;
 	*pPacket << type;
 	pPacket->PutData((char *) loginSessionKey, MONITOR_LOGIN_SESSION_KEY_SIZE);
 }
 
-void MornitoringClient::InsertClient(SESSION_ID sessionID, Client *pClient) {
+void MonitoringClient::InsertClient(SESSION_ID sessionID, Client *pClient) {
 	_ClientMap.emplace(::make_pair(sessionID, pClient));
 }
 
-void MornitoringClient::RemoveClient(SESSION_ID sessionID) {
+void MonitoringClient::RemoveClient(SESSION_ID sessionID) {
 	auto iter = _ClientMap.find(sessionID);
 	if (iter == _ClientMap.end()) {
 		return;
@@ -112,7 +120,7 @@ void MornitoringClient::RemoveClient(SESSION_ID sessionID) {
 	delete pClient;
 }
 
-MornitoringClient::Client *MornitoringClient::FindClient(SESSION_ID sessionID) {
+MonitoringClient::Client *MonitoringClient::FindClient(SESSION_ID sessionID) {
 	auto iter = _ClientMap.find(sessionID);
 	if (iter == _ClientMap.end()) {
 		return nullptr;
