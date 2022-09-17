@@ -1,6 +1,7 @@
 #ifndef  __PACKET__
 #define  __PACKET__
 #include "ObjectPool_TLS.hpp"
+#include "Types.h"
 
 #define PACKET_NET_HEADER		NET_HEADER
 #define PACKET_NET_HEADER_SIZE	sizeof(PACKET_NET_HEADER)
@@ -79,8 +80,8 @@ public:
 	// Parameters: 없음.
 	// Return: (int)사용중인 데이타 사이즈.
 	//////////////////////////////////////////////////////////////////////////
-	int		GetSendSize(void) { return _writePos - _sendPos; }
-	int		GetDataSize(void) { return _writePos - _readPos; }
+	inline int		GetSendSize(void) { return _writePos - _sendPos; }
+	inline int		GetDataSize(void) { return _writePos - _readPos; }
 
 
 
@@ -129,107 +130,168 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	// 넣기.	각 변수 타입마다 모두 만듬.
 	//////////////////////////////////////////////////////////////////////////
-	inline Packet &operator << (unsigned char value) {
-		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+	inline Packet &operator << (BYTE value) {
+		if (sizeof(value) > _iBufferSize - _writePos)
+			return *this;
+		BYTE *temp = (BYTE *) (_pBuffer + _writePos);
+		*temp = value;
 		_writePos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator << (char value) {
-		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+	inline Packet &operator << (WORD value) {
+		if (sizeof(value) > _iBufferSize - _writePos)
+			return *this;
+		WORD *temp = (WORD *) (_pBuffer + _writePos);
+		*temp = value;
 		_writePos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator << (short value) {
-		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+	inline Packet &operator << (DWORD value) {
+		if (sizeof(value) > _iBufferSize - _writePos)
+			return *this;
+		DWORD *temp = (DWORD *) (_pBuffer + _writePos);
+		*temp = value;
 		_writePos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator << (unsigned short value) {
-		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+	inline Packet &operator << (QWORD value) {
+		if (sizeof(value) > _iBufferSize - _writePos)
+			return *this;
+		QWORD *temp = (QWORD *) (_pBuffer + _writePos);
+		*temp = value;
 		_writePos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator << (int value) {
-		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+	inline Packet &operator << (CHAR value) {
+		if (sizeof(value) > _iBufferSize - _writePos)
+			return *this;
+		CHAR *temp = (CHAR *) (_pBuffer + _writePos);
+		*temp = value;
 		_writePos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator << (unsigned long value) {
-		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+	inline Packet &operator << (SHORT value) {
+		if (sizeof(value) > _iBufferSize - _writePos)
+			return *this;
+		SHORT *temp = (SHORT *) (_pBuffer + _writePos);
+		*temp = value;
 		_writePos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator << (float value) {
-		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+	inline Packet &operator << (INT value) {
+		if (sizeof(value) > _iBufferSize - _writePos)
+			return *this;
+		INT *temp = (INT *) (_pBuffer + _writePos);
+		*temp = value;
 		_writePos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator << (__int64 value) {
-		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+	inline Packet &operator << (FLOAT value) {
+		if (sizeof(value) > _iBufferSize - _writePos)
+			return *this;
+		FLOAT *temp = (FLOAT *) (_pBuffer + _writePos);
+		*temp = value;
 		_writePos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator << (double value) {
-		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+	inline Packet &operator << (INT64 value) {
+		if (sizeof(value) > _iBufferSize - _writePos)
+			return *this;
+		INT64 *temp = (INT64 *) (_pBuffer + _writePos);
+		*temp = value;
 		_writePos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator << (unsigned long long value) {
-		memcpy_s(_pBuffer + _writePos, _iBufferSize, &value, sizeof(value));
+	inline Packet &operator << (DOUBLE value) {
+		if (sizeof(value) > _iBufferSize - _writePos)
+			return *this;
+		DOUBLE *temp = (DOUBLE *) (_pBuffer + _writePos);
+		*temp = value;
 		_writePos += sizeof(value);
 		return *this;
 	}
 
+
 	//////////////////////////////////////////////////////////////////////////
 	// 빼기.	각 변수 타입마다 모두 만듬.
 	//////////////////////////////////////////////////////////////////////////
-	inline Packet &operator >> (unsigned char &value) {
-		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+	inline Packet &operator >> (BYTE &value) {
+		if (sizeof(value) > GetDataSize())
+			return *this;
+		BYTE *temp = (BYTE *) (_pBuffer + _readPos);
+		value = *temp;
 		_readPos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator >> (char &value) {
-		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+	inline Packet &operator >> (WORD &value) {
+		if (sizeof(value) > GetDataSize())
+			return *this;
+		WORD *temp = (WORD *) (_pBuffer + _readPos);
+		value = *temp;
 		_readPos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator >> (short &value) {
-		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+	inline Packet &operator >> (DWORD &value) {
+		if (sizeof(value) > GetDataSize())
+			return *this;
+		DWORD *temp = (DWORD *) (_pBuffer + _readPos);
+		value = *temp;
 		_readPos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator >> (unsigned short &value) {
-		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+	inline Packet &operator >> (QWORD &value) {
+		if (sizeof(value) > GetDataSize())
+			return *this;
+		QWORD *temp = (QWORD *) (_pBuffer + _readPos);
+		value = *temp;
 		_readPos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator >> (int &value) {
-		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+	inline Packet &operator >> (CHAR &value) {
+		if (sizeof(value) > GetDataSize())
+			return *this;
+		CHAR *temp = (CHAR *) (_pBuffer + _readPos);
+		value = *temp;
 		_readPos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator >> (unsigned long &value) {
-		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+	inline Packet &operator >> (SHORT &value) {
+		if (sizeof(value) > GetDataSize())
+			return *this;
+		SHORT *temp = (SHORT *) (_pBuffer + _readPos);
+		value = *temp;
 		_readPos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator >> (float &value) {
-		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+	inline Packet &operator >> (INT &value) {
+		if (sizeof(value) > GetDataSize())
+			return *this;
+		INT *temp = (INT *) (_pBuffer + _readPos);
+		value = *temp;
 		_readPos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator >> (__int64 &value) {
-		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+	inline Packet &operator >> (FLOAT &value) {
+		if (sizeof(value) > GetDataSize())
+			return *this;
+		FLOAT *temp = (FLOAT *) (_pBuffer + _readPos);
+		value = *temp;
 		_readPos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator >> (double &value) {
-		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+	inline Packet &operator >> (INT64 &value) {
+		if (sizeof(value) > GetDataSize())
+			return *this;
+		INT64 *temp = (INT64 *) (_pBuffer + _readPos);
+		value = *temp;;
 		_readPos += sizeof(value);
 		return *this;
 	}
-	inline Packet &operator >> (unsigned long long &value) {
-		memcpy_s(&value, sizeof(value), _pBuffer + _readPos, sizeof(value));
+	inline Packet &operator >> (DOUBLE &value) {
+		if (sizeof(value) > GetDataSize())
+			return *this;
+		DOUBLE *temp = (DOUBLE *) (_pBuffer + _readPos);
+		value = *temp;
 		_readPos += sizeof(value);
 		return *this;
 	}

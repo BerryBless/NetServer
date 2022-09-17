@@ -112,7 +112,7 @@ bool Packet::Decode() {
 	BYTE prevE = 0;
 	BYTE D;
 
-	for (int i = 1; i <= len ; ++i) {
+	for (int i = 1; i <= len; ++i) {
 		curE = (BYTE) *temp;
 		curP = curE ^ (prevE + FIXED_KEY + i);
 		D = curP ^ (prevP + randKey + i);
@@ -123,7 +123,7 @@ bool Packet::Decode() {
 
 		temp++;
 	}
-	
+
 	return VerifyCheckSum();
 }
 
