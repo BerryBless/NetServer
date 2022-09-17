@@ -416,6 +416,7 @@ bool CClient::TryConnectServer(SOCKET &socket, sockaddr_in &addr) {
 
 		if (err != WSAEISCONN) {
 			_LOG(dfLOG_LEVEL_ERROR, L"Unusual Connect Error %d", err);
+			return false;
 		}
 	}
 
@@ -430,6 +431,7 @@ bool CClient::NetMonitorProc() {
 	while (_isRunning) {
 
 		Sleep(1000);
+		if (!_isRunning) break;
 		OnMonitoringPerSec();
 		CalcTPS();
 	}

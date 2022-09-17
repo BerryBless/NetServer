@@ -17,7 +17,7 @@
 }while(0)
 #endif // !CRASH
 
-#define df_SENDTHREAD // 센드 스레드 적용
+//#define df_SENDTHREAD // 센드 스레드 적용
 
 // ----------------------------------------------
 // SESSION_ID

@@ -18,7 +18,7 @@
     <ClCompile Include="main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="MornitoringClient.cpp">
+    <ClCompile Include="MonitoringClient.cpp">
       <Filter>Main\Client</Filter>
     </ClCompile>
   </ItemGroup>
@@ -26,7 +26,7 @@
     <ClInclude Include="pch.h">
       <Filter>Util</Filter>
     </ClInclude>
-    <ClInclude Include="MornitoringClient.h">
+    <ClInclude Include="MonitoringClient.h">
       <Filter>Main\Client</Filter>
     </ClInclude>
   </ItemGroup>

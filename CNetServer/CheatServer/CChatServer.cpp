@@ -89,6 +89,7 @@ void CChatServer::BeginServer(const WCHAR *szConfigFile) {
 
 	// Connect Monitor Servoer
 	ASSERT_CRASH(_monitorServerConnection.ConnectMonitorServer(_monitorServerIP, _monitorServerPort, SERVER_TYPE::CHAT_SERVER));
+	//_monitorServerConnection.ConnectMonitorServer(_monitorServerIP, _monitorServerPort, SERVER_TYPE::CHAT_SERVER);
 	_LOG(dfLOG_LEVEL_NOTICE, L"ConnectMonitorServer");
 
 	// Start Chat Server

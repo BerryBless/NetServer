@@ -616,6 +616,7 @@ bool CServer::NetMonitorProc() {
 	while (!_isRunning) YieldProcessor;
 	while (_isRunning) {
 		Sleep(1000);
+		if (!_isRunning) break;
 		OnMonitoringPerSec();
 		CalcTPS();
 	}
@@ -626,18 +627,22 @@ bool CServer::NetMonitorProc() {
 bool CServer::SendThreadProc() {
 	while (!_isRunning) YieldProcessor;
 	while (_isRunning) {
-		//::Sleep(0);
+		::Sleep(1);
 		for (int i = 1; i <= this->_maxConnection; ++i) {
-			//::Sleep(0);
+			YieldProcessor;
 			if (InterlockedOr((LONG *) &_sessionContainer[i]._isAlive, FALSE) == FALSE)
 				continue;
+			YieldProcessor;
 			SESSION *pSession = AcquireSession(_sessionContainer[i]._ID, 889988);
+			YieldProcessor;
 			if (pSession == nullptr)
 				continue;
 
 			if (pSession->_sendQueue.GetSize() > 0)
 				SendPost(pSession, 123321);
+			YieldProcessor;
 			ReturnSession(pSession, 998899);
+			YieldProcessor;
 		}
 	}
 	return false;
@@ -651,7 +656,7 @@ bool CServer::TimeOutProc() {
 	while (_isRunning) {
 		timeoutTime = timeGetTime();
 		Sleep(_timeoutMillisec);
-		if (_isRunning == false) return false;
+		if (_isRunning == false) break;
 		for (int i = 1; i <= this->_maxConnection; ++i) {
 			if (InterlockedOr((LONG *) &_sessionContainer[i]._IOcount, 0) & 0x80000000 != 0) continue;
 			if (InterlockedOr((LONG *) &_sessionContainer[i]._isAlive, FALSE) == FALSE) continue;
@@ -1016,7 +1021,7 @@ SESSION *CServer::AcquireSession(SESSION_ID sessionID, int logic) {
 	}
 
 	return pSession;
-}
+	}
 
 void CServer::ReturnSession(SESSION *pSession, int logic) {
 	if (pSession == NULL) CRASH();
@@ -1047,7 +1052,7 @@ logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), p
 #else
 	DecrementIOCount(pSession, logic);
 #endif // !df_LOGGING_SESSION_LOGIC
-}
+	}
 
 
 bool CServer::ReleaseSession(SESSION *pSession, int logic) {

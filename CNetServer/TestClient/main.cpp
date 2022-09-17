@@ -1,7 +1,7 @@
 #include "pch.h"
-#include "MornitoringClient.h"
+#include "MonitoringClient.h"
 int main() {
-	MornitoringClient monitor;
+	MonitoringClient monitor(L"MonitoringToolConfig.ini");
 	monitor.ConnectMonitor();
 	Sleep(INFINITE);
 	return 0;

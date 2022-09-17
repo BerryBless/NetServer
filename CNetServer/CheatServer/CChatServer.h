@@ -16,7 +16,7 @@
 #define MASSAGE_MAX_LEN			512
 #define MASSAGE_MAX_SIZE		1024
 
-#define UPDATE_THREAD // 업데이트 스레드 적용
+//#define UPDATE_THREAD // 업데이트 스레드 적용
 
 class CChatServer : public CServer {
 
