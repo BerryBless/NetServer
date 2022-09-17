@@ -16,7 +16,7 @@
 #define MASSAGE_MAX_LEN			512
 #define MASSAGE_MAX_SIZE		1024
 
-//#define UPDATE_THREAD // 업데이트 스레드 적용
+#define UPDATE_THREAD // 업데이트 스레드 적용
 
 class CChatServer : public CServer {
 
@@ -119,29 +119,29 @@ private:
 	tm _timeFormet;
 	time_t _startTime;
 
-	DWORD								_curLogTimer;
-	DWORD								_preLogTimer;
+	DWORD									_curLogTimer;
+	DWORD									_preLogTimer;
 
 private:
 	// Monitor
-	SMClient							_monitorServerConnection;
-	HardWareMoniter						_hardMoniter;
-	ProcessMoniter						_procMonitor;
+	SMClient								_monitorServerConnection;
+	HardWareMoniter							_hardMoniter;
+	ProcessMoniter							_procMonitor;
 
-	LONG								_SectorMoveCalc;
-	LONG								_SectorMoveTPS;
-	LONG								_ChatRecvCalc;
-	LONG								_ChatRecvTPS;
-	LONG								_ChatSendCalc;
-	LONG								_ChatSendTPS;
-	LONG								_LoginCalc;
-	LONG								_LoginTPS;
-	LONG								_LeaveCalc;
-	LONG								_LeaveTPS;
-	LONG								_UpdateCalc;
-	LONG								_UpdateTPS;
+	LONG									_SectorMoveCalc;
+	LONG									_SectorMoveTPS;
+	LONG									_ChatRecvCalc;
+	LONG									_ChatRecvTPS;
+	LONG									_ChatSendCalc;
+	LONG									_ChatSendTPS;
+	LONG									_LoginCalc;
+	LONG									_LoginTPS;
+	LONG									_LeaveCalc;
+	LONG									_LeaveTPS;
+	LONG									_UpdateCalc;
+	LONG									_UpdateTPS;
 
-	LONGLONG							_SectorAroundCount;
-	LONGLONG							_totalSectorAroundSend;
+	LONGLONG								_SectorAroundCount;
+	LONGLONG								_totalSectorAroundSend;
 };
 

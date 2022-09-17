@@ -164,7 +164,6 @@
     <ClInclude Include="CThread.h" />
     <ClInclude Include="DBConnection.h" />
     <ClInclude Include="DBConnectionPool.h" />
-    <ClInclude Include="NetCoreErrorDefine.h" />
     <ClInclude Include="ObjectPool.hpp" />
     <ClInclude Include="ObjectPool_TLS.hpp" />
     <ClInclude Include="CommonProtocol.h" />

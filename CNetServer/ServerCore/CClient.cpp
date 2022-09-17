@@ -241,6 +241,7 @@ bool CClient::OnGQCS() {
 	SESSION_ID completionKey = 0;
 	WSAOVERLAPPED *pOverlapped = nullptr;
 	SESSION *pSession = nullptr;
+	while (!_isRunning) YieldProcessor;
 	while (_isRunning) {
 		//---------------------------
 		// GQCS()
@@ -425,6 +426,7 @@ bool CClient::NetMonitorProc() {
 	//---------------------------
 	// 1초마다 TPS계산
 	//---------------------------
+	while (!_isRunning) YieldProcessor;
 	while (_isRunning) {
 
 		Sleep(1000);

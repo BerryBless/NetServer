@@ -4,7 +4,7 @@
 #include <time.h>
 #include <stdio.h>
 
-CMonitoringServer::CMonitoringServer() :CServer (false){
+CMonitoringServer::CMonitoringServer() :CServer(false) {
 	_pMonitorToolServer = new CMonitorToolServer;
 	_preLogTimer = _curLogTimer = timeGetTime();
 }
@@ -12,7 +12,7 @@ CMonitoringServer::CMonitoringServer() :CServer (false){
 CMonitoringServer::~CMonitoringServer() {
 }
 
-void CMonitoringServer::BeginServer(u_long IP,  u_short monitorSPort, u_short toolSPort, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
+void CMonitoringServer::BeginServer(u_long IP, u_short monitorSPort, u_short toolSPort, BYTE workerThreadCount, BYTE maxRunThreadCount, BOOL nagle, u_short maxConnection) {
 	_isRunning = Start(IP, monitorSPort, workerThreadCount, maxRunThreadCount, nagle, maxConnection);
 	_pMonitorToolServer->BeginServer(IP, toolSPort, workerThreadCount, maxRunThreadCount, nagle, maxConnection);
 }
@@ -121,11 +121,28 @@ void CMonitoringServer::OnTimeout(SESSION_ID sessionID) {
 }
 
 void CMonitoringServer::OnMonitoringPerSec() {
-	/*_curLogTimer = timeGetTime();
-	if (_curLogTimer - _preLogTimer >= 60000) {
-
-	}*/
-	printf_s("RUNNING SERVER...\n");
+	_curLogTimer = timeGetTime();
+	if (_curLogTimer - _preLogTimer >= 6000) {
+		_preLogTimer = _curLogTimer;
+		if (_C_RunningFlag) {
+			printf_s("=============================================================\n");
+			printf_s("chatserver :: ON\n");
+			printf_s("CPU\t\t{ TOTAL[%lld], TICK[%lld], min[%lld], MAX[%lld] }\n",
+				_C_CPU[this->TOTAL], _C_CPU[this->TICK], _C_CPU[this->MIN], _C_CPU[this->MAX]);
+			printf_s("PrivateBytes\t{ TOTAL[%lld], TICK[%lld], min[%lld], MAX[%lld] }\n",
+				_C_PrivateBytes[this->TOTAL], _C_PrivateBytes[this->TICK], _C_PrivateBytes[this->MIN], _C_PrivateBytes[this->MAX]);
+			printf_s("PacketPoolSize\t{ TOTAL[%lld], TICK[%lld], min[%lld], MAX[%lld] }\n",
+				_C_PacketPoolSize[this->TOTAL], _C_PacketPoolSize[this->TICK], _C_PacketPoolSize[this->MIN], _C_PacketPoolSize[this->MAX]);
+			printf_s("SessionCount\t{ TOTAL[%lld], TICK[%lld], min[%lld], MAX[%lld] }\n",
+				_C_SessionCount[this->TOTAL], _C_SessionCount[this->TICK], _C_SessionCount[this->MIN], _C_SessionCount[this->MAX]);
+			printf_s("PlayerCount\t{ TOTAL[%lld], TICK[%lld], min[%lld], MAX[%lld] }\n",
+				_C_PlayerCount[this->TOTAL], _C_PlayerCount[this->TICK], _C_PlayerCount[this->MIN], _C_PlayerCount[this->MAX]);
+			printf_s("UpdateTPS\t{ TOTAL[%lld], TICK[%lld], min[%lld], MAX[%lld] }\n",
+				_C_UpdateTPS[this->TOTAL], _C_UpdateTPS[this->TICK], _C_UpdateTPS[this->MIN], _C_UpdateTPS[this->MAX]);
+			printf_s("JobQueue\t{ TOTAL[%lld], TICK[%lld], min[%lld], MAX[%lld] }\n",
+				_C_JobQueue[this->TOTAL], _C_JobQueue[this->TICK], _C_JobQueue[this->MIN], _C_JobQueue[this->MAX]);
+		}
+	}
 }
 
 void CMonitoringServer::PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type) {
@@ -156,7 +173,7 @@ void CMonitoringServer::PacketProcMonitorDataUpdate(Packet *pPacket, SESSION_ID 
 	BYTE dataType;
 	int dataValue;
 	int timeStamp;
-	*pPacket >> serverNo>> dataType >> dataValue >> timeStamp;
+	*pPacket >> serverNo >> dataType >> dataValue >> timeStamp;
 	ServerConnect *pConnection = FindServer(sessionID);
 	ASSERT_CRASH(pConnection != nullptr);
 	if (pConnection->_isLogin == false) {
@@ -187,7 +204,6 @@ void CMonitoringServer::PacketProcMonitorDataUpdate(Packet *pPacket, SESSION_ID 
 }
 
 void CMonitoringServer::ResetChatServerData() {
-	this->_C_RunningFlag = false;
 	memmove_s(this->_C_CPU, sizeof(_Template), _Template, sizeof(_Template));
 	memmove_s(this->_C_PrivateBytes, sizeof(_Template), _Template, sizeof(_Template));
 	memmove_s(this->_C_PacketPoolSize, sizeof(_Template), _Template, sizeof(_Template));
@@ -201,7 +217,9 @@ void CMonitoringServer::DataUpdateChatServer(BYTE dataType, int dataValue, int t
 	ULONGLONG *target = nullptr;
 	WCHAR dataName[20];
 	switch (dataType) {
-	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_ON_OFF:	_C_RunningFlag = true; break;
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_ON_OFF:
+		_C_RunningFlag = !_C_RunningFlag;
+		break;
 	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_CPU_USAGE:
 		target = _C_CPU;
 		swprintf_s(dataName, L"CPU_USAGE");
@@ -238,7 +256,7 @@ void CMonitoringServer::DataUpdateChatServer(BYTE dataType, int dataValue, int t
 		target[this->MIN] = min(target[this->MIN], dataValue);
 		target[this->MAX] = max(target[this->MAX], dataValue);
 		++target[this->TICK];
-	QueryDataBase(SERVER_TYPE::CHAT_SERVER, dataName, target[this->TOTAL], target[this->MIN], target[this->MAX], target[this->TICK]);
+		QueryDataBase(SERVER_TYPE::CHAT_SERVER, dataName, target[this->TOTAL], target[this->MIN], target[this->MAX], target[this->TICK]);
 	}
 }
 
@@ -275,7 +293,7 @@ void CMonitoringServer::QueryDataBase(int serverNo, const WCHAR *dataType, ULONG
 	time_t now = time(nullptr);
 	tm t;
 	localtime_s(&t, &now);
-	WCHAR query[512]; 
+	WCHAR query[512];
 	int idx = -1;
 	switch (serverNo) {
 	case SERVER_TYPE::CHAT_SERVER:
@@ -287,7 +305,7 @@ void CMonitoringServer::QueryDataBase(int serverNo, const WCHAR *dataType, ULONG
 	swprintf_s(query, _QUERY_FORMAT[idx], t.tm_year % 100, t.tm_mon + 1, dataType, total, min, max, tick);
 	if (dbConn->Execute(query) == false) {
 		wprintf_s(L"%s", query);
-		swprintf_s(query, _QUERY_FORMAT[idx+1], t.tm_year % 100, t.tm_mon + 1);
+		swprintf_s(query, _QUERY_FORMAT[idx + 1], t.tm_year % 100, t.tm_mon + 1);
 		ASSERT_CRASH(dbConn->Execute(query));
 
 		swprintf_s(query, _QUERY_FORMAT[idx], t.tm_year % 100, t.tm_mon + 1, dataType, total, min, max, tick);

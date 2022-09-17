@@ -11,7 +11,7 @@
 #define dfLOG_BUF_SIZE 512 // 로그 버퍼 사이즈
 CLogger g_sysLogger;
 
-CLogger::CLogger() : _logLevel{ 0 }, _filePath{ 0 }, _logCount{0}{
+CLogger::CLogger() : _logLevel{ 0 }, _filePath{ 0 }, _logCount{ 0 }{
 	CLogger::Initialize();
 	CLogger::SetDirectory(L"Log\\LibraryLog");
 	CLogger::SetLogLevel(dfLOG_LEVEL_ERROR);

@@ -75,7 +75,7 @@ CParser::CParser(const WCHAR *FILEPATH) {
 
 	// buffer를 동적할당
 	buffer = new char[_filesize];
-	int ret=0;
+	int ret = 0;
 	// buffer에 파일내용 한번에 넣기
 	ret = fread_s(buffer, _filesize, _filesize, 1, fp);
 	if (ret == 0) {

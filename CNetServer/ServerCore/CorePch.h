@@ -1,7 +1,7 @@
 
 /*
 프로젝트 설정
-1. General -> Output Directory -> $(SolutionDir)Binary\$(Configuration)\
+1. General -> Output Directory -> $(SolutionDir)Binary\$(Configuration)\$(ProjectName)\
 2. pch 적용
 3. 최적화 컴파일 끄기
 4. VC++ Directories

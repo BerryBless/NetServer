@@ -17,6 +17,7 @@ class CMonitoringServer : public CServer {
 	struct ServerConnect {
 		SESSION_ID _id = 0;
 		int _serverNo = 0;
+		bool _isRunning = false;
 		bool _isLogin = false;
 	};
 public:
@@ -36,11 +37,11 @@ public:
 
 private:
 	virtual bool OnConnectionRequest(WCHAR *IPstr, DWORD IP, USHORT Port);
-	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, SESSION_ID sessionID) ;
+	virtual void OnClientJoin(WCHAR *ipStr, DWORD ip, USHORT port, SESSION_ID sessionID);
 	virtual void OnClientLeave(SESSION_ID sessionID);
-	virtual void OnRecv(SESSION_ID sessionID, Packet *pPacket) ;
+	virtual void OnRecv(SESSION_ID sessionID, Packet *pPacket);
 	virtual void OnSend(SESSION_ID sessionID);
-	virtual void OnError(int errorcode, const WCHAR *log) ;
+	virtual void OnError(int errorcode, const WCHAR *log);
 	virtual void OnTimeout(SESSION_ID sessionID);
 	virtual void OnMonitoringPerSec(); // 1 초마다 갱신되는 모니터링
 

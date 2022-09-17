@@ -66,9 +66,6 @@
     <ClInclude Include="Session.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="NetCoreErrorDefine.h">
-      <Filter>Network</Filter>
-    </ClInclude>
     <ClInclude Include="RingBuffer.h">
       <Filter>Network</Filter>
     </ClInclude>

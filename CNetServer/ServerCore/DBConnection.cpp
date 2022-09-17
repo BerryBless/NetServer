@@ -71,7 +71,7 @@ INT DBConnection::GetRowCount() {
 	SQLRETURN ret = ::SQLRowCount(_statement, OUT & count);
 
 	if (ret == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO)
-		return (INT)count;
+		return (INT) count;
 
 	return -1;
 }

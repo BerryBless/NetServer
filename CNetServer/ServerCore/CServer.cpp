@@ -176,7 +176,7 @@ void CServer::Startup() {
 		_LOG(dfLOG_LEVEL_NOTICE, L"///// Server Already Running");
 		return;
 	}
-	
+
 	//---------------------------
 	// 문자열 로컬 세팅
 	//---------------------------
@@ -188,7 +188,7 @@ void CServer::Startup() {
 	//---------------------------
 	timeBeginPeriod(1);
 
-	
+
 
 	_LOG(dfLOG_LEVEL_NOTICE, L"==============================START SERVER==============================");
 
@@ -319,7 +319,8 @@ void CServer::BeginThreads() {
 				pServer->OnGQCS();
 			},
 			this);
-		if (ret == false)CRASH();
+		if (ret == false)
+			CRASH();
 	}
 
 	// ACCEPT
@@ -363,6 +364,8 @@ bool CServer::OnGQCS() {
 	SESSION_ID completionKey = 0;
 	WSAOVERLAPPED *pOverlapped = nullptr;
 	SESSION *pSession = nullptr;
+	while (!_isRunning) YieldProcessor;
+
 	while (_isRunning) {
 		//---------------------------
 		// GQCS()
@@ -421,9 +424,9 @@ bool CServer::OnGQCS() {
 		//---------------------------
 		// 	   IOCount --
 		//---------------------------
-		DecrementIOCount(pSession, dfLOGIC_WORKER + dfLOGIC_DECREMENT_IO);
-		//if (InterlockedDecrement(&pSession->_IOcount) == 0)
-		//	ReleaseSession(pSession, dfLOGIC_WORKER + dfLOGIC_DECREMENT_IO);
+		//DecrementIOCount(pSession, dfLOGIC_WORKER + dfLOGIC_DECREMENT_IO);
+		if (InterlockedDecrement(&pSession->_IOcount) == 0)
+			ReleaseSession(pSession, dfLOGIC_WORKER + dfLOGIC_DECREMENT_IO);
 
 	}
 	return _isRunning;
@@ -531,6 +534,7 @@ bool CServer::AcceptProc() {
 	//---------------------------
 	SOCKADDR_IN clientaddr;
 	SOCKET clientsock;
+	while (!_isRunning) YieldProcessor;
 	while (_isRunning) {
 
 		//---------------------------
@@ -589,9 +593,9 @@ bool CServer::AcceptProc() {
 
 
 		// 세션 만들때 _IOcount --
-		DecrementIOCount(pSession, dfLOGIC_ACCEPT);
-		//if (InterlockedDecrement(&pSession->_IOcount) == 0)
-		//	ReleaseSession(pSession, dfLOGIC_ACCEPT);
+		//DecrementIOCount(pSession, dfLOGIC_ACCEPT);
+		if (InterlockedDecrement(&pSession->_IOcount) == 0)
+			ReleaseSession(pSession, dfLOGIC_ACCEPT);
 
 
 		//---------------------------
@@ -609,7 +613,7 @@ bool CServer::NetMonitorProc() {
 	//---------------------------
 	// 1초마다 TPS계산
 	//---------------------------
-
+	while (!_isRunning) YieldProcessor;
 	while (_isRunning) {
 		Sleep(1000);
 		OnMonitoringPerSec();
@@ -620,6 +624,7 @@ bool CServer::NetMonitorProc() {
 }
 #ifdef df_SENDTHREAD
 bool CServer::SendThreadProc() {
+	while (!_isRunning) YieldProcessor;
 	while (_isRunning) {
 		//::Sleep(0);
 		for (int i = 1; i <= this->_maxConnection; ++i) {
@@ -629,6 +634,7 @@ bool CServer::SendThreadProc() {
 			SESSION *pSession = AcquireSession(_sessionContainer[i]._ID, 889988);
 			if (pSession == nullptr)
 				continue;
+
 			if (pSession->_sendQueue.GetSize() > 0)
 				SendPost(pSession, 123321);
 			ReturnSession(pSession, 998899);
@@ -641,6 +647,7 @@ bool CServer::SendThreadProc() {
 
 bool CServer::TimeOutProc() {
 	DWORD timeoutTime;
+	while (!_isRunning) YieldProcessor;
 	while (_isRunning) {
 		timeoutTime = timeGetTime();
 		Sleep(_timeoutMillisec);
@@ -723,9 +730,9 @@ bool CServer::SendPost(SESSION *pSession, int logic) {
 			//	Error Fail WSASend
 			//  IOCount --
 			//---------------------------
-			DecrementIOCount(pSession, logic + dfLOGIC_DECREMENT_IO);
-			//if (InterlockedDecrement(&pSession->_IOcount) == 0)
-			//	ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
+			//DecrementIOCount(pSession, logic + dfLOGIC_DECREMENT_IO);
+			if (InterlockedDecrement(&pSession->_IOcount) == 0)
+				ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
 
 			//PRO_END(L"SendPost");
 			return false;
@@ -789,9 +796,9 @@ bool CServer::RecvPost(SESSION *pSession, int logic) {
 			//	Error : Fail WSARecv
 			//  IOCount --
 			//---------------------------
-			DecrementIOCount(pSession, logic + dfLOGIC_DECREMENT_IO);
-			//if (InterlockedDecrement(&pSession->_IOcount) == 0)
-			//	ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
+			//DecrementIOCount(pSession, logic + dfLOGIC_DECREMENT_IO);
+			if (InterlockedDecrement(&pSession->_IOcount) == 0)
+				ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
 			//PRO_END(L"RecvPost");
 			return false;
 		}
