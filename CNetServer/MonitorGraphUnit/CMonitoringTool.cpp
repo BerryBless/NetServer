@@ -106,8 +106,11 @@ void CMonitoringTool::PacketProcMonitorToolDataUpdate(Packet *pPacket, SESSION_I
 	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_CPU_USAGE:
 		_C_CPU->InsertData(dataValue);
 		break;
-	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PRIVATE_BYTES:
-		_C_PrivateBytes->InsertData(dataValue);
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_RECEIVE_PACKET_COUNT:
+		_C_RecvPacket->InsertData(dataValue);
+		break;
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_SEND_PACKET_COUNT:
+		_C_SendPacket->InsertData(dataValue);
 		break;
 	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_SESSION_COUNTS:
 		_C_SessionCount->InsertData(dataValue);
@@ -138,14 +141,16 @@ void CMonitoringTool::MakePacketMonitorToolResLogin(Packet *pPacket, const char 
 void CMonitoringTool::CreateView(HINSTANCE hInst, HWND hWnd) {
 	_C_CPU = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"CPU USE",
 		/* ux */20, /* uy */ 10, /* xsize */300, /* ysize*/ 200, /* max value */ 100, /* Alert value */85);
-	_C_PrivateBytes = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Recv Packet Count",
+	_C_RecvPacket = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Recv Packet Count",
 		/* ux */340, /* uy */ 10, /* xsize */300, /* ysize*/ 200, /* max value */ 30000, /* Alert value */30000);
-	_C_PacketPoolSize = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Packet Use Count",
-		/* ux */660, /* uy */ 10, /* xsize */300, /* ysize*/ 200, /* max value */ 15000, /* Alert value */15000);
+	_C_SendPacket = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Send Packet Count",
+		/* ux */660, /* uy */ 10, /* xsize */300, /* ysize*/ 200, /* max value */ 1000000, /* Alert value */0);
 	_C_SessionCount = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Session Count",
 		/* ux */20, /* uy */ 230, /* xsize */300, /* ysize*/ 200, /* max value */ 20000, /* Alert value */15001);
 	_C_PlayerCount = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Player Count",
 		/* ux */340, /* uy */ 230, /* xsize */300, /* ysize*/ 200, /* max value */ 20000, /* Alert value */15001);
+	_C_PacketPoolSize = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Packet Use Count",
+		/* ux */660, /* uy */ 230, /* xsize */300, /* ysize*/ 200, /* max value */ 15000, /* Alert value */15000);
 	_C_UpdateTPS = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Update TPS",
 		/* ux */20, /* uy */ 460, /* xsize */300, /* ysize*/ 200, /* max value */ 20000, /* Alert value */0);
 	_C_JobQueue = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"JobQueue",

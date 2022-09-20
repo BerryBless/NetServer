@@ -58,7 +58,8 @@ private:
 private:
 
 	CMonitorGraphUnit *_C_CPU;
-	CMonitorGraphUnit *_C_PrivateBytes;
+	CMonitorGraphUnit *_C_RecvPacket;
+	CMonitorGraphUnit *_C_SendPacket;
 	CMonitorGraphUnit *_C_PacketPoolSize;
 	CMonitorGraphUnit *_C_SessionCount;
 	CMonitorGraphUnit *_C_PlayerCount;

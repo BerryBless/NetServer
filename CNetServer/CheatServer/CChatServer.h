@@ -89,11 +89,6 @@ private:
 	inline BOOLEAN TrySectorLock(WORD x, WORD y) { return TryAcquireSRWLockExclusive(&this->_sector[y][x]._lock); }
 
 private:
-	// Monitoring
-	void PrintMonitor(FILE *fp);
-	void PrintFileMonitor();
-
-private:
 	DWORD									_isRunning;
 
 	// ConfigData

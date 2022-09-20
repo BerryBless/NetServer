@@ -130,7 +130,9 @@ void CMonitoringServer::OnMonitoringPerSec() {
 			printf_s("CPU\t\t{ TOTAL[%lld], TICK[%lld], min[%lld], MAX[%lld] }\n",
 				_C_CPU[this->TOTAL], _C_CPU[this->TICK], _C_CPU[this->MIN], _C_CPU[this->MAX]);
 			printf_s("PrivateBytes\t{ TOTAL[%lld], TICK[%lld], min[%lld], MAX[%lld] }\n",
-				_C_PrivateBytes[this->TOTAL], _C_PrivateBytes[this->TICK], _C_PrivateBytes[this->MIN], _C_PrivateBytes[this->MAX]);
+				_C_RecvPacket[this->TOTAL], _C_RecvPacket[this->TICK], _C_RecvPacket[this->MIN], _C_RecvPacket[this->MAX]);
+			printf_s("PrivateBytes\t{ TOTAL[%lld], TICK[%lld], min[%lld], MAX[%lld] }\n",
+				_C_SendPacket[this->TOTAL], _C_SendPacket[this->TICK], _C_SendPacket[this->MIN], _C_SendPacket[this->MAX]);
 			printf_s("PacketPoolSize\t{ TOTAL[%lld], TICK[%lld], min[%lld], MAX[%lld] }\n",
 				_C_PacketPoolSize[this->TOTAL], _C_PacketPoolSize[this->TICK], _C_PacketPoolSize[this->MIN], _C_PacketPoolSize[this->MAX]);
 			printf_s("SessionCount\t{ TOTAL[%lld], TICK[%lld], min[%lld], MAX[%lld] }\n",
@@ -205,7 +207,8 @@ void CMonitoringServer::PacketProcMonitorDataUpdate(Packet *pPacket, SESSION_ID 
 
 void CMonitoringServer::ResetChatServerData() {
 	memmove_s(this->_C_CPU, sizeof(_Template), _Template, sizeof(_Template));
-	memmove_s(this->_C_PrivateBytes, sizeof(_Template), _Template, sizeof(_Template));
+	memmove_s(this->_C_RecvPacket, sizeof(_Template), _Template, sizeof(_Template));
+	memmove_s(this->_C_SendPacket, sizeof(_Template), _Template, sizeof(_Template));
 	memmove_s(this->_C_PacketPoolSize, sizeof(_Template), _Template, sizeof(_Template));
 	memmove_s(this->_C_SessionCount, sizeof(_Template), _Template, sizeof(_Template));
 	memmove_s(this->_C_PlayerCount, sizeof(_Template), _Template, sizeof(_Template));
@@ -224,9 +227,13 @@ void CMonitoringServer::DataUpdateChatServer(BYTE dataType, int dataValue, int t
 		target = _C_CPU;
 		swprintf_s(dataName, L"CPU_USAGE");
 		break;
-	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PRIVATE_BYTES:
-		target = _C_PrivateBytes;
-		swprintf_s(dataName, L"PRIVATE_BYTES");
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_RECEIVE_PACKET_COUNT:
+		target = _C_RecvPacket;
+		swprintf_s(dataName, L"Recv_Packet");
+		break;
+	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_SEND_PACKET_COUNT:
+		target = _C_RecvPacket;
+		swprintf_s(dataName, L"Send_Packet");
 		break;
 	case CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_SESSION_COUNTS:
 		target = _C_SessionCount;
@@ -257,6 +264,7 @@ void CMonitoringServer::DataUpdateChatServer(BYTE dataType, int dataValue, int t
 		target[this->MAX] = max(target[this->MAX], dataValue);
 		++target[this->TICK];
 		QueryDataBase(SERVER_TYPE::CHAT_SERVER, dataName, target[this->TOTAL], target[this->MIN], target[this->MAX], target[this->TICK]);
+		wprintf_s(L"%s [%d]\n", dataName, dataValue);
 	}
 }
 

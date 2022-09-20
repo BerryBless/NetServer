@@ -121,6 +121,13 @@ CParser::CParser(const WCHAR *FILEPATH) {
 			// 짝이되는 대괄호를 만났으니.. 초기화
 			_start = -1;
 		}
+		// TODO 주석 처리
+		if (*(_buffer + index) == L'/' && *(_buffer + index + 1) == L'/') {
+			while (*(_buffer + index) != L'\n' && index < _filesize) {
+				*(_buffer + index) = L' ';
+				++index;
+			}
+		}
 	}
 
 	// index 초기값

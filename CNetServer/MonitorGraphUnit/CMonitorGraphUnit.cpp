@@ -166,6 +166,7 @@ BOOL CMonitorGraphUnit::PutThis(void) {
 BOOL CMonitorGraphUnit::InsertData(int iData) {
 	// 창 크기에 따른 데이터의 최대 개수
 	// 너비의 1/3 만 넣고, x간 간격이 3
+	_iDataMax = max(iData, _iDataMax);
 	int max_X = (int) ((float) _iWindowWidth / 3.2f);
 
 	// 데이터 넣기

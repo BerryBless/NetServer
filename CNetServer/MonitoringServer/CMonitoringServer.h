@@ -114,7 +114,8 @@ private:
 	//CHAT SERVER DATA
 	DWORD									_C_RunningFlag = false;
 	ULONGLONG								_C_CPU[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
-	ULONGLONG								_C_PrivateBytes[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
+	ULONGLONG								_C_RecvPacket[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
+	ULONGLONG								_C_SendPacket[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
 	ULONGLONG								_C_PacketPoolSize[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
 	ULONGLONG								_C_SessionCount[4] = { 0,MAX_VALUE,MIN_VALUE,0 };
 	ULONGLONG								_C_PlayerCount[4] = { 0,MAX_VALUE,MIN_VALUE,0 };

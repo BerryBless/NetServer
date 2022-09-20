@@ -617,8 +617,8 @@ bool CServer::NetMonitorProc() {
 	while (_isRunning) {
 		Sleep(1000);
 		if (!_isRunning) break;
-		OnMonitoringPerSec();
 		CalcTPS();
+		OnMonitoringPerSec();
 	}
 
 	return _isRunning;
