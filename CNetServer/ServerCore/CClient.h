@@ -42,7 +42,7 @@ protected:
 	virtual void OnRecv(SESSION_ID sessionID, Packet *pPacket) = 0;//< 패킷 수신 완료 후
 	virtual void OnSend(SESSION_ID sessionID) = 0; //< 패킷 송신 완료 후
 	virtual void OnError(int errorcode, const WCHAR *) = 0;//< 에러났을때 // TODO errorcode
-	virtual void OnMonitoringPerSec() = 0;
+	//virtual void OnMonitoringPerSec() = 0;
 
 
 
@@ -57,13 +57,13 @@ private:
 	bool SendProc(SESSION *pSession, DWORD transferredSize);
 	bool RecvProc(SESSION *pSession, DWORD transferredSize);
 	bool TryConnectServer(SOCKET &socket, sockaddr_in &addr);
-	bool NetMonitorProc();
+	//bool NetMonitorProc();
 
-	bool SendPost(SESSION *pSession, int logic = 0);
-	bool RecvPost(SESSION *pSession, int logic = 0);
+	bool SendPost(SESSION *pSession  = 0);
+	bool RecvPost(SESSION *pSession  = 0);
 	void PostClientLeave(SESSION_ID sessionID); // leave 컨텐츠처리를 스레드 분리를 위한 함수
 	bool TryGetRecvPacket(SESSION *pSession, Packet *pPacket);
-	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic = 0);
+	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv  = 0);
 
 
 	void CreateIOCP();
@@ -76,12 +76,12 @@ private:
 	// ==============================================
 	// Session Management
 	// ==============================================
-	SESSION *AcquireSession(SESSION_ID sessionID, int logic = 0);
-	void ReturnSession(SESSION *pSession, int logic = 0);
-	inline bool IncrementIOCount(SESSION *pSession, int logic = 0);
-	inline bool DecrementIOCount(SESSION *pSession, int logic = 0);
+	SESSION *AcquireSession(SESSION_ID sessionID  = 0);
+	void ReturnSession(SESSION *pSession  = 0);
+	inline bool IncrementIOCount(SESSION *pSession  = 0);
+	inline bool DecrementIOCount(SESSION *pSession  = 0);
 
-	bool ReleaseSession(SESSION *pSession, int logic);
+	bool ReleaseSession(SESSION *pSession );
 
 	inline void SetSessionActiveTimer(SESSION *pSession) { InterlockedExchange(&pSession->_lastActiveTime, timeGetTime()); }
 
@@ -134,7 +134,7 @@ private:
 	// THREAD
 	// ----------------------------------------------
 	CThread									*_tWorkers;
-	CThread									_tMonitoring = CThread(L"LanClient Monitoring Thread");
+	//CThread									_tMonitoring = CThread(L"LanClient Monitoring Thread");
 
 	// ----------------------------------------------
 	// Session Container 
@@ -147,7 +147,7 @@ protected:
 	// ==============================================
 	// 모니터링
 	// ==============================================
-	struct MoniteringInfo {
+	/*struct MoniteringInfo {
 		DWORD								_workerThreadCount;
 		DWORD								_runningThreadCount;
 		ULONGLONG							_sessionCnt;
@@ -166,29 +166,29 @@ protected:
 		ULONGLONG							_maxCapacity;
 		ULONGLONG							_stackSize;
 		ULONGLONG							_stackCapacity;
-	};
+	};*/
 
 
-	// 모니터링 변수
+	//// 모니터링 변수
 	volatile alignas(64) ULONGLONG			_curSessionCount;
 	volatile alignas(64) ULONGLONG			_totalPacket;
-	volatile alignas(64) ULONGLONG			_recvPacketCalc;
-	volatile alignas(64) ULONGLONG			_recvPacketPerSec;
-	volatile alignas(64) LONGLONG			_sendedPacketCalc;
-	volatile alignas(64) LONGLONG			_sendedPacketPerSec;
-	volatile alignas(64) ULONGLONG			_sendPacketCalc;
-	volatile alignas(64) ULONGLONG			_sendPacketPerSec;
-	volatile alignas(64) LONG64				_sendProcessedBytesCalc;
-	volatile alignas(64) LONG64				_sendProcessedBytesTPS;
-	volatile alignas(64) LONG64				_totalProcessedByte;
-	volatile alignas(64) ULONGLONG			_connectCalc;
-	volatile alignas(64) ULONGLONG			_connectPerSec;
+	//volatile alignas(64) ULONGLONG			_recvPacketCalc;
+	//volatile alignas(64) ULONGLONG			_recvPacketPerSec;
+	//volatile alignas(64) LONGLONG			_sendedPacketCalc;
+	//volatile alignas(64) LONGLONG			_sendedPacketPerSec;
+	//volatile alignas(64) ULONGLONG			_sendPacketCalc;
+	//volatile alignas(64) ULONGLONG			_sendPacketPerSec;
+	//volatile alignas(64) LONG64				_sendProcessedBytesCalc;
+	//volatile alignas(64) LONG64				_sendProcessedBytesTPS;
+	//volatile alignas(64) LONG64				_totalProcessedByte;
+	//volatile alignas(64) ULONGLONG			_connectCalc;
+	//volatile alignas(64) ULONGLONG			_connectPerSec;
 	volatile alignas(64) ULONGLONG			_totalConnectSession;
 	volatile alignas(64) ULONGLONG			_totalDisconnectSession;
 
-	void CalcTPS();
-	MoniteringInfo GetMoniteringInfo();
+	//void CalcTPS();
+	//MoniteringInfo GetMoniteringInfo();
 
-	void ResetMonitor();
+	//void ResetMonitor();
 };
 

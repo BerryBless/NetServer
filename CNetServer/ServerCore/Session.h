@@ -1,9 +1,9 @@
 #pragma once
-#include "Types.h"
+#include "Define.h"
 #include "Queue.hpp"
 #include "SerializingBuffer.h"
 #include "RingBuffer.h"
-//#define df_LOGGING_SESSION_LOGIC 1000
+#define df_LOGGING_SESSION_LOGIC 1000
 #define dfSESSION_SEND_PACKER_BUFFER_SIZE 200
 
 struct SESSION {
@@ -32,12 +32,6 @@ struct SESSION {
 	alignas(64) DWORD _sendPacketCnt;
 	alignas(64) DWORD _isAlive;
 
-#ifdef df_LOGGING_SESSION_LOGIC
-	alignas(64) DWORD _IncIndex;
-	alignas(64) DWORD _DecIndex;
-	int _IncLog[df_LOGGING_SESSION_LOGIC] = { 0 };
-	int _DecLog[df_LOGGING_SESSION_LOGIC] = { 0 };
-#endif // df_LOGGING_SESSION_LOGIC
 
 	SESSION() {
 		_ID = 0;

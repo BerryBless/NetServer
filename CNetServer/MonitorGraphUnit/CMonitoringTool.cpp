@@ -142,18 +142,18 @@ void CMonitoringTool::CreateView(HINSTANCE hInst, HWND hWnd) {
 	_C_CPU = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"CPU USE",
 		/* ux */20, /* uy */ 10, /* xsize */300, /* ysize*/ 200, /* max value */ 100, /* Alert value */85);
 	_C_RecvPacket = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Recv Packet Count",
-		/* ux */340, /* uy */ 10, /* xsize */300, /* ysize*/ 200, /* max value */ 30000, /* Alert value */30000);
+		/* ux */340, /* uy */ 10, /* xsize */300, /* ysize*/ 200, /* max value */ 50000, /* Alert value */0);
 	_C_SendPacket = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Send Packet Count",
 		/* ux */660, /* uy */ 10, /* xsize */300, /* ysize*/ 200, /* max value */ 1000000, /* Alert value */0);
 	_C_SessionCount = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Session Count",
-		/* ux */20, /* uy */ 230, /* xsize */300, /* ysize*/ 200, /* max value */ 20000, /* Alert value */15001);
+		/* ux */20, /* uy */ 230, /* xsize */300, /* ysize*/ 200, /* max value */ 20000, /* Alert value */0);
 	_C_PlayerCount = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Player Count",
 		/* ux */340, /* uy */ 230, /* xsize */300, /* ysize*/ 200, /* max value */ 20000, /* Alert value */15001);
 	_C_PacketPoolSize = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Packet Use Count",
-		/* ux */660, /* uy */ 230, /* xsize */300, /* ysize*/ 200, /* max value */ 15000, /* Alert value */15000);
+		/* ux */660, /* uy */ 230, /* xsize */300, /* ysize*/ 200, /* max value */ 15000, /* Alert value */0);
 	_C_UpdateTPS = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"Update TPS",
 		/* ux */20, /* uy */ 460, /* xsize */300, /* ysize*/ 200, /* max value */ 20000, /* Alert value */0);
-	_C_JobQueue = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"JobQueue",
+	_C_JobQueue = new CMonitorGraphUnit(hInst, hWnd, CMonitorGraphUnit::TYPE::LINE_SINGLE, L"JobQueue Size",
 		/* ux */340, /* uy */ 460, /* xsize */300, /* ysize*/ 200, /* max value */ 20000, /* Alert value */0);
 }
 

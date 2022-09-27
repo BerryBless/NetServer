@@ -179,7 +179,7 @@
     <ClInclude Include="SMClient.h" />
     <ClInclude Include="Stack.hpp" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="Types.h" />
+    <ClInclude Include="Define.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CClient.cpp" />

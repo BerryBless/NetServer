@@ -70,23 +70,23 @@ private:
 	bool SendThreadProc();
 #endif
 
-	bool SendPost(SESSION *pSession, int logic);
-	bool RecvPost(SESSION *pSession, int logic);
+	bool SendPost(SESSION *pSession );
+	bool RecvPost(SESSION *pSession );
 	void PostClientLeave(SESSION_ID sessionID); // leave 컨텐츠처리를 스레드 분리를 위한 함수
 	bool TryGetRecvPacket(SESSION *pSession, Packet *pPacket);
-	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic);
+	bool SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv );
 
 
 private:
 	// ==============================================
 	// Session Management
 	// ==============================================
-	SESSION *AcquireSession(SESSION_ID sessionID, int logic);
-	void ReturnSession(SESSION *pSession, int logic);
-	inline bool IncrementIOCount(SESSION *pSession, int logic);
-	inline bool DecrementIOCount(SESSION *pSession, int logic);
+	SESSION *AcquireSession(SESSION_ID sessionID );
+	void ReturnSession(SESSION *pSession );
+	inline bool IncrementIOCount(SESSION *pSession );
+	inline bool DecrementIOCount(SESSION *pSession );
 
-	bool ReleaseSession(SESSION *pSession, int logic);
+	bool ReleaseSession(SESSION *pSession );
 
 	inline void SetSessionActiveTimer(SESSION *pSession) { InterlockedExchange(&pSession->_lastActiveTime, timeGetTime()); }
 
@@ -208,17 +208,4 @@ protected:
 };
 
 
-//////////////////////////////////////////////////////////////////////////////
-// logic - 디버깅 가능하게
-//////////////////////////////////////////////////////////////////////////////
-#define dfLOGIC_WORKER			10000
-#define dfLOGIC_ACCEPT			20000
-#define dfLOGIC_CPMPLETE_SEND	2000
-#define dfLOGIC_CPMPLETE_RECV	3000
-#define dfLOGIC_SEND_PACKET		6000
-#define dfLOGIC_DISCONNECT		7000
-#define dfLOGIC_DECREMENT_IO	300
-#define dfLOGIC_INCREMENT_IO	200
-#define dfLOGIC_RELEASE_SESSION 1
-#define dfLOGIC_SET_BUFFER		2
 

@@ -347,22 +347,24 @@ _hardMoniter.AvailableMemoryMBytes(), _hardMoniter.NonPagedPoolMBytes(), _procMo
 
 		fwprintf_s(fp, L"Session Packet Queue Size [%lld]\tQueue AVG[%lld]\n",
 			monitor._queueSize, monitor._queueSizeAvg);
+		int packetPoolCapacity = Packet::_packetPool.GetCapacity();
+		int packetPoolSize = Packet::_packetPool.GetSize();
+		int playerMapSize = _playerMap.size();
 #ifdef UPDATE_THREAD
+		int jobPoolSize = _jobMsgPool.GetSize();
 		fwprintf_s(fp, L"\
 Packet pool Capacity\t[%d]\tsize\t[%d]\n\
 JobMsgPool Capacity\t[%d]\tsize\t[%d]\n\
 Player Pool Capacity\t[%d]\tsize\t[%d]\n\
 JobQueue Capacity\t[%d]\tsize\t[%d]\n\
 player map size\t\t[%lld]\n",
-Packet::_packetPool.GetCapacity(), Packet::_packetPool.GetSize(),
+packetPoolCapacity, packetPoolSize,
 _jobMsgPool.GetCapacity(), _jobMsgPool.GetSize(),
 _playerPool.GetCapacity(), _playerPool.GetSize(),
-_jobQueue.GetPoolCapacity(), _jobQueue.GetPoolSize(),
-_playerMap.size());
+_jobQueue.GetPoolCapacity(), jobPoolSize,
+playerMapSize);
 #else
-		int packetPoolCapacity = Packet::_packetPool.GetCapacity();
-		int packetPoolSize = Packet::_packetPool.GetSize();
-		int playerMapSize = _playerMap.size();
+		
 		fwprintf_s(fp, L"\
 Packet pool Capacity\t[%d]\tsize\t[%d]\n\
 Player Pool Capacity\t[%d]\tsize\t[%d]\n\
@@ -389,7 +391,7 @@ _hardMoniter.ProcessorTotal(), _hardMoniter.ProcessorKernel(), _hardMoniter.Proc
 		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_PACKET_POOL_USAGE, packetPoolSize, _curLogTimer);
 #ifdef UPDATE_THREAD
 		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_TPS, _UpdateTPS, _curLogTimer);
-		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_MSG_QUEUE_SIZE, _jobMsgPool.GetSize(), _curLogTimer);
+		_monitorServerConnection.SendMonitorPacket(SERVER_TYPE::CHAT_SERVER, CHAT_SERVER_MONITORING_TYPE::CHAT_SERVER_UPDATE_MSG_QUEUE_SIZE, jobPoolSize, _curLogTimer);
 #endif // UPDATE_THREAD
 
 	}

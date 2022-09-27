@@ -17,3 +17,9 @@ typedef wchar_t				WCHAR;
 typedef char				CHAR;
 
 typedef unsigned long long SESSION_ID;
+
+//////////////////////////
+// ERROR DEFINE
+//////////////////////////
+// TODO 번호맥이기
+#define ERROR_NO_SEESSION 0

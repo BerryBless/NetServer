@@ -1,7 +1,7 @@
 #ifndef  __PACKET__
 #define  __PACKET__
 #include "ObjectPool_TLS.hpp"
-#include "Types.h"
+#include "Define.h"
 
 #define PACKET_NET_HEADER		NET_HEADER
 #define PACKET_NET_HEADER_SIZE	sizeof(PACKET_NET_HEADER)

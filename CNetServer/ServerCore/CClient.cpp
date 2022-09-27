@@ -7,7 +7,7 @@
 CClient::CClient(bool isEncryption) {
 	InitializeSRWLock(&_lock);
 
-	ResetMonitor();
+	//ResetMonitor();
 
 	_maxRunThreadCount = 0;
 	_workerThreadCount = 0;
@@ -85,7 +85,7 @@ bool CClient::Connect(const WCHAR *serverIP, USHORT serverPort) {
 	DecrementIOCount(pSession);
 
 	InterlockedIncrement(&_totalConnectSession);
-	InterlockedIncrement(&_connectCalc);
+	//InterlockedIncrement(&_connectCalc);
 
 	return true;
 }
@@ -118,7 +118,7 @@ bool CClient::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 	//---------------------------
 	// 세션찾기
 	//---------------------------
-	SESSION *pSession = AcquireSession(sessionID, 664466);
+	SESSION *pSession = AcquireSession(sessionID);
 	if (pSession == NULL) {
 		//_LOG(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: can not find session..");
 		OnError(123, L"SendPacket ERROR :: can not find session..");
@@ -146,9 +146,9 @@ bool CClient::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 	//---------------------------
 	// monitor
 	//---------------------------
-	InterlockedIncrement(&_sendPacketCalc);
+	//InterlockedIncrement(&_sendPacketCalc);
 	SendPost(pSession);
-	ReturnSession(pSession, 446644);
+	ReturnSession(pSession);
 	//PRO_END(L"SendPacket");
 	return true;
 }
@@ -228,12 +228,12 @@ void CClient::BeginThreads() {
 	}
 
 	// MONITORING
-	_tMonitoring.Launch(
+	/*_tMonitoring.Launch(
 		[](LPVOID arg) {
 			CClient *pClient = (CClient *) arg;
 			pClient->NetMonitorProc();
 		},
-		this);
+		this);*/
 }
 
 bool CClient::OnGQCS() {
@@ -328,9 +328,9 @@ bool CClient::SendProc(SESSION *pSession, DWORD transferredSize) {
 	// 	   Send가 끝났다
 	//---------------------------
 	InterlockedExchange(&pSession->_IOFlag, FALSE);
-	InterlockedAdd64(&_sendedPacketCalc, sendedPacketCnt);
-	InterlockedAdd64(&_sendProcessedBytesCalc, transferredSize);
-	InterlockedAdd64(&_totalProcessedByte, transferredSize);
+	//InterlockedAdd64(&_sendedPacketCalc, sendedPacketCnt);
+	//InterlockedAdd64(&_sendProcessedBytesCalc, transferredSize);
+	//InterlockedAdd64(&_totalProcessedByte, transferredSize);
 
 	//---------------------------
 	// SendQ에 보낼것이 남아있으면 Send
@@ -361,7 +361,7 @@ bool CClient::RecvProc(SESSION *pSession, DWORD transferredSize) {
 		Packet *pPacket = Packet::AllocAddRef();
 		if (TryGetRecvPacket(pSession, pPacket)) {
 			InterlockedIncrement(&_totalPacket);
-			InterlockedIncrement(&_recvPacketCalc);
+			//InterlockedIncrement(&_recvPacketCalc);
 			OnRecv(pSession->_ID, pPacket);
 		} else {
 			pPacket->SubRef();
@@ -423,23 +423,23 @@ bool CClient::TryConnectServer(SOCKET &socket, sockaddr_in &addr) {
 	return true;
 }
 
-bool CClient::NetMonitorProc() {
-	//---------------------------
-	// 1초마다 TPS계산
-	//---------------------------
-	while (!_isRunning) YieldProcessor;
-	while (_isRunning) {
+//bool CClient::NetMonitorProc() {
+//	//---------------------------
+//	// 1초마다 TPS계산
+//	//---------------------------
+//	while (!_isRunning) YieldProcessor;
+//	while (_isRunning) {
+//
+//		Sleep(1000);
+//		if (!_isRunning) break;
+//		OnMonitoringPerSec();
+//		//CalcTPS();
+//	}
+//
+//	return _isRunning;
+//}
 
-		Sleep(1000);
-		if (!_isRunning) break;
-		OnMonitoringPerSec();
-		CalcTPS();
-	}
-
-	return _isRunning;
-}
-
-bool CClient::SendPost(SESSION *pSession, int logic) {
+bool CClient::SendPost(SESSION *pSession) {
 	if (pSession == NULL) {
 		CRASH();
 	}
@@ -458,7 +458,7 @@ bool CClient::SendPost(SESSION *pSession, int logic) {
 	//---------------------------
 	if (pSession->_sendQueue.GetSize() <= 0) {
 		if (InterlockedExchange(&pSession->_IOFlag, FALSE) == FALSE) {
-			_LOG(dfLOG_LEVEL_ERROR, L"SendPost(%d) _IOFlag Exchange false to false", logic);
+			_LOG(dfLOG_LEVEL_ERROR, L"SendPost() _IOFlag Exchange false to false");
 			CRASH();
 		}
 		return FALSE;
@@ -473,7 +473,7 @@ bool CClient::SendPost(SESSION *pSession, int logic) {
 	//---------------------------
 	WSABUF bufferSet[dfSESSION_SEND_PACKER_BUFFER_SIZE] = { 0 };
 
-	SetWSABuffer(bufferSet, pSession, FALSE, logic);
+	SetWSABuffer(bufferSet, pSession, FALSE);
 
 
 
@@ -485,7 +485,7 @@ bool CClient::SendPost(SESSION *pSession, int logic) {
 	//---------------------------
 	// IOCount ++
 	//---------------------------
-	IncrementIOCount(pSession, logic);
+	IncrementIOCount(pSession);
 	//InterlockedIncrement(&pSession->_IOcount);
 
 	//---------------------------
@@ -500,14 +500,14 @@ bool CClient::SendPost(SESSION *pSession, int logic) {
 		if (err != WSA_IO_PENDING) {
 			CancelIoEx((HANDLE) pSession->_sock, nullptr);
 			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
-				_LOG(dfLOG_LEVEL_ERROR, L"//// WSASend(%d) ERROR [%d]", logic, err);
+				_LOG(dfLOG_LEVEL_ERROR, L"//// WSASend() ERROR [%d]", err);
 				//CRASH();
 			}
 			//---------------------------
 			//	Error Fail WSASend
 			//  IOCount --
 			//---------------------------
-			DecrementIOCount(pSession, logic);
+			DecrementIOCount(pSession);
 			//if (InterlockedDecrement(&pSession->_IOcount) == 0)
 			//	ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
 
@@ -521,7 +521,7 @@ bool CClient::SendPost(SESSION *pSession, int logic) {
 	return true;
 }
 
-bool CClient::RecvPost(SESSION *pSession, int logic) {
+bool CClient::RecvPost(SESSION *pSession) {
 	if (pSession == NULL) {
 		CRASH();
 	}
@@ -537,7 +537,7 @@ bool CClient::RecvPost(SESSION *pSession, int logic) {
 	//---------------------------
 	// IOCount ++
 	//---------------------------
-	IncrementIOCount(pSession, logic);
+	IncrementIOCount(pSession);
 	//InterlockedIncrement(&pSession->_IOcount);
 
 	//---------------------------
@@ -548,7 +548,7 @@ bool CClient::RecvPost(SESSION *pSession, int logic) {
 	DWORD flag = 0;
 	DWORD byteRecvs;
 
-	SetWSABuffer(bufferSet, pSession, TRUE, logic);
+	SetWSABuffer(bufferSet, pSession, TRUE);
 
 	//---------------------------
 	// 오버랩 초기화
@@ -566,14 +566,14 @@ bool CClient::RecvPost(SESSION *pSession, int logic) {
 		if (err != WSA_IO_PENDING) {
 			CancelIoEx((HANDLE) pSession->_sock, nullptr);
 			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
-				_LOG(dfLOG_LEVEL_ERROR, L"//// %d :: WSARecv ERROR [%d]\n", logic, err);
+				_LOG(dfLOG_LEVEL_ERROR, L"//// RecvPost() :: WSARecv ERROR [%d]\n", err);
 
 			}
 			//---------------------------
 			//	Error : Fail WSARecv
 			//  IOCount --
 			//---------------------------
-			DecrementIOCount(pSession, logic);
+			DecrementIOCount(pSession);
 			//if (InterlockedDecrement(&pSession->_IOcount) == 0)
 			//	ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
 			//PRO_END(L"RecvPost");
@@ -669,7 +669,7 @@ bool CClient::TryGetRecvPacket(SESSION *pSession, Packet *pPacket) {
 	return true;
 }
 
-bool CClient::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic) {
+bool CClient::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv) {
 	if (isRecv) {
 		//---------------------------
 		// recv버퍼에 넣기
@@ -687,7 +687,7 @@ bool CClient::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int 
 		// 무결성 검사
 		//---------------------------
 		if (BufSets[0].len + BufSets[1].len != frSize) {
-			_LOG(dfLOG_LEVEL_ERROR, L"SetWSABuffer(%d) :: BufSets[0].len + BufSets[1].len != FreeSize", logic);
+			_LOG(dfLOG_LEVEL_ERROR, L"SetWSABuffer() :: BufSets[0].len + BufSets[1].len != FreeSize");
 			CRASH();
 		}
 	} else {
@@ -797,59 +797,51 @@ bool CClient::SetNagle(SOCKET sock, bool sw) {
 	return false;
 }
 
-SESSION *CClient::AcquireSession(SESSION_ID sessionID, int logic) {
+SESSION *CClient::AcquireSession(SESSION_ID sessionID) {
 	SESSION *pSession = FindSession(sessionID);
-#ifndef df_LOGGING_SESSION_LOGIC
 	if ((InterlockedIncrement(&pSession->_IOcount) & 0x80000000) != 0) {
 		if (InterlockedDecrement(&pSession->_IOcount) == 0)
-			this->ReleaseSession(pSession, logic);
+			this->ReleaseSession(pSession);
 		return nullptr;
 	}
-#else
-	IncrementIOCount(pSession, logic);
-#endif // !df_LOGGING_SESSION_LOGIC
 
 	if (pSession->_ID != sessionID) {
 		if (InterlockedDecrement(&pSession->_IOcount) == 0)
-			this->ReleaseSession(pSession, logic);
+			this->ReleaseSession(pSession);
 		return nullptr;
 	}
 
 	return pSession;
 }
 
-void CClient::ReturnSession(SESSION *pSession, int logic) {
+void CClient::ReturnSession(SESSION *pSession) {
 	if (pSession == NULL) CRASH();
-#ifndef df_LOGGING_SESSION_LOGIC
 	//---------------------------
 	// IOCount--
 	//---------------------------
 	DWORD IOcount = InterlockedDecrement(&pSession->_IOcount);
-	_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]", pSession->_ID, logic, IOcount);
+	_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: IOCount[%d]", pSession->_ID, IOcount);
 
 	if (IOcount == 0) {
 		//---------------------------
 		// disconnect
 		//---------------------------
-		_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]\t call ReleaseSession()", pSession->_ID, logic, IOcount);
-		ReleaseSession(pSession, logic);
+		_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: IOCount[%d]\t call ReleaseSession()", pSession->_ID, IOcount);
+		ReleaseSession(pSession);
 	}
 	if (IOcount < 0) {
 		//---------------------------
 		// ERROR
 		//---------------------------
 		_LOG(dfLOG_LEVEL_ERROR,
-			L"DecrementIOCount(%d) pSession->_IOcount [%d]\n\
+			L"DecrementIOCount() pSession->_IOcount [%d]\n\
 SOCK[%d] :: recv [%d]byte, send [%d]byte, IOCount[%d], _IOFlag [%d]",
-logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
+pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
 		CRASH();
 	}
-#else
-	DecrementIOCount(pSession, logic);
-#endif // !df_LOGGING_SESSION_LOGIC
 }
 
-inline bool CClient::IncrementIOCount(SESSION *pSession, int logic) {
+inline bool CClient::IncrementIOCount(SESSION *pSession) {
 	//---------------------------
 	// IOCount++
 	//---------------------------
@@ -857,39 +849,29 @@ inline bool CClient::IncrementIOCount(SESSION *pSession, int logic) {
 	//DWORD retval = InterlockedIncrement(&pSession->_IOcount);
 	if ((InterlockedIncrement(&pSession->_IOcount) & 0x80000000) != 0) {
 		if (InterlockedDecrement(&pSession->_IOcount) == 0)
-			this->ReleaseSession(pSession, logic);
+			this->ReleaseSession(pSession);
 		return false;
 	}
 
-#ifdef df_LOGGING_SESSION_LOGIC
-	int idx = InterlockedIncrement(&pSession->_IncIndex);
-	if (idx >= df_LOGGING_SESSION_LOGIC) pSession->_IncIndex = 0;
-	pSession->_IncLog[idx] = logic;
-#endif // df_LOGGING_SESSION_LOGIC
 
-	_LOG(dfLOG_LEVEL_DEBUG, L"IncrementIOCount() ID[%lld] :: logic[%d]", pSession->_ID, logic);
+	_LOG(dfLOG_LEVEL_DEBUG, L"IncrementIOCount() ID[%lld]", pSession->_ID);
 	return true;
 }
 
-inline bool CClient::DecrementIOCount(SESSION *pSession, int logic) {
+inline bool CClient::DecrementIOCount(SESSION *pSession) {
 	//---------------------------
 	// IOCount--
 	//---------------------------
 	if (pSession == NULL) CRASH();
 	DWORD retval = InterlockedDecrement(&pSession->_IOcount);
-#ifdef df_LOGGING_SESSION_LOGIC
-	int idx = InterlockedIncrement(&pSession->_DecIndex);
-	if (idx >= df_LOGGING_SESSION_LOGIC) pSession->_DecIndex = 0;
-	pSession->_DecLog[idx] = logic;
-#endif // df_LOGGING_SESSION_LOGIC
-	_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]", pSession->_ID, logic, retval);
+	_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: IOCount[%d]", pSession->_ID, retval);
 
 	if (retval == 0) {
 		//---------------------------
 		// disconnect
 		//---------------------------
-		_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]\t call ReleaseSession()", pSession->_ID, logic, retval);
-		ReleaseSession(pSession, logic);
+		_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: IOCount[%d]\t call ReleaseSession()", pSession->_ID, retval);
+		ReleaseSession(pSession);
 		return false;
 	}
 	if (retval < 0) {
@@ -897,15 +879,15 @@ inline bool CClient::DecrementIOCount(SESSION *pSession, int logic) {
 		// ERROR
 		//---------------------------
 		_LOG(dfLOG_LEVEL_ERROR,
-			L"DecrementIOCount(%d) pSession->_IOcount [%d]\n\
+			L"DecrementIOCount() pSession->_IOcount [%d]\n\
 SOCK[%d] :: recv [%d]byte, send [%d]byte, IOCount[%d], _IOFlag [%d]",
-logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
+pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
 		CRASH();
 	}
 	return true;
 }
 
-bool CClient::ReleaseSession(SESSION *pSession, int logic) {
+bool CClient::ReleaseSession(SESSION *pSession) {
 	//---------------------------
 	// Release Session
 	//---------------------------
@@ -1055,54 +1037,54 @@ void CClient::InitializeIndex() {
 	}
 }
 
-void CClient::CalcTPS() {
-	_connectPerSec = InterlockedExchange(&_connectCalc, 0);
-	_recvPacketPerSec = InterlockedExchange(&_recvPacketCalc, 0);
-	_sendPacketPerSec = InterlockedExchange(&_sendPacketCalc, 0);
-	_sendProcessedBytesTPS = InterlockedExchange64(&_sendProcessedBytesCalc, 0);
-	_sendedPacketPerSec = InterlockedExchange64(&_sendedPacketCalc, 0);
-}
-
-CClient::MoniteringInfo CClient::GetMoniteringInfo() {
-	MoniteringInfo info;
-	info._workerThreadCount = _maxRunThreadCount;
-	info._runningThreadCount = _workerThreadCount;
-	info._connectPerSec = _connectPerSec;
-	info._recvPacketPerSec = _recvPacketPerSec;
-	info._sendPacketPerSec = _sendPacketPerSec;
-	info._totalConnectSession = _totalConnectSession;
-	info._totalPacket = _totalPacket;
-	info._sendBytePerSec = _sendProcessedBytesTPS;
-	info._sendedPacketPerSec = _sendedPacketPerSec;
-	info._totalProecessedBytes = _totalProcessedByte;
-	info._totalReleaseSession = _totalDisconnectSession;
-	info._sessionCnt = _curSessionCount;
-	//info._stackCapacity = 0;
-	info._stackSize = _emptyIndex.GetSize();
-	info._queueSize = 0;
-	//info._queueCapacity = 0;
-	//info._maxCapacity = 0;
-	for (int i = 1; i <= _maxConnection; i++)
-		info._queueSize += _sessionContainer[i]._sendQueue.GetSize();
-	info._queueSizeAvg = info._queueSize / _maxConnection;
-	return info;
-}
-
-void CClient::ResetMonitor() {
-	_curSessionCount = 0;
-	_totalPacket = 0;
-	_recvPacketCalc = 0;
-	_recvPacketPerSec = 0;
-	_sendPacketCalc = 0;
-	_sendPacketPerSec = 0;
-	_sendedPacketCalc = 0;
-	_sendedPacketPerSec = 0;
-	_sendProcessedBytesCalc = 0;
-	_sendProcessedBytesTPS = 0;
-	_totalProcessedByte = 0;
-
-	_connectCalc = 0;
-	_connectPerSec = 0;
-	_totalConnectSession = 0;
-	_totalDisconnectSession = 0;
-}
+//void CClient::CalcTPS() {
+//	_connectPerSec = InterlockedExchange(&_connectCalc, 0);
+//	_recvPacketPerSec = InterlockedExchange(&_recvPacketCalc, 0);
+//	_sendPacketPerSec = InterlockedExchange(&_sendPacketCalc, 0);
+//	_sendProcessedBytesTPS = InterlockedExchange64(&_sendProcessedBytesCalc, 0);
+//	_sendedPacketPerSec = InterlockedExchange64(&_sendedPacketCalc, 0);
+//}
+//
+//CClient::MoniteringInfo CClient::GetMoniteringInfo() {
+//	MoniteringInfo info;
+//	info._workerThreadCount = _maxRunThreadCount;
+//	info._runningThreadCount = _workerThreadCount;
+//	info._connectPerSec = _connectPerSec;
+//	info._recvPacketPerSec = _recvPacketPerSec;
+//	info._sendPacketPerSec = _sendPacketPerSec;
+//	info._totalConnectSession = _totalConnectSession;
+//	info._totalPacket = _totalPacket;
+//	info._sendBytePerSec = _sendProcessedBytesTPS;
+//	info._sendedPacketPerSec = _sendedPacketPerSec;
+//	info._totalProecessedBytes = _totalProcessedByte;
+//	info._totalReleaseSession = _totalDisconnectSession;
+//	info._sessionCnt = _curSessionCount;
+//	//info._stackCapacity = 0;
+//	info._stackSize = _emptyIndex.GetSize();
+//	info._queueSize = 0;
+//	//info._queueCapacity = 0;
+//	//info._maxCapacity = 0;
+//	for (int i = 1; i <= _maxConnection; i++)
+//		info._queueSize += _sessionContainer[i]._sendQueue.GetSize();
+//	info._queueSizeAvg = info._queueSize / _maxConnection;
+//	return info;
+//}
+//
+//void CClient::ResetMonitor() {
+//	_curSessionCount = 0;
+//	_totalPacket = 0;
+//	_recvPacketCalc = 0;
+//	_recvPacketPerSec = 0;
+//	_sendPacketCalc = 0;
+//	_sendPacketPerSec = 0;
+//	_sendedPacketCalc = 0;
+//	_sendedPacketPerSec = 0;
+//	_sendProcessedBytesCalc = 0;
+//	_sendProcessedBytesTPS = 0;
+//	_totalProcessedByte = 0;
+//
+//	_connectCalc = 0;
+//	_connectPerSec = 0;
+//	_totalConnectSession = 0;
+//	_totalDisconnectSession = 0;
+//}

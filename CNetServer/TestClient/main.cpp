@@ -1,8 +1,8 @@
 #include "pch.h"
-#include "MonitoringClient.h"
+#include "DummyClient.h"
 int main() {
-	MonitoringClient monitor(L"MonitoringToolConfig.ini");
-	monitor.ConnectMonitor();
+	DummyClient monitor(L"MonitoringToolConfig.ini");
+	monitor.Connect();
 	Sleep(INFINITE);
 	return 0;
 }

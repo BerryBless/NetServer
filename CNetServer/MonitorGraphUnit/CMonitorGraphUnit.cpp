@@ -166,7 +166,15 @@ BOOL CMonitorGraphUnit::PutThis(void) {
 BOOL CMonitorGraphUnit::InsertData(int iData) {
 	// 창 크기에 따른 데이터의 최대 개수
 	// 너비의 1/3 만 넣고, x간 간격이 3
-	_iDataMax = max(iData, _iDataMax);
+	if (iData > _iDataMax) {
+		int floor =  (iData / 1000) * 1000 + 1000;
+		_iDataMax = floor;
+
+		PlaySound((LPCTSTR) SND_ALIAS_SYSTEMHAND, NULL, SND_ALIAS_ID | SND_ASYNC); // 소리 출력
+		DeleteObject(_hBackBrush);
+		_hBackBrush = CreateSolidBrush(RGB(200, 0, 0));
+		SetTimer(_hWnd, 1, dfALERT_TIME_MS, NULL);
+	}
 	int max_X = (int) ((float) _iWindowWidth / 3.2f);
 
 	// 데이터 넣기

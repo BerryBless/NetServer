@@ -60,7 +60,7 @@
     <ClInclude Include="CommonProtocol.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="Types.h">
+    <ClInclude Include="Define.h">
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="Session.h">

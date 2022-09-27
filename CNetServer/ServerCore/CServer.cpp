@@ -111,10 +111,10 @@ bool CServer::DisconnectSession(SESSION_ID sessionID) {
 	// 세션 끊기
 	//---------------------------
 	bool ret = false;
-	SESSION *pSession = AcquireSession(sessionID, dfLOGIC_DISCONNECT);
+	SESSION *pSession = AcquireSession(sessionID);
 	if (pSession == NULL) {
 		_LOG(dfLOG_LEVEL_DEBUG, L"//Disconnect ERROR :: can not find session..");
-		OnError(dfLOGIC_DISCONNECT, L"Disconnect ERROR :: can not find session..");
+		OnError(ERROR_NO_SEESSION, L"Disconnect ERROR :: can not find session..");
 		return false;
 	}
 	_LOG(dfLOG_LEVEL_DEBUG, L"//Disconnect id[%d]", sessionID);
@@ -123,7 +123,7 @@ bool CServer::DisconnectSession(SESSION_ID sessionID) {
 	ret = CancelIoEx((HANDLE) pSession->_sock, nullptr);
 
 	//closesocket(pSession->_sock);
-	ReturnSession(pSession, dfLOGIC_DISCONNECT);
+	ReturnSession(pSession);
 	return ret;
 }
 
@@ -134,10 +134,10 @@ bool CServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 	//---------------------------
 	// 세션찾기
 	//---------------------------
-	SESSION *pSession = AcquireSession(sessionID, 664466);
+	SESSION *pSession = AcquireSession(sessionID);
 	if (pSession == NULL) {
 		//_LOG(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: can not find session..");
-		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: can not find session..");
+		OnError(ERROR_NO_SEESSION, L"SendPacket ERROR :: can not find session..");
 		pPacket->SubRef();
 		return false;
 	}
@@ -146,7 +146,7 @@ bool CServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 	//---------------------------
 	if (!InterlockedOr((LONG *) &pSession->_isAlive, 0)) {
 		_LOG(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: Session is colsed..");
-		OnError(dfLOGIC_SEND_PACKET, L"SendPacket ERROR :: Session is colsed..");
+		OnError(ERROR_NO_SEESSION, L"SendPacket ERROR :: Session is colsed..");
 		pPacket->SubRef();
 		return false;
 	}
@@ -164,9 +164,9 @@ bool CServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 	//---------------------------
 	InterlockedIncrement(&_sendPacketCalc);
 #ifndef df_SENDTHREAD
-	SendPost(pSession, dfLOGIC_SEND_PACKET);
+	SendPost(pSession);
 #endif // !df_SENDTHREAD
-	ReturnSession(pSession, 446644);
+	ReturnSession(pSession);
 	PRO_END(L"SendPacket");
 	return true;
 }
@@ -426,7 +426,7 @@ bool CServer::OnGQCS() {
 		//---------------------------
 		//DecrementIOCount(pSession, dfLOGIC_WORKER + dfLOGIC_DECREMENT_IO);
 		if (InterlockedDecrement(&pSession->_IOcount) == 0)
-			ReleaseSession(pSession, dfLOGIC_WORKER + dfLOGIC_DECREMENT_IO);
+			ReleaseSession(pSession);
 
 	}
 	return _isRunning;
@@ -460,7 +460,7 @@ bool CServer::SendProc(SESSION *pSession, DWORD transferredSize) {
 	//---------------------------
 	// SendQ에 보낼것이 남아있으면 Send
 	//---------------------------
-	SendPost(pSession, dfLOGIC_CPMPLETE_SEND);
+	SendPost(pSession);
 #endif
 	return true;
 }
@@ -499,7 +499,7 @@ bool CServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 	//---------------------------
 	// RecvPost
 	//---------------------------
-	return RecvPost(pSession, dfLOGIC_CPMPLETE_RECV);
+	return RecvPost(pSession);
 }
 
 bool CServer::TryAccept(SOCKET &clientSocket, sockaddr_in &clientAddr) {
@@ -589,13 +589,13 @@ bool CServer::AcceptProc() {
 		//---------------------------
 		// WSARecv걸어주기
 		//---------------------------
-		RecvPost(pSession, dfLOGIC_ACCEPT);
+		RecvPost(pSession);
 
 
 		// 세션 만들때 _IOcount --
 		//DecrementIOCount(pSession, dfLOGIC_ACCEPT);
 		if (InterlockedDecrement(&pSession->_IOcount) == 0)
-			ReleaseSession(pSession, dfLOGIC_ACCEPT);
+			ReleaseSession(pSession);
 
 
 		//---------------------------
@@ -633,15 +633,15 @@ bool CServer::SendThreadProc() {
 			if (InterlockedOr((LONG *) &_sessionContainer[i]._isAlive, FALSE) == FALSE)
 				continue;
 			YieldProcessor;
-			SESSION *pSession = AcquireSession(_sessionContainer[i]._ID, 889988);
+			SESSION *pSession = AcquireSession(_sessionContainer[i]._ID);
 			YieldProcessor;
 			if (pSession == nullptr)
 				continue;
 
 			if (pSession->_sendQueue.GetSize() > 0)
-				SendPost(pSession, 123321);
+				SendPost(pSession);
 			YieldProcessor;
-			ReturnSession(pSession, 998899);
+			ReturnSession(pSession);
 			YieldProcessor;
 		}
 	}
@@ -667,7 +667,7 @@ bool CServer::TimeOutProc() {
 	}
 	return false;
 }
-bool CServer::SendPost(SESSION *pSession, int logic) {
+bool CServer::SendPost(SESSION *pSession) {
 	if (pSession == NULL) {
 		CRASH();
 	}
@@ -686,7 +686,7 @@ bool CServer::SendPost(SESSION *pSession, int logic) {
 	//---------------------------
 	if (pSession->_sendQueue.GetSize() <= 0) {
 		if (InterlockedExchange(&pSession->_IOFlag, FALSE) == FALSE) {
-			_LOG(dfLOG_LEVEL_ERROR, L"SendPost(%d) _IOFlag Exchange false to false", logic);
+			_LOG(dfLOG_LEVEL_ERROR, L"SendPost() _IOFlag Exchange false to false");
 			CRASH();
 		}
 		return FALSE;
@@ -701,7 +701,7 @@ bool CServer::SendPost(SESSION *pSession, int logic) {
 	//---------------------------
 	WSABUF bufferSet[dfSESSION_SEND_PACKER_BUFFER_SIZE] = { 0 };
 
-	SetWSABuffer(bufferSet, pSession, FALSE, logic + dfLOGIC_SET_BUFFER);
+	SetWSABuffer(bufferSet, pSession, FALSE);
 
 
 
@@ -713,7 +713,7 @@ bool CServer::SendPost(SESSION *pSession, int logic) {
 	//---------------------------
 	// IOCount ++
 	//---------------------------
-	IncrementIOCount(pSession, logic + dfLOGIC_INCREMENT_IO);
+	IncrementIOCount(pSession);
 	//InterlockedIncrement(&pSession->_IOcount);
 
 	//---------------------------
@@ -728,7 +728,7 @@ bool CServer::SendPost(SESSION *pSession, int logic) {
 		if (err != WSA_IO_PENDING) {
 			CancelIoEx((HANDLE) pSession->_sock, nullptr);
 			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
-				_LOG(dfLOG_LEVEL_ERROR, L"//// WSASend(%d) ERROR [%d]", logic, err);
+				_LOG(dfLOG_LEVEL_ERROR, L"//// WSASend() ERROR [%d]", err);
 				//CRASH();
 			}
 			//---------------------------
@@ -737,7 +737,7 @@ bool CServer::SendPost(SESSION *pSession, int logic) {
 			//---------------------------
 			//DecrementIOCount(pSession, logic + dfLOGIC_DECREMENT_IO);
 			if (InterlockedDecrement(&pSession->_IOcount) == 0)
-				ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
+				ReleaseSession(pSession);
 
 			//PRO_END(L"SendPost");
 			return false;
@@ -749,7 +749,7 @@ bool CServer::SendPost(SESSION *pSession, int logic) {
 	return true;
 }
 
-bool CServer::RecvPost(SESSION *pSession, int logic) {
+bool CServer::RecvPost(SESSION *pSession) {
 	if (pSession == NULL) {
 		CRASH();
 	}
@@ -765,7 +765,7 @@ bool CServer::RecvPost(SESSION *pSession, int logic) {
 	//---------------------------
 	// IOCount ++
 	//---------------------------
-	IncrementIOCount(pSession, logic + dfLOGIC_INCREMENT_IO);
+	IncrementIOCount(pSession);
 	//InterlockedIncrement(&pSession->_IOcount);
 
 	//---------------------------
@@ -776,7 +776,7 @@ bool CServer::RecvPost(SESSION *pSession, int logic) {
 	DWORD flag = 0;
 	DWORD byteRecvs;
 
-	SetWSABuffer(bufferSet, pSession, TRUE, logic + dfLOGIC_SET_BUFFER);
+	SetWSABuffer(bufferSet, pSession, TRUE);
 
 	//---------------------------
 	// 오버랩 초기화
@@ -794,7 +794,7 @@ bool CServer::RecvPost(SESSION *pSession, int logic) {
 		if (err != WSA_IO_PENDING) {
 			CancelIoEx((HANDLE) pSession->_sock, nullptr);
 			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
-				_LOG(dfLOG_LEVEL_ERROR, L"//// %d :: WSARecv ERROR [%d]\n", logic, err);
+				_LOG(dfLOG_LEVEL_ERROR, L"//// WSARecv ERROR [%d]\n", err);
 
 			}
 			//---------------------------
@@ -803,7 +803,7 @@ bool CServer::RecvPost(SESSION *pSession, int logic) {
 			//---------------------------
 			//DecrementIOCount(pSession, logic + dfLOGIC_DECREMENT_IO);
 			if (InterlockedDecrement(&pSession->_IOcount) == 0)
-				ReleaseSession(pSession, logic + dfLOGIC_DECREMENT_IO);
+				ReleaseSession(pSession);
 			//PRO_END(L"RecvPost");
 			return false;
 		}
@@ -890,7 +890,7 @@ bool CServer::TryGetRecvPacket(SESSION *pSession, Packet *pPacket) {
 	return true;
 }
 
-bool CServer::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int logic) {
+bool CServer::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv) {
 	if (isRecv) {
 		//---------------------------
 		// recv버퍼에 넣기
@@ -908,7 +908,7 @@ bool CServer::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int 
 		// 무결성 검사
 		//---------------------------
 		if (BufSets[0].len + BufSets[1].len != frSize) {
-			_LOG(dfLOG_LEVEL_ERROR, L"SetWSABuffer(%d) :: BufSets[0].len + BufSets[1].len != FreeSize", logic);
+			_LOG(dfLOG_LEVEL_ERROR, L"SetWSABuffer() :: BufSets[0].len + BufSets[1].len != FreeSize");
 			CRASH();
 		}
 	} else {
@@ -944,7 +944,7 @@ bool CServer::SetWSABuffer(WSABUF *BufSets, SESSION *pSession, bool isRecv, int 
 	return true;
 }
 
-inline bool CServer::IncrementIOCount(SESSION *pSession, int logic) {
+inline bool CServer::IncrementIOCount(SESSION *pSession) {
 	//---------------------------
 	// IOCount++
 	//---------------------------
@@ -952,39 +952,28 @@ inline bool CServer::IncrementIOCount(SESSION *pSession, int logic) {
 	//DWORD retval = InterlockedIncrement(&pSession->_IOcount);
 	if ((InterlockedIncrement(&pSession->_IOcount) & 0x80000000) != 0) {
 		if (InterlockedDecrement(&pSession->_IOcount) == 0)
-			this->ReleaseSession(pSession, logic);
+			this->ReleaseSession(pSession);
 		return false;
 	}
 
-#ifdef df_LOGGING_SESSION_LOGIC
-	int idx = InterlockedIncrement(&pSession->_IncIndex);
-	if (idx >= df_LOGGING_SESSION_LOGIC) pSession->_IncIndex = 0;
-	pSession->_IncLog[idx] = logic;
-#endif // df_LOGGING_SESSION_LOGIC
-
-	_LOG(dfLOG_LEVEL_DEBUG, L"IncrementIOCount() ID[%lld] :: logic[%d]", pSession->_ID, logic);
+	_LOG(dfLOG_LEVEL_DEBUG, L"IncrementIOCount() ID[%lld]", pSession->_ID);
 	return true;
 }
 
-inline bool CServer::DecrementIOCount(SESSION *pSession, int logic) {
+inline bool CServer::DecrementIOCount(SESSION *pSession) {
 	//---------------------------
 	// IOCount--
 	//---------------------------
 	if (pSession == NULL) CRASH();
 	DWORD retval = InterlockedDecrement(&pSession->_IOcount);
-#ifdef df_LOGGING_SESSION_LOGIC
-	int idx = InterlockedIncrement(&pSession->_DecIndex);
-	if (idx >= df_LOGGING_SESSION_LOGIC) pSession->_DecIndex = 0;
-	pSession->_DecLog[idx] = logic;
-#endif // df_LOGGING_SESSION_LOGIC
-	_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]", pSession->_ID, logic, retval);
+	_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: IOCount[%d]", pSession->_ID, retval);
 
 	if (retval == 0) {
 		//---------------------------
 		// disconnect
 		//---------------------------
-		_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]\t call ReleaseSession()", pSession->_ID, logic, retval);
-		ReleaseSession(pSession, logic + dfLOGIC_RELEASE_SESSION);
+		_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: IOCount[%d]\t call ReleaseSession()", pSession->_ID, retval);
+		ReleaseSession(pSession);
 		return false;
 	}
 	if (retval < 0) {
@@ -992,9 +981,9 @@ inline bool CServer::DecrementIOCount(SESSION *pSession, int logic) {
 		// ERROR
 		//---------------------------
 		_LOG(dfLOG_LEVEL_ERROR,
-			L"DecrementIOCount(%d) pSession->_IOcount [%d]\n\
+			L"DecrementIOCount() pSession->_IOcount [%d]\n\
 SOCK[%d] :: recv [%d]byte, send [%d]byte, IOCount[%d], _IOFlag [%d]",
-logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
+pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
 		CRASH();
 	}
 	return true;
@@ -1002,60 +991,52 @@ logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), p
 
 
 
-SESSION *CServer::AcquireSession(SESSION_ID sessionID, int logic) {
+SESSION *CServer::AcquireSession(SESSION_ID sessionID) {
 	SESSION *pSession = FindSession(sessionID);
-#ifndef df_LOGGING_SESSION_LOGIC
 	if ((InterlockedIncrement(&pSession->_IOcount) & 0x80000000) != 0) {
 		if (InterlockedDecrement(&pSession->_IOcount) == 0)
-			this->ReleaseSession(pSession, logic);
+			this->ReleaseSession(pSession);
 		return nullptr;
 	}
-#else
-	IncrementIOCount(pSession, logic);
-#endif // !df_LOGGING_SESSION_LOGIC
 
 	if (pSession->_ID != sessionID) {
 		if (InterlockedDecrement(&pSession->_IOcount) == 0)
-			this->ReleaseSession(pSession, logic);
+			this->ReleaseSession(pSession);
 		return nullptr;
 	}
 
 	return pSession;
-	}
+}
 
-void CServer::ReturnSession(SESSION *pSession, int logic) {
+void CServer::ReturnSession(SESSION *pSession) {
 	if (pSession == NULL) CRASH();
-#ifndef df_LOGGING_SESSION_LOGIC
 	//---------------------------
 	// IOCount--
 	//---------------------------
 	DWORD IOcount = InterlockedDecrement(&pSession->_IOcount);
-	_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]", pSession->_ID, logic, IOcount);
+	_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: IOCount[%d]", pSession->_ID, IOcount);
 
 	if (IOcount == 0) {
 		//---------------------------
 		// disconnect
 		//---------------------------
-		_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: logic[%d], IOCount[%d]\t call ReleaseSession()", pSession->_ID, logic, IOcount);
-		ReleaseSession(pSession, logic + dfLOGIC_RELEASE_SESSION);
+		_LOG(dfLOG_LEVEL_DEBUG, L"DecrementIOCount() ID[%lld] :: IOCount[%d]\t call ReleaseSession()", pSession->_ID, IOcount);
+		ReleaseSession(pSession);
 	}
 	if (IOcount < 0) {
 		//---------------------------
 		// ERROR
 		//---------------------------
 		_LOG(dfLOG_LEVEL_ERROR,
-			L"DecrementIOCount(%d) pSession->_IOcount [%d]\n\
+			L"DecrementIOCount() pSession->_IOcount [%d]\n\
 SOCK[%d] :: recv [%d]byte, send [%d]byte, IOCount[%d], _IOFlag [%d]",
-logic, pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
+pSession->_IOcount, pSession->_sock, pSession->_recvQueue.GetUseSize(), pSession->_sendQueue.GetSize(), pSession->_IOcount, pSession->_IOFlag);
 		CRASH();
 	}
-#else
-	DecrementIOCount(pSession, logic);
-#endif // !df_LOGGING_SESSION_LOGIC
-	}
+}
 
 
-bool CServer::ReleaseSession(SESSION *pSession, int logic) {
+bool CServer::ReleaseSession(SESSION *pSession) {
 	//---------------------------
 	// Release Session
 	//---------------------------

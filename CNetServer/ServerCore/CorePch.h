@@ -38,7 +38,7 @@
 #include "HardWareMoniter.h"
 #include "ProcessMoniter.h"
 #include "SerializingBuffer.h"
-#include "Types.h"
+#include "Define.h"
 #include "CParser.h"
 #include "DBConnectionPool.h"
 #include "CThread.h"
