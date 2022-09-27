@@ -9,7 +9,7 @@ struct Player {
 		_sessionID = 0;
 
 		_isLogin = 0;
-		_AccountNo = 0;
+		_accountNo = 0;
 		_SectorX = -1;
 		_SectorY = -1;
 	};
@@ -17,7 +17,7 @@ struct Player {
 		_sessionID = sessionID;
 
 		_isLogin = 0;
-		_AccountNo = accountNo;
+		_accountNo = accountNo;
 		_SectorX = sectorX;
 		_SectorY = sectorY;
 
@@ -29,7 +29,7 @@ struct Player {
 	SESSION_ID	_sessionID;
 
 	DWORD		_isLogin;
-	ACCOUNT_NO	_AccountNo;
+	ACCOUNT_NO	_accountNo;
 	WORD		_SectorX;
 	WORD		_SectorY;
 	WCHAR		_ID[20];

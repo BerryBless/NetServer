@@ -35,7 +35,7 @@ public:
 	// 프레임p
 
 	// 생성 소멸
-	CMonitorGraphUnit(HINSTANCE hInstance, HWND hWndParent, TYPE enType, const WCHAR *szTitle, int iPosX, int iPosY, int iWidth, int iHeight, int iDataMax, int iDataAlert);
+	CMonitorGraphUnit(HINSTANCE hInstance, HWND hWndParent, TYPE enType, const WCHAR *title, int posX, int posY, int width, int height, int dataMax, int dataAlert);
 	~CMonitorGraphUnit();
 
 	/////////////////////////////////////////////////////////
@@ -88,18 +88,18 @@ private:
 	// 윈도우 위치,크기,색상, 그래프 타입 등.. 자료
 	//------------------------------------------------------
 	// 윈도우 타입
-	TYPE		_enGraphType;
+	TYPE		_graphType;
 
 	// 색상
-	COLORREF	_BackColor;
-	COLORREF _TitleColor;
-	COLORREF _UIColor;
+	COLORREF	_bgColor;
+	COLORREF	_titleColor;
+	COLORREF	_UIColor;
 
 	// 윈도우정보
-	int		_iWindowPosX;
-	int		_iWindowPosY;
-	int		_iWindowWidth;
-	int		_iWindowHeight;
+	int		_windowPosX;
+	int		_windowPosY;
+	int		_windowWidth;
+	int		_windowHeight;
 
 	//------------------------------------------------------
 	// 더블 버퍼링용 메모리 DC, 메모리 비트맵
@@ -131,22 +131,11 @@ private:
 
 	static int _childCnt;// 자식이 몇개있는지 카운터
 
-	int _iDataMax; // 데이터 최대 크기
-	int		_iDataAlert;	// 경보 울리는 기준값
+	int _dataMax; // 데이터 최대 크기
+	int		_dataAlert;	// 경보 울리는 기준값
 
-	WCHAR _szTitle[30];// 타이틀 이름
+	WCHAR _title[30];// 타이틀 이름
 
-		//------------------------------------------------------
-	// 경고모드 - 
-	//
-	// 데이터 경고수치 도달시 경고음과 함께 자신을 제외한 모든 윈도우에 UM_ALERT 메시지를 보낸다.
-	//
-	// _bAlertMode = TRUE 가 된 후 타이머를 사용하여 일정시간 후 해제.
-	//
-	//  경고 상황을 굳이  맴버 변수 플래그로 들고 있는 이유는 ... ?  
-	//  필요치 않다면 안만드셔도 되며,  구현하다 보면 필요하게 될 것입니다.  
-	//------------------------------------------------------
-	BOOL		_bAlertMode;
 };
 
 /*
@@ -199,7 +188,7 @@ case WM_TIMER:
 
 // 자식윈도우
 _hWnd = CreateWindow(_szWindowClass, NULL, WS_CHILD | WS_VISIBLE | WS_CAPTION | WS_CLIPSIBLINGS,
-						_iWindowPosX, _iWindowPosY, _iWindowWidth, _iWindowHeight, _hWndParent, NULL, _hInstance, NULL);
+						_windowPosX, _windowPosY, _windowWidth, _windowHeight, _hWndParent, NULL, _hInstance, NULL);
 
 
 */

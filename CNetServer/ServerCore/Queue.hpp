@@ -7,10 +7,10 @@ template <typename T>
 class Queue {
 private:
 
-	struct Node {
+	struct NODE {
 		T _data;
-		Node *_prev;
-		Node *_next;
+		NODE *_prev;
+		NODE *_next;
 	};
 
 public:
@@ -32,10 +32,10 @@ public:
 	void Clear();
 private:
 
-	Node _head;        // 시작노드를 포인트한다.
-	Node _tail;        // 마지막노드를 포인트한다.
+	NODE _head;        // 시작노드를 포인트한다.
+	NODE _tail;        // 마지막노드를 포인트한다.
 	long _size;         // 큐 노드 카운트
-	ObjectPool<Node> _nodePool;
+	ObjectPool<NODE> _nodePool;
 
 	SRWLOCK _lock;
 };
@@ -61,7 +61,7 @@ inline Queue<T>::~Queue() {
 template<typename T>
 inline void Queue<T>::enqueue(T data) {
 	AcquireSRWLockExclusive(&_lock);
-	Node *pNode = (Node *) _nodePool.Alloc();
+	NODE *pNode = (NODE *) _nodePool.Alloc();
 	pNode->_data = data;
 
 
@@ -79,7 +79,7 @@ template<typename T>
 inline bool Queue<T>::dequeue(T& data) {
 	if (_head._next == &_tail) return false;
 	AcquireSRWLockExclusive(&_lock);
-	Node *pNode = _head._next;
+	NODE *pNode = _head._next;
 	data = pNode->_data;
 	pNode->_prev->_next = pNode->_next;
 	pNode->_next->_prev = pNode->_prev;
@@ -94,7 +94,7 @@ inline bool Queue<T>::dequeue(T& data) {
 template<typename T>
 inline DWORD Queue<T>::Peek(T arr[], DWORD size) {
 	int cnt = 0;
-	Node *temp = _head._next;
+	NODE *temp = _head._next;
 	for (; cnt < size; ++cnt) {
 		if (temp == &_tail) break;
 		arr[cnt] = temp->_data;
@@ -108,7 +108,7 @@ inline void Queue<T>::Clear() {
 	AcquireSRWLockExclusive(&_lock);
 	T temp;
 	while (_head._next != &_tail) {
-		Node *pNode = _head._next;
+		NODE *pNode = _head._next;
 		pNode->_prev->_next = pNode->_next;
 		pNode->_next->_prev = pNode->_prev;
 

@@ -19,7 +19,7 @@ public:
 	void Initialize();
 	void SetDirectory(const WCHAR *path);
 	void SetLogLevel(int level) { _logLevel = level; }
-	int getLogLevel() { return _logLevel; }
+	int  GetLogLevel() { return _logLevel; }
 private:
 	void FileLock();
 	void FileUnlock();

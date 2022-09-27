@@ -19,7 +19,7 @@ LRESULT CALLBACK  CMonitorGraphUnit::WndProc(HWND hWnd, UINT message, WPARAM wPa
 	case WM_PAINT:
 		// 화면 갱신할
 		if (pThis != NULL) {
-			switch (pThis->_enGraphType) {
+			switch (pThis->_graphType) {
 			case CMonitorGraphUnit::TYPE::LINE_SINGLE:
 				pThis->Paint_LineSingle();
 				break;
@@ -54,7 +54,7 @@ CMonitorGraphUnit *CMonitorGraphUnit::GetThis(HWND hWnd) {
 
 CMonitorGraphUnit::CMonitorGraphUnit(HINSTANCE hInstance, HWND hWndParent, TYPE enType, const WCHAR *szTitle, int iPosX, int iPosY, int iWidth, int iHeight, int iDataMax, int iDataAlert) {
 	// 클래스 이름 복사
-	wsprintf(_szTitle, L"%s", szTitle);
+	wsprintf(_title, L"%s", szTitle);
 
 	// 자식클래스 WndProc등록
 	WNDCLASSEXW wcex;
@@ -70,12 +70,12 @@ CMonitorGraphUnit::CMonitorGraphUnit(HINSTANCE hInstance, HWND hWndParent, TYPE 
 	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
 	wcex.hbrBackground = (HBRUSH) GetStockObject(BLACK_BRUSH);
 	wcex.lpszMenuName = MAKEINTRESOURCEW(IDI_MONITORGRAPHUNIT);
-	wcex.lpszClassName = _szTitle;
+	wcex.lpszClassName = _title;
 	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 	RegisterClassExW(&wcex);
 
 	// 자식클래스 인스턴스 생성
-	_hWnd = CreateWindow(_szTitle, NULL, WS_CHILD | WS_VISIBLE,
+	_hWnd = CreateWindow(_title, NULL, WS_CHILD | WS_VISIBLE,
 		iPosX, iPosY, iWidth, iHeight,
 		hWndParent, NULL, hInstance, NULL);
 
@@ -91,14 +91,14 @@ CMonitorGraphUnit::CMonitorGraphUnit(HINSTANCE hInstance, HWND hWndParent, TYPE 
 	_hInstance = hInstance;
 
 	// 타입지정
-	_enGraphType = enType;
+	_graphType = enType;
 
 	// This포인터 저장
 	PutThis();
 
 	// 데이터 최대값 지정
-	_iDataMax = iDataMax;
-	_iDataAlert = iDataAlert;
+	_dataMax = iDataMax;
+	_dataAlert = iDataAlert;
 #pragma region Create Resource
 	//------------------------------------------------------
 	// 더블버퍼링 버퍼 생성
@@ -114,12 +114,12 @@ CMonitorGraphUnit::CMonitorGraphUnit(HINSTANCE hInstance, HWND hWndParent, TYPE 
 	//------------------------------------------------------
 	// 백 브러쉬 생성  (색상 채우기용)
 	//------------------------------------------------------
-	 _BackColor = RGB(25, 25, 25);
-	 _TitleColor = RGB(100, 100, 100);
+	 _bgColor = RGB(25, 25, 25);
+	 _titleColor = RGB(100, 100, 100);
 	 _UIColor = RGB(0, 255, 0);
 
-	_hBackBrush = CreateSolidBrush(_BackColor);
-	_hBackBrush_Title = CreateSolidBrush(_TitleColor);
+	_hBackBrush = CreateSolidBrush(_bgColor);
+	_hBackBrush_Title = CreateSolidBrush(_titleColor);
 
 
 	// 각 자식 윈도우의 색상은  1개로 통일 하셔도 됩니다.
@@ -166,16 +166,16 @@ BOOL CMonitorGraphUnit::PutThis(void) {
 BOOL CMonitorGraphUnit::InsertData(int iData) {
 	// 창 크기에 따른 데이터의 최대 개수
 	// 너비의 1/3 만 넣고, x간 간격이 3
-	if (iData > _iDataMax) {
+	if (iData > _dataMax) {
 		int floor =  (iData / 1000) * 1000 + 1000;
-		_iDataMax = floor;
+		_dataMax = floor;
 
 		PlaySound((LPCTSTR) SND_ALIAS_SYSTEMHAND, NULL, SND_ALIAS_ID | SND_ASYNC); // 소리 출력
 		DeleteObject(_hBackBrush);
 		_hBackBrush = CreateSolidBrush(RGB(200, 0, 0));
 		SetTimer(_hWnd, 1, dfALERT_TIME_MS, NULL);
 	}
-	int max_X = (int) ((float) _iWindowWidth / 3.2f);
+	int max_X = (int) ((float) _windowWidth / 3.2f);
 
 	// 데이터 넣기
 	if (_dataList.size() > max_X) {
@@ -183,7 +183,7 @@ BOOL CMonitorGraphUnit::InsertData(int iData) {
 	}
 	_dataList.push_back(iData);
 
-	if (_iDataAlert != 0 && _iDataAlert <= iData) {
+	if (_dataAlert != 0 && _dataAlert <= iData) {
 		//  경고 1회 !
 		PlaySound((LPCTSTR) SND_ALIAS_SYSTEMHAND, NULL, SND_ALIAS_ID | SND_ASYNC); // 소리 출력
 		DeleteObject(_hBackBrush);
@@ -238,9 +238,9 @@ void CMonitorGraphUnit::Paint_LineSingle() {
 }
 #pragma region UI
 void CMonitorGraphUnit::Paint_Title() {
-	BYTE byR = min(255, GetRValue(_BackColor) + 270);
-	BYTE byG = min(255, GetGValue(_BackColor) + 270);
-	BYTE byB = min(255, GetBValue(_BackColor) + 70);
+	BYTE byR = min(255, GetRValue(_bgColor) + 270);
+	BYTE byG = min(255, GetGValue(_bgColor) + 270);
+	BYTE byB = min(255, GetBValue(_bgColor) + 70);
 
 	SetTextColor(_hMemDC, RGB(byR, byG, byB));
 
@@ -258,7 +258,7 @@ void CMonitorGraphUnit::Paint_Title() {
 	GetClientRect(_hWnd, &rect);                                 // 윈도우 크기 얻어오기
 
 
-	Rectangle(_hMemDC, 0, 0, _iWindowWidth + 1, dfTITLE_RECT_HEIGHT);
+	Rectangle(_hMemDC, 0, 0, _windowWidth + 1, dfTITLE_RECT_HEIGHT);
 
 	// Ractangle 사각형 그리기로  상단 부분에 30pixel 높이로 사각형을 그립니다.
 	// Ractangle 출력시 외곽선은 Pen, 내부는 Brush 로 채워집니다.
@@ -274,38 +274,38 @@ void CMonitorGraphUnit::Paint_Title() {
 	
 
 	HFONT hOldFont = (HFONT) SelectObject(_hMemDC, _hFontTitle);
-	TextOut(_hMemDC, 7, 3, _szTitle, (int) wcslen(_szTitle));
+	TextOut(_hMemDC, 7, 3, _title, (int) wcslen(_title));
 	SelectObject(_hMemDC, hOldFont);
 
 }
 void CMonitorGraphUnit::Paint_Grid() {
-	BYTE byR = min(255, GetRValue(_BackColor) + 70);
-	BYTE byG = min(255, GetGValue(_BackColor) + 170);
-	BYTE byB = min(255, GetBValue(_BackColor) + 70);
+	BYTE byR = min(255, GetRValue(_bgColor) + 70);
+	BYTE byG = min(255, GetGValue(_bgColor) + 170);
+	BYTE byB = min(255, GetBValue(_bgColor) + 70);
 
 	SetTextColor(_hMemDC, RGB(byR, byG, byB));
 	HPEN	hOldPen = (HPEN) SelectObject(_hMemDC, _hGridPen);
 
-	int iDataInterval = _iDataMax / 4;		// Max 데이터를 기준으로 4등분 해보았습니다.  
+	int iDataInterval = _dataMax / 4;		// Max 데이터를 기준으로 4등분 해보았습니다.  
 						// Max 데이터를 기준으로 4등분이 아닌,  그냥 윈도우 크기 기준으로 4등분을 하면 안되느냐 ? 라고 하실 수 있으나
 						//  4등분 그리드 선에  실제 데이터 수치도 표기를 해주어야 하므로  실제 데이터값 기준으로 구한 것입니다.
 
 
-	int iY = _iWindowPosY + dfTITLE_RECT_HEIGHT;
+	int iY = _windowPosY + dfTITLE_RECT_HEIGHT;
 
 
-	int iIntervalY = (_iWindowHeight - dfTITLE_RECT_HEIGHT) / 4;	// 실제 화면 윈도우 크기기준 4등분
+	int iIntervalY = (_windowHeight - dfTITLE_RECT_HEIGHT) / 4;	// 실제 화면 윈도우 크기기준 4등분
 
 
 	HFONT hOldFont = (HFONT) SelectObject(_hMemDC, _hFontGrid);
 
 	WCHAR szPoint[10];
-	wsprintf(szPoint, L"%d", _iDataMax);
+	wsprintf(szPoint, L"%d", _dataMax);
 	//----------------------------------------------------
 	// 각 위치별 수치 찍기
 	//----------------------------------------------------
 
-	TextOut(_hMemDC, _iWindowPosX + 1, iY + 1, szPoint, (int) wcslen(szPoint));	// 가장 상단부의 수치를 찍어봅니다.  수치가 szPoint 에 구해져 있습니다.  
+	TextOut(_hMemDC, _windowPosX + 1, iY + 1, szPoint, (int) wcslen(szPoint));	// 가장 상단부의 수치를 찍어봅니다.  수치가 szPoint 에 구해져 있습니다.  
 
 	for (int iCnt = 3; iCnt > 0; --iCnt) {
 		iY += iIntervalY;
@@ -313,14 +313,14 @@ void CMonitorGraphUnit::Paint_Grid() {
 		//----------------------------------------------------
 		// 세로축 선 긋기
 		//----------------------------------------------------
-		MoveToEx(_hMemDC, _iWindowPosX + 1, iY + 1, NULL);
-		LineTo(_hMemDC, _iWindowPosX + _iWindowWidth - 1, iY + 1);
+		MoveToEx(_hMemDC, _windowPosX + 1, iY + 1, NULL);
+		LineTo(_hMemDC, _windowPosX + _windowWidth - 1, iY + 1);
 
 		//----------------------------------------------------
 		// 각 위치별 수치 찍기
 		//----------------------------------------------------
-		wsprintf(szPoint, L"%d", _iDataMax / (4) * (iCnt));
-		TextOut(_hMemDC, _iWindowPosX + 1, iY + 1, szPoint, (int) wcslen(szPoint));
+		wsprintf(szPoint, L"%d", _dataMax / (4) * (iCnt));
+		TextOut(_hMemDC, _windowPosX + 1, iY + 1, szPoint, (int) wcslen(szPoint));
 	}
 
 	SelectObject(_hMemDC, hOldFont);
@@ -331,14 +331,14 @@ void CMonitorGraphUnit::Paint_Grid() {
 int CMonitorGraphUnit::GetDataYPos(int data) {
 	// 그래프로 대략 표현하기
 	// min( bottom-1 ,  bottom - (Height * (data/dataMax) )
-	return min((_iWindowHeight + _iWindowPosY - 1), (_iWindowHeight + _iWindowPosY) -
-		(int) ((double) (_iWindowHeight - dfTITLE_RECT_HEIGHT) * ((double) data / (double) _iDataMax)));
+	return min((_windowHeight + _windowPosY - 1), (_windowHeight + _windowPosY) -
+		(int) ((double) (_windowHeight - dfTITLE_RECT_HEIGHT) * ((double) data / (double) _dataMax)));
 }
 
 // 
 void CMonitorGraphUnit::ChangeBackgroundBrush() {
 	DeleteObject(_hBackBrush);
-	_hBackBrush = CreateSolidBrush(_BackColor);
+	_hBackBrush = CreateSolidBrush(_bgColor);
 }
 
 
@@ -378,10 +378,10 @@ void CMonitorGraphUnit::CreateMemDC() {
 	SetROP2(_hMemDC, R2_XORPEN);	// 그래프 그리드랑 xor
 	// TODO 폰트 xor
 	// 윈도우 크기정보 저장
-	_iWindowPosX = Rect.left;
-	_iWindowPosY = Rect.top;
-	_iWindowWidth = Rect.right - Rect.left;
-	_iWindowHeight = Rect.bottom - Rect.top;
+	_windowPosX = Rect.left;
+	_windowPosY = Rect.top;
+	_windowWidth = Rect.right - Rect.left;
+	_windowHeight = Rect.bottom - Rect.top;
 }
 
 void CMonitorGraphUnit::FlipMemDC() {

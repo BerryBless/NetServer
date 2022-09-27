@@ -469,7 +469,7 @@ void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID sessionID) 
 		pPacket->GetData((char *) pPlayer->_NickName, NICK_NAME_MAX_SIZE);
 		pPacket->GetData((char *) pPlayer->_TokenKey, TOKEN_KEY_SIZE);
 
-		pPlayer->_AccountNo = acno;
+		pPlayer->_accountNo = acno;
 		pPlayer->_SectorX = -1;
 		pPlayer->_SectorY = -1;
 		pPlayer->_sessionID = sessionID;
@@ -482,7 +482,7 @@ void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID sessionID) 
 	pPacket->SubRef(4);
 
 	Packet *pResLoginPacket = Packet::AllocAddRef();
-	MakePacketResponseLogin(pResLoginPacket, pPlayer->_AccountNo, status);
+	MakePacketResponseLogin(pResLoginPacket, pPlayer->_accountNo, status);
 	SendPacket(pPlayer->_sessionID, pResLoginPacket);
 	if (status == FALSE) {
 		_LOG(dfLOG_LEVEL_ERROR, L"status == FALSE"); // TODO ERROR MSG
@@ -531,8 +531,8 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID) {
 		_LOG(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  pPlayer->_isLogin == false", sessionID); // TODO ERROR MSG
 		DisconnectSession(sessionID);
 		return;
-	}if (pPlayer->_AccountNo != no) {
-		_LOG(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  _AccountNo == no", sessionID); // TODO ERROR MSG
+	}if (pPlayer->_accountNo != no) {
+		_LOG(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  _accountNo == no", sessionID); // TODO ERROR MSG
 		DisconnectSession(sessionID);
 		return;
 	}
@@ -596,7 +596,7 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID) {
 
 	// Send RES_SECTOR_MOVE Msg
 	Packet *pResPacket = Packet::AllocAddRef();
-	MakePacketResponseSectorMove(pResPacket, pPlayer->_AccountNo, pPlayer->_SectorX, pPlayer->_SectorY);
+	MakePacketResponseSectorMove(pResPacket, pPlayer->_accountNo, pPlayer->_SectorX, pPlayer->_SectorY);
 	SendPacket(pPlayer->_sessionID, pResPacket);
 	pResPacket->SubRef(7);
 	PRO_END(L"MoveSector");
@@ -642,9 +642,9 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID sessionID) {
 		DisconnectSession(sessionID);
 		return;
 	}
-	if (no != pSender->_AccountNo) {
+	if (no != pSender->_accountNo) {
 		//TODO ERROR
-		_LOG(dfLOG_LEVEL_ERROR, L"no != pSender->_AccountNo");
+		_LOG(dfLOG_LEVEL_ERROR, L"no != pSender->_accountNo");
 		DisconnectSession(sessionID);
 		return;
 	}
@@ -655,7 +655,7 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID sessionID) {
 		return;
 	}
 	Packet *pResPacket = Packet::AllocAddRef();
-	MakePacketResponseMessage(pResPacket, pSender->_AccountNo, pSender->_ID, pSender->_NickName, msgLen, message);
+	MakePacketResponseMessage(pResPacket, pSender->_accountNo, pSender->_ID, pSender->_NickName, msgLen, message);
 	BroadcastSectorAround(pResPacket, pSender->_SectorX, pSender->_SectorY, nullptr);
 
 	pResPacket->SubRef(11);

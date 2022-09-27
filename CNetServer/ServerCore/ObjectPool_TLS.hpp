@@ -9,8 +9,8 @@ template <typename DATA>
 class ObjectPool_TLS {
 	friend class CChunk;
 private:
-	struct st_Chunk_Block;
-	struct st_FreeCount;
+	struct CHUNK_BLOCK;
+	struct FREECOUNT;
 
 	class CChunk {
 	public:
@@ -21,14 +21,14 @@ private:
 			MAX_SIZE = 500
 		};
 
-		st_Chunk_Block				_ObjectArr[MAX_SIZE];
+		CHUNK_BLOCK				_ObjectArr[MAX_SIZE];
 		int							_AllocCount = 0;
 		DWORD						_threadID;
 		ObjectPool_TLS *			_pObjPool = nullptr;
-		alignas(64) st_FreeCount	_FreeCount;
+		alignas(64) FREECOUNT	_FreeCount;
 	};
 
-	struct st_FreeCount {
+	struct FREECOUNT {
 		union {
 			LONG counter = 0;
 			struct {
@@ -38,7 +38,7 @@ private:
 		};
 	};
 
-	struct st_Chunk_Block {
+	struct CHUNK_BLOCK {
 		DATA			data;
 		void *			code;
 		CChunk *		pOrigin;
@@ -109,7 +109,7 @@ inline void ObjectPool_TLS<DATA>::Free(DATA *pData) {
 		pData->~DATA();
 	}
 
-	st_Chunk_Block *block = (st_Chunk_Block *) pData;
+	CHUNK_BLOCK *block = (CHUNK_BLOCK *) pData;
 
 	block->pOrigin->Free(pData);
 	InterlockedDecrement(&_Size);
@@ -127,7 +127,7 @@ inline DWORD ObjectPool_TLS<DATA>::GetSize(void) {
 template<typename DATA>
 inline DATA *ObjectPool_TLS<DATA>::CChunk::Alloc(void) {
 	if (_AllocCount == CChunk::MAX_SIZE) return nullptr;
-	st_Chunk_Block *pBlock = (st_Chunk_Block *) &_ObjectArr[_AllocCount++];
+	CHUNK_BLOCK *pBlock = (CHUNK_BLOCK *) &_ObjectArr[_AllocCount++];
 
 	pBlock->pOrigin = this;
 	pBlock->code = this;
@@ -137,8 +137,8 @@ inline DATA *ObjectPool_TLS<DATA>::CChunk::Alloc(void) {
 }
 template<typename DATA>
 inline bool ObjectPool_TLS<DATA>::CChunk::Free(DATA *pData) {
-	st_Chunk_Block *block = (st_Chunk_Block *) pData;
-	st_FreeCount freeCounter;
+	CHUNK_BLOCK *block = (CHUNK_BLOCK *) pData;
+	FREECOUNT freeCounter;
 
 	if (block->code != this ||
 		block->checkSum_over != CHUNK_CHECKSUM) {
