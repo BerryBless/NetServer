@@ -47,7 +47,7 @@ CChatServer::CChatServer() : CServer(ENCRYPTED_PACKET), _startTime{ 0 }, _timeFo
 
 	_curLogTimer = _preLogTimer = timeGetTime();
 
-	SetTimeoutTime(40000);
+	SetTimeoutTime(2000);
 
 	InitializeSRWLock(&_playerMapLock);
 
@@ -245,10 +245,10 @@ void CChatServer::OnTimeout(SESSION_ID sessionID) {
 	job->_Type = CHAT_PACKET_TYPE::ON_TIME_OUT;
 	job->_pPacket = nullptr;
 
-	//_jobQueue.enqueue(job);
-	//SetEvent(_DequeueEvent);
+	_jobQueue.enqueue(job);
+	SetEvent(_DequeueEvent);
 #else
-	//PacketProc(nullptr,sessionID, CHAT_PACKET_TYPE::ON_TIME_OUT);
+	DisconnectSession(sessionID);
 #endif // UPDATE_THREAD
 }
 
@@ -433,8 +433,7 @@ void CChatServer::PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type) {
 		//PacketProcHeartBeat(pPacket, sessionID);
 		break;
 	default:
-		wsprintf(errmsg, L"ERROR :: Session Default Case sessionID : %I64u", sessionID);
-		_LOG(dfLOG_LEVEL_ERROR, errmsg);
+		_LOG(dfLOG_LEVEL_DEBUG, L"ERROR :: Session Default Case sessionID : %I64u", sessionID);
 		DisconnectSession(sessionID);
 		break;
 	}
@@ -450,14 +449,14 @@ void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID sessionID) 
 	ACCOUNT_NO acno;
 
 	if (pPacket->GetDataSize() < sizeof(ACCOUNT_NO)) {
-		_LOG(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() < sizeof(ACCOUNT_NO)"); // TODO ERROR MSG
+		_LOG(dfLOG_LEVEL_DEBUG, L"pPacket->GetDataSize() < sizeof(ACCOUNT_NO)"); // TODO ERROR MSG
 		DisconnectSession(sessionID);
 	}
 	//(*pPacket).GetData((char *) &acno, sizeof(ACCOUNT_NO));
 	(*pPacket) >> acno;
 
 	if (pPacket->GetDataSize() != ID_MAX_SIZE + NICK_NAME_MAX_SIZE + TOKEN_KEY_SIZE) {
-		_LOG(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() != ID_MAX_SIZE + NICK_NAME_MAX_SIZE + TOKEN_KEY_SIZE"); // TODO ERROR MSG
+		_LOG(dfLOG_LEVEL_DEBUG, L"pPacket->GetDataSize() != ID_MAX_SIZE + NICK_NAME_MAX_SIZE + TOKEN_KEY_SIZE"); // TODO ERROR MSG
 		DisconnectSession(sessionID);
 	}
 	Player *pPlayer = FindPlayer(sessionID);
@@ -485,7 +484,7 @@ void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID sessionID) 
 	MakePacketResponseLogin(pResLoginPacket, pPlayer->_accountNo, status);
 	SendPacket(pPlayer->_sessionID, pResLoginPacket);
 	if (status == FALSE) {
-		_LOG(dfLOG_LEVEL_ERROR, L"status == FALSE"); // TODO ERROR MSG
+		_LOG(dfLOG_LEVEL_DEBUG, L"status == FALSE"); // TODO ERROR MSG
 		DisconnectSession(sessionID);
 	}
 
@@ -505,7 +504,7 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID) {
 	// 패킷 꺼내기
 	pPacket->AddRef(5);
 	if (pPacket->GetDataSize() != (sizeof(no) + sizeof(sx) + sizeof(sy))) {
-		_LOG(dfLOG_LEVEL_ERROR, L"pPacket->GetDataSize() != (sizeof(no) + sizeof(sx) + sizeof(sy))"); // TODO ERROR MSG
+		_LOG(dfLOG_LEVEL_DEBUG, L"pPacket->GetDataSize() != (sizeof(no) + sizeof(sx) + sizeof(sy))"); // TODO ERROR MSG
 		DisconnectSession(sessionID);
 		pPacket->SubRef(5);
 		return;
@@ -515,7 +514,7 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID) {
 	pPacket->SubRef(6);
 	// 섹터 범위 초과
 	if (sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE) {
-		_LOG(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE", sessionID); // TODO ERROR MSG
+		_LOG(dfLOG_LEVEL_DEBUG, L"PacketProcMoveSector(id [%I64u])  sx >= SECTOR_X_SIZE || sy >= SECTOR_Y_SIZE", sessionID); // TODO ERROR MSG
 		DisconnectSession(sessionID);
 		return;
 	}
@@ -524,15 +523,15 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID) {
 	// 플레이어 무결성
 	Player *pPlayer = FindPlayer(sessionID);
 	if (pPlayer == nullptr) {
-		_LOG(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  pPlayer == nullptr", sessionID); // TODO ERROR MSG
+		_LOG(dfLOG_LEVEL_DEBUG, L"PacketProcMoveSector(id [%I64u])  pPlayer == nullptr", sessionID); // TODO ERROR MSG
 		DisconnectSession(sessionID);
 		return;
 	}if (pPlayer->_isLogin == false) {
-		_LOG(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  pPlayer->_isLogin == false", sessionID); // TODO ERROR MSG
+		_LOG(dfLOG_LEVEL_DEBUG, L"PacketProcMoveSector(id [%I64u])  pPlayer->_isLogin == false", sessionID); // TODO ERROR MSG
 		DisconnectSession(sessionID);
 		return;
 	}if (pPlayer->_accountNo != no) {
-		_LOG(dfLOG_LEVEL_ERROR, L"PacketProcMoveSector(id [%I64u])  _accountNo == no", sessionID); // TODO ERROR MSG
+		_LOG(dfLOG_LEVEL_DEBUG, L"PacketProcMoveSector(id [%I64u])  _accountNo == no", sessionID); // TODO ERROR MSG
 		DisconnectSession(sessionID);
 		return;
 	}
@@ -633,24 +632,24 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID sessionID) {
 	Player *pSender = FindPlayer(sessionID);
 	if (pSender == nullptr) {
 		//TODO ERROR
-		_LOG(dfLOG_LEVEL_ERROR, L"pSender == nullptr");
+		_LOG(dfLOG_LEVEL_DEBUG, L"pSender == nullptr");
 		DisconnectSession(sessionID);
 		return;
 	}
 	if (pSender->_isLogin == false) {
-		_LOG(dfLOG_LEVEL_ERROR, L"pSender->_isLogin == false");
+		_LOG(dfLOG_LEVEL_DEBUG, L"pSender->_isLogin == false");
 		DisconnectSession(sessionID);
 		return;
 	}
 	if (no != pSender->_accountNo) {
 		//TODO ERROR
-		_LOG(dfLOG_LEVEL_ERROR, L"no != pSender->_accountNo");
+		_LOG(dfLOG_LEVEL_DEBUG, L"no != pSender->_accountNo");
 		DisconnectSession(sessionID);
 		return;
 	}
 	if (pSender->_SectorX >= 50 || pSender->_SectorY >= 50) {
 		//TODO ERROR
-		_LOG(dfLOG_LEVEL_ERROR, L"pSender->_SectorX >= 50 || pSender->_SectorY >= 50");
+		_LOG(dfLOG_LEVEL_DEBUG, L"pSender->_SectorX >= 50 || pSender->_SectorY >= 50");
 		DisconnectSession(sessionID);
 		return;
 	}

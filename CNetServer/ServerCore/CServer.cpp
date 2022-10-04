@@ -148,6 +148,7 @@ bool CServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 		_LOG(dfLOG_LEVEL_DEBUG, L"//SendPacket ERROR :: Session is colsed..");
 		OnError(ERROR_NO_SEESSION, L"SendPacket ERROR :: Session is colsed..");
 		pPacket->SubRef();
+		ReturnSession(pSession);
 		return false;
 	}
 	PRO_BEGIN(L"SendPacket");
@@ -658,10 +659,8 @@ bool CServer::TimeOutProc() {
 		Sleep(_timeoutMillisec);
 		if (_isRunning == false) break;
 		for (int i = 1; i <= this->_maxConnection; ++i) {
-			if (InterlockedOr((LONG *) &_sessionContainer[i]._IOcount, 0) & 0x80000000 != 0) continue;
-			if (InterlockedOr((LONG *) &_sessionContainer[i]._isAlive, FALSE) == FALSE) continue;
-
-			if (_sessionContainer[i]._lastActiveTime >= timeoutTime) continue;
+			if ((InterlockedOr((LONG *) &_sessionContainer[i]._IOcount, 0) & 0x80000000) != 0) continue;
+			if (_sessionContainer[i]._lastActiveTime > timeoutTime) continue;
 			this->OnTimeout(_sessionContainer[i]._ID);
 		}
 	}
@@ -726,7 +725,6 @@ bool CServer::SendPost(SESSION *pSession) {
 		int err = WSAGetLastError();
 
 		if (err != WSA_IO_PENDING) {
-			CancelIoEx((HANDLE) pSession->_sock, nullptr);
 			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
 				_LOG(dfLOG_LEVEL_ERROR, L"//// WSASend() ERROR [%d]", err);
 				//CRASH();
@@ -755,9 +753,6 @@ bool CServer::RecvPost(SESSION *pSession) {
 	}
 	if (InterlockedOr((long *) &pSession->_isAlive, FALSE) == FALSE) {
 		return false;
-	}
-	if (InterlockedOr64((LONG64 *) &pSession->_ID, 0) == 0) {
-		CRASH();
 	}
 	//PRO_BEGIN(L"RecvPost");
 
@@ -792,7 +787,6 @@ bool CServer::RecvPost(SESSION *pSession) {
 		int err = WSAGetLastError();
 
 		if (err != WSA_IO_PENDING) {
-			CancelIoEx((HANDLE) pSession->_sock, nullptr);
 			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
 				_LOG(dfLOG_LEVEL_ERROR, L"//// WSARecv ERROR [%d]\n", err);
 

@@ -498,7 +498,6 @@ bool CClient::SendPost(SESSION *pSession) {
 		int err = WSAGetLastError();
 
 		if (err != WSA_IO_PENDING) {
-			CancelIoEx((HANDLE) pSession->_sock, nullptr);
 			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
 				_LOG(dfLOG_LEVEL_ERROR, L"//// WSASend() ERROR [%d]", err);
 				//CRASH();
@@ -528,9 +527,7 @@ bool CClient::RecvPost(SESSION *pSession) {
 	if (InterlockedOr((long *) &pSession->_isAlive, FALSE) == FALSE) {
 		return false;
 	}
-	if (InterlockedOr64((LONG64 *) &pSession->_ID, 0) == 0) {
-		CRASH();
-	}
+
 	//PRO_BEGIN(L"RecvPost");
 
 
@@ -564,7 +561,6 @@ bool CClient::RecvPost(SESSION *pSession) {
 		int err = WSAGetLastError();
 
 		if (err != WSA_IO_PENDING) {
-			CancelIoEx((HANDLE) pSession->_sock, nullptr);
 			if (err != 10053 && err != 10054 && err != 10064 && err != 10038) {
 				_LOG(dfLOG_LEVEL_ERROR, L"//// RecvPost() :: WSARecv ERROR [%d]\n", err);
 
