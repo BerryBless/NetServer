@@ -26,7 +26,7 @@ struct SESSION {
 	SRWLOCK _lock;
 
 	// session state
-	DWORD _lastActiveTime;
+	DWORD _timeoutTimer;
 	alignas(64) DWORD _IOcount;
 	alignas(64) DWORD _IOFlag;
 	alignas(64) DWORD _sendPacketCnt;

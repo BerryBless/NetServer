@@ -47,7 +47,7 @@ CChatServer::CChatServer() : CServer(ENCRYPTED_PACKET), _startTime{ 0 }, _timeFo
 
 	_curLogTimer = _preLogTimer = timeGetTime();
 
-	SetTimeoutTime(2000);
+	SetTimeoutTime(10000);
 
 	InitializeSRWLock(&_playerMapLock);
 

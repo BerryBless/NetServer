@@ -470,6 +470,7 @@ bool CServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 	//---------------------------
 	// recv신호가 옴
 	//---------------------------
+	if (pSession == nullptr) CRASH();
 
 	//---------------------------
 	// 온만큼 링버퍼 Rear빼주기
@@ -479,8 +480,8 @@ bool CServer::RecvProc(SESSION *pSession, DWORD transferredSize) {
 		_LOG(dfLOG_LEVEL_ERROR, L" ID[%lld] :: transferredSize[%d] != movRet[%d]", pSession->_ID, transferredSize, movRet);
 		CRASH();
 	}
+	SetSessionTimeoutTimer(pSession);
 
-	SetSessionActiveTimer(pSession);
 	//---------------------------
 	// 	   반복문 돌며 패킷 처리
 	//---------------------------
@@ -655,12 +656,12 @@ bool CServer::TimeOutProc() {
 	DWORD timeoutTime;
 	while (!_isRunning) YieldProcessor;
 	while (_isRunning) {
+		Sleep(2000);
 		timeoutTime = timeGetTime();
-		Sleep(_timeoutMillisec);
 		if (_isRunning == false) break;
 		for (int i = 1; i <= this->_maxConnection; ++i) {
 			if ((InterlockedOr((LONG *) &_sessionContainer[i]._IOcount, 0) & 0x80000000) != 0) continue;
-			if (_sessionContainer[i]._lastActiveTime > timeoutTime) continue;
+			if (timeoutTime < InterlockedOr((LONG *) &_sessionContainer[i]._timeoutTimer, 0)) continue;
 			this->OnTimeout(_sessionContainer[i]._ID);
 		}
 	}
@@ -1102,6 +1103,7 @@ SESSION *CServer::CreateSession(SOCKET sock, sockaddr_in clientaddr) {
 	//---------------------------
 	// 초기화
 	//---------------------------
+	SetSessionTimeoutTimer(pSession);
 	InitializeSRWLock(&pSession->_lock);
 	InterlockedExchange64((LONG64 *) &pSession->_ID, 0);
 	InterlockedIncrement(&pSession->_IOcount);
@@ -1125,7 +1127,6 @@ SESSION *CServer::CreateSession(SOCKET sock, sockaddr_in clientaddr) {
 	GetStringIP(pSession->_IPStr, clientaddr);
 	pSession->_IP = ntohl(clientaddr.sin_addr.S_un.S_addr);
 	pSession->_port = ntohs(clientaddr.sin_port);
-	SetSessionActiveTimer(pSession);
 
 	//---------------------------
 	// IOCP

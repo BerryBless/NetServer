@@ -352,8 +352,6 @@ bool CClient::RecvProc(SESSION *pSession, DWORD transferredSize) {
 		_LOG(dfLOG_LEVEL_ERROR, L" ID[%lld] :: transferredSize[%d] != movRet[%d]", pSession->_ID, transferredSize, movRet);
 		CRASH();
 	}
-
-	SetSessionActiveTimer(pSession);
 	//---------------------------
 	// 	   반복문 돌며 패킷 처리
 	//---------------------------
@@ -978,7 +976,6 @@ SESSION *CClient::CreateSession(SOCKET sock, sockaddr_in servAddr) {
 	GetStringIP(pSession->_IPStr, servAddr);
 	pSession->_IP = ntohl(servAddr.sin_addr.S_un.S_addr);
 	pSession->_port = ntohs(servAddr.sin_port);
-	SetSessionActiveTimer(pSession);
 
 	//---------------------------
 	// IOCP

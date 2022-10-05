@@ -83,7 +83,6 @@ private:
 
 	bool ReleaseSession(SESSION *pSession );
 
-	inline void SetSessionActiveTimer(SESSION *pSession) { InterlockedExchange(&pSession->_lastActiveTime, timeGetTime()); }
 
 	SESSION *CreateSession(SOCKET sock, sockaddr_in servAddr);
 	SESSION_ID GeneratesessionID();

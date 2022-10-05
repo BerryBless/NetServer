@@ -88,7 +88,7 @@ private:
 
 	bool ReleaseSession(SESSION *pSession );
 
-	inline void SetSessionActiveTimer(SESSION *pSession) { InterlockedExchange(&pSession->_lastActiveTime, timeGetTime()); }
+	inline void SetSessionTimeoutTimer(SESSION *pSession) { InterlockedExchange(&pSession->_timeoutTimer, timeGetTime() + _timeoutMillisec); }
 
 	SESSION *CreateSession(SOCKET sock, sockaddr_in clientaddr);
 	SESSION_ID GeneratesessionID();
