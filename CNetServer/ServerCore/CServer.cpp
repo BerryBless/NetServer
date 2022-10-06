@@ -656,7 +656,7 @@ bool CServer::TimeOutProc() {
 	DWORD timeoutTime;
 	while (!_isRunning) YieldProcessor;
 	while (_isRunning) {
-		Sleep(2000);
+		Sleep(_timeoutMillisec / 2);
 		timeoutTime = timeGetTime();
 		if (_isRunning == false) break;
 		for (int i = 1; i <= this->_maxConnection; ++i) {

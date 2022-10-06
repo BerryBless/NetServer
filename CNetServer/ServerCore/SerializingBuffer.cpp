@@ -97,7 +97,6 @@ void Packet::Encode() {
 		*temp = E;
 		temp++;
 	}
-
 }
 
 bool Packet::Decode() {

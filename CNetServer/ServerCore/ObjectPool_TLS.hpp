@@ -9,8 +9,8 @@ template <typename DATA>
 class ObjectPool_TLS {
 	friend class CChunk;
 private:
-	struct CHUNK_BLOCK;
-	struct FREECOUNT;
+	struct st_Chunk_Block;
+	struct st_FreeCount;
 
 	class CChunk {
 	public:
@@ -21,14 +21,14 @@ private:
 			MAX_SIZE = 500
 		};
 
-		CHUNK_BLOCK				_ObjectArr[MAX_SIZE];
+		st_Chunk_Block				_ObjectArr[MAX_SIZE];
 		int							_AllocCount = 0;
 		DWORD						_threadID;
-		ObjectPool_TLS *			_pObjPool = nullptr;
-		alignas(64) FREECOUNT	_FreeCount;
+		ObjectPool_TLS *_pObjPool = nullptr;
+		alignas(64) st_FreeCount	_FreeCount;
 	};
 
-	struct FREECOUNT {
+	struct st_FreeCount {
 		union {
 			LONG counter = 0;
 			struct {
@@ -38,10 +38,10 @@ private:
 		};
 	};
 
-	struct CHUNK_BLOCK {
+	struct st_Chunk_Block {
 		DATA			data;
-		void *			code;
-		CChunk *		pOrigin;
+		void *code;
+		CChunk *pOrigin;
 		unsigned int	checkSum_over = CHUNK_CHECKSUM;
 	};
 
@@ -82,8 +82,7 @@ template<typename DATA>
 inline DATA *ObjectPool_TLS<DATA>::Alloc(void) {
 	CChunk *chunk = (CChunk *) TlsGetValue(_tlsIdx);
 	DWORD myID = GetCurrentThreadId();
-	if (chunk == nullptr || chunk->_threadID != GetCurrentThreadId() || chunk->_AllocCount == CChunk::MAX_SIZE)
-	{
+	if (chunk == nullptr || chunk->_threadID != GetCurrentThreadId() || chunk->_AllocCount == CChunk::MAX_SIZE) {
 		chunk = _pObjectPool->Alloc();
 		chunk->_threadID = GetCurrentThreadId();
 		chunk->_pObjPool = this;
@@ -109,7 +108,7 @@ inline void ObjectPool_TLS<DATA>::Free(DATA *pData) {
 		pData->~DATA();
 	}
 
-	CHUNK_BLOCK *block = (CHUNK_BLOCK *) pData;
+	st_Chunk_Block *block = (st_Chunk_Block *) pData;
 
 	block->pOrigin->Free(pData);
 	InterlockedDecrement(&_Size);
@@ -127,7 +126,7 @@ inline DWORD ObjectPool_TLS<DATA>::GetSize(void) {
 template<typename DATA>
 inline DATA *ObjectPool_TLS<DATA>::CChunk::Alloc(void) {
 	if (_AllocCount == CChunk::MAX_SIZE) return nullptr;
-	CHUNK_BLOCK *pBlock = (CHUNK_BLOCK *) &_ObjectArr[_AllocCount++];
+	st_Chunk_Block *pBlock = (st_Chunk_Block *) &_ObjectArr[_AllocCount++];
 
 	pBlock->pOrigin = this;
 	pBlock->code = this;
@@ -137,8 +136,8 @@ inline DATA *ObjectPool_TLS<DATA>::CChunk::Alloc(void) {
 }
 template<typename DATA>
 inline bool ObjectPool_TLS<DATA>::CChunk::Free(DATA *pData) {
-	CHUNK_BLOCK *block = (CHUNK_BLOCK *) pData;
-	FREECOUNT freeCounter;
+	st_Chunk_Block *block = (st_Chunk_Block *) pData;
+	st_FreeCount freeCounter;
 
 	if (block->code != this ||
 		block->checkSum_over != CHUNK_CHECKSUM) {
