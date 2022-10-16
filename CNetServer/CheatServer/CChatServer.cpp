@@ -691,12 +691,10 @@ void CChatServer::BroadcastSectorAround(Packet *pPacket, WORD sectorX, WORD sect
 	WORD sy = sectorY <= 0 ? 0 : sectorY - 1;
 	WORD ex = sectorX >= SECTOR_X_SIZE - 1 ? SECTOR_X_SIZE - 1 : sectorX + 1;
 	WORD ey = sectorY >= SECTOR_Y_SIZE - 1 ? SECTOR_Y_SIZE - 1 : sectorY + 1;
-
 #ifndef UPDATE_THREAD
-
-
 	for (WORD dy = sy; dy <= ey; ++dy) {
 		for (WORD dx = sx; dx <= ex; ++dx) {
+			//AcquireSRWLockShared
 			SectorSLock(dx, dy);
 		}
 	}
@@ -775,12 +773,12 @@ void CChatServer::RemovePlayer(SESSION_ID sessionID) {
 }
 
 Player *CChatServer::FindPlayer(SESSION_ID sessionID) {
-	__PLAYER_MAP_LOCK();
+	PlayerMapLock();
 	auto iter = _playerMap.find(sessionID);
 	if (iter == _playerMap.end()) {
-		__PLAYER_MAP_UNLOCK();
+		PlayerMapUnlock();
 		return nullptr;
 	}
-	__PLAYER_MAP_UNLOCK();
+	PlayerMapUnlock();
 	return iter->second;
 }

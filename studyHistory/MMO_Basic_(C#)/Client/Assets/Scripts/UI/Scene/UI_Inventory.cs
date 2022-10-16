@@ -1,0 +1,41 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+
+public class UI_Inventory : UI_Base
+{
+    public List<UI_Inventory_Item> Items { get; } = new List<UI_Inventory_Item>();
+    public override void Init()
+    {
+        Items.Clear();
+        // 그리드 산하의 모든 아이템UI 날림
+        GameObject grid = transform.Find("ItemGrid").gameObject;
+        foreach (Transform child in grid.transform)
+            Destroy(child.gameObject);
+
+        // 아이템칸 20칸 만들어주기
+        for(int i = 0; i < 20; i++)
+        {
+            GameObject go = Managers.Resource.Instantiate("UI/Scene/UI_Inventory_Item", grid.transform);
+            UI_Inventory_Item item = go.GetOrAddComponent<UI_Inventory_Item>();
+            Items.Add(item); // 이제 리스트에서 접근가능
+        }
+    }
+
+    // UI인벤 새로고침
+    public void RefreshUI() {
+        if (Items.Count == 0) return;
+
+        List<Item> items = Managers.Inven.Items.Values.ToList();
+        items.Sort((l, r) => { return l.Slot - r.Slot; });  // 슬롯 정렬
+
+        foreach(Item item in items)
+        {
+            if (item.Slot < 0 || item.Slot >= 20)
+                continue;
+
+            Items[item.Slot].SetItem(item);
+        }
+    }
+}

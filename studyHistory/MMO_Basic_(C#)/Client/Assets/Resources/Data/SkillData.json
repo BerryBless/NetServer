@@ -1,0 +1,25 @@
+{
+  "skills": [
+    {
+      "id": "1",
+      "name": "JIT",
+      "cooldown": "0.2",
+      "damage": "10",
+      "skillType": "SkillAuto"
+    },
+    {
+      "id": "2",
+      "name": "SSSSSHOT",
+      "cooldown": "0.3",
+      "damage": "15",
+      "skillType": "SkillProjectile",
+      "projectile": {
+        "name": "Arrow",
+        "speed": "10",
+        "range": "10",
+        "prefab": "Creature/Arrow"
+      }
+
+    }
+  ]
+} 

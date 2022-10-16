@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 283ac0596a977214aa5a43c2dcece1df, type: 3}
+  m_Name: EasyProfileSettings
+  m_EditorClassIdentifier: 
+  UseApiOnly: 0
+  MinAllowPasswordCharacters: 6
+  EmailValidationCharacter: '@'
+  UseEmailConfirm: 0
+  AutoSaveUserCredentials: 1
+  AutoLoginOnStart: 1
+  SystemDateFormat: yyyy/MM/dd HH:mm:ss
+  AllowToLoadScene: 1
+  LoginSceneName: FriendsLogin
+  ProfileSceneName: FriendsMain
+  LoginWindowPrefab: {fileID: 5231671422370121034, guid: 313647ec9a07ea74dbdb79fddb3de8db,
+    type: 3}
+  RegistrationWindowPrefab: {fileID: 819702092076679956, guid: 480267137e5381c4d9c130cdc5ecfb11,
+    type: 3}
+  LoadingWindowPrefab: {fileID: 212179785772753428, guid: 3717f095795ff58459968b1a6884e3a5,
+    type: 3}
+  PopupWindowPrefab: {fileID: 399583718631491334, guid: 3e0587ec3840f144fa6b118cd8222ec4,
+    type: 3}
+  UserProfileWindowPrefab: {fileID: 4069872169278559111, guid: 5f17b08cd25988748a54cdd96676951d,
+    type: 3}
+  RestorePasswordWindowPrefab: {fileID: 2737965318753547597, guid: bb017f0dc5fa22847b39f6a4db649677,
+    type: 3}
+  UploadImageQuality: 50
+  ProfileAvatarSize: 512
+  DefaultAvatarTexture: {fileID: 2800000, guid: 7df098efe627dc44c9bdf7857f0e77cd,
+    type: 3}
+  CustomValues:
+  - ValueID: Status
+    ValueType: 0
+    IntValue: 0
+    StringValue: 
+    FloatValue: 0
+  - ValueID: Gold
+    ValueType: 1
+    IntValue: 0
+    StringValue: 
+    FloatValue: 0
+  - ValueID: Exp
+    ValueType: 2
+    IntValue: 0
+    StringValue: 
+    FloatValue: 0
+  - ValueID: NewValueID
+    ValueType: 0
+    IntValue: 0
+    StringValue: 
+    FloatValue: 0
