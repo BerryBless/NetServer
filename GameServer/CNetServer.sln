@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestClient", "TestClient\Te
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MonitorGraphUnit", "MonitorGraphUnit\MonitorGraphUnit.vcxproj", "{5C28907A-17B8-43A4-992D-E14B2979777B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EchoServer", "EchoServer\EchoServer.vcxproj", "{CEEECFC6-996F-471D-9258-D34060866E15}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -61,6 +63,14 @@ Global
 		{5C28907A-17B8-43A4-992D-E14B2979777B}.Release|x64.Build.0 = Release|x64
 		{5C28907A-17B8-43A4-992D-E14B2979777B}.Release|x86.ActiveCfg = Release|Win32
 		{5C28907A-17B8-43A4-992D-E14B2979777B}.Release|x86.Build.0 = Release|Win32
+		{CEEECFC6-996F-471D-9258-D34060866E15}.Debug|x64.ActiveCfg = Debug|x64
+		{CEEECFC6-996F-471D-9258-D34060866E15}.Debug|x64.Build.0 = Debug|x64
+		{CEEECFC6-996F-471D-9258-D34060866E15}.Debug|x86.ActiveCfg = Debug|Win32
+		{CEEECFC6-996F-471D-9258-D34060866E15}.Debug|x86.Build.0 = Debug|Win32
+		{CEEECFC6-996F-471D-9258-D34060866E15}.Release|x64.ActiveCfg = Release|x64
+		{CEEECFC6-996F-471D-9258-D34060866E15}.Release|x64.Build.0 = Release|x64
+		{CEEECFC6-996F-471D-9258-D34060866E15}.Release|x86.ActiveCfg = Release|Win32
+		{CEEECFC6-996F-471D-9258-D34060866E15}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
