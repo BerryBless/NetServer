@@ -1,7 +1,7 @@
 # 게임서버 스터디 저장소
-포트폴리오 : https://url.kr/1q36lm
-email : shsuzakfn@gmail.com
----
+## 포트폴리오 : https://url.kr/1q36lm
+## email : shsuzakfn@gmail.com
+
 ## 1. 게임서버 라이브러리 
 Windows IOCP를 클래스로 래핑하여 어느 프로젝트에서든 서버가 필요하면 CServer를 상속받아 서버를 열 수 있음. 
 
