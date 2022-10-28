@@ -5,22 +5,19 @@
 #include "CCrashDump.h"
 #include "ObjectPool.hpp"
 #include "ObjectPool_TLS.h"
+#include "SerializingBuffer.h"
 
 #include <time.h>
 #include <strsafe.h>
 #include <locale.h>
 
-#define dfTEST_THREAD_POOLING_CNT 10000
+#define dfTEST_THREAD_POOLING_CNT 500
 #define dfTLSPOOL
 
 
 class TEST_NODE {
 public:
-	TEST_NODE()
-	{
-		_data = 11;
-	}
-	UINT64 _data;
+	Packet _data;
 	UINT64 _check;
 
 };
@@ -28,7 +25,7 @@ public:
 #ifdef dfTLSPOOL
 ObjectPool_TLS<TEST_NODE> g_pool(true);
 #else
-CObjectPool<TEST_NODE> g_pool;
+CLF_ObjectPool<TEST_NODE> g_pool;
 #endif // dfTLSPOOL
 
 unsigned int __stdcall PoolingTestThread(LPVOID arg);
@@ -37,9 +34,9 @@ unsigned int __stdcall PoolingTestThread(LPVOID arg);
 #define dfPOOL 1
 
 int main() {
-	int threadCnt;
-	printf_s("num of thread >> ");
-	scanf_s("%d", &threadCnt);
+	int threadCnt = 4;
+	//printf_s("num of thread >> ");
+	//scanf_s("%d", &threadCnt);
 	PRO_INIT(threadCnt * 2);
 	CLogger::Initialize();
 	CLogger::SetDirectory(L"LOG");
@@ -47,6 +44,8 @@ int main() {
 	TEST_NODE **g_ltestnodes = new TEST_NODE * [dfTEST_THREAD_POOLING_CNT * threadCnt];
 
 	for (int i = 0; i < dfTEST_THREAD_POOLING_CNT * threadCnt; i++) {
+		if (i%1000 == 999 )
+			int h = 1;
 		g_ltestnodes[i] = g_pool.Alloc();
 	}
 
@@ -117,12 +116,14 @@ unsigned int __stdcall PoolingTestThread(LPVOID arg) {
 			}
 
 
-			testnodes[i]->_data = ID;
+			testnodes[i]->_data << ID;
 			testnodes[i]->_check = 10000;
 		}
 
 		for (int i = 0; i < dfTEST_THREAD_POOLING_CNT; i++) {
-			if (testnodes[i]->_data != ID)
+			DWORD id;
+			testnodes[i]->_data >> id;
+			if (id != ID)
 				CRASH();
 			testnodes[i]->_check += ID;
 		}
@@ -154,12 +155,12 @@ unsigned int __stdcall PoolingTestThread(LPVOID arg) {
 		}
 
 		int spin = 0;
-		while (spin < 300) {
-			YieldProcessor();
+		while (spin < 30) {
+			Sleep(0);
 			++spin;
 		}
-		//if (g_lfpool.GetSize() == 0) {
-		//	if (g_lfpool.GetCapacity() != dfTEST_MAX_POOLING_NODE)
+		//if (g_pool.GetSize() == 0) {
+		//	if (g_pool.GetCapacity() != dfTEST_MAX_POOLING_NODE)
 		//		CRASH();
 		//}
 	}

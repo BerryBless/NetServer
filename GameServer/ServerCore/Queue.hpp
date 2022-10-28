@@ -35,7 +35,7 @@ private:
 	NODE _head;        // 시작노드를 포인트한다.
 	NODE _tail;        // 마지막노드를 포인트한다.
 	long _size;         // 큐 노드 카운트
-	ObjectPool<NODE> _nodePool;
+	ObjectPool_TLS<NODE> _nodePool;
 
 	SRWLOCK _lock;
 };

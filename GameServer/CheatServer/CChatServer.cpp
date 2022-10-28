@@ -579,7 +579,7 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID) {
 	Packet *pResPacket = Packet::AllocAddRef();
 	MakePacketResponseSectorMove(pResPacket, pPlayer->_accountNo, pPlayer->_SectorX, pPlayer->_SectorY);
 	SendPacket(pPlayer->_sessionID, pResPacket);
-	pResPacket->SubRef(7);
+	pResPacket->SubRef();
 }
 
 // PACKET_CS_CHAT_REQ_MESSAGE
@@ -630,7 +630,7 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID sessionID) {
 	MakePacketResponseMessage(pResPacket, pSender->_accountNo, pSender->_ID, pSender->_NickName, msgLen, message);
 	BroadcastSectorAround(pResPacket, pSender->_SectorX, pSender->_SectorY, nullptr);
 
-	pResPacket->SubRef(11);
+	pResPacket->SubRef();
 }
 void CChatServer::PacketProcHeartBeat(Packet *pPacket, SESSION_ID sessionID) {
 	Player *pPlayer = FindPlayer(sessionID);

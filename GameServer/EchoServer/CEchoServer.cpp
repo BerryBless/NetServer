@@ -133,9 +133,10 @@ disconnect Count[%lld]\n",
 monitor._totalPacket, monitor._totalProecessedBytes, monitor._totalAcceptSession, monitor._totalReleaseSession);
 	fwprintf_s(outFP, L"\n\
 ----------------------------MEMORY------------------------------------ \n\
+PacketPool Capacity[%d] usesize[%d]\n\
 Available\t[%lluMb]\n\
 NPPool\t\t[%lluMb]\n\
-Private Mem\t[%lluKb]\n",
+Private Mem\t[%lluKb]\n",Packet::_packetPool.GetCapacity(), Packet::_packetPool.GetSize(),
 _hardMoniter.AvailableMemoryMBytes(), _hardMoniter.NonPagedPoolMBytes(), _procMonitor.PrivateMemoryKBytes());
 	fwprintf_s(outFP, L"\n\
 ---------------------------CORE USAGE--------------------------------- \n\

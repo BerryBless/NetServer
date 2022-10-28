@@ -356,7 +356,7 @@ public:
 #endif // df_LOGGING_PACKET_COUNTER_LOGIC
 
 
-	static ObjectPool_TLS<Packet> _packetPool;
+	//static ObjectPool_TLS<Packet> _packetPool;
 	//static ObjectPool<Packet> _packetPool;
 
 protected:

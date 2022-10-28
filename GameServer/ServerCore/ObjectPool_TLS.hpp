@@ -36,16 +36,10 @@ public:
 	ObjectPool_TLS(bool bPlacementNew = false) {
 		_totalUseCount = 0;
 		_bPlacementNew = bPlacementNew;
-
-		_pObjectPool = (CLF_ObjectPool<CHUNK>*)_aligned_malloc(sizeof(CLF_ObjectPool<CHUNK>), 64);
-		new (_pObjectPool) CLF_ObjectPool<CHUNK>;
-
 		_tlsIdx = TlsAlloc();
+
 	}
 	virtual	~ObjectPool_TLS() {
-		if (_pObjectPool != nullptr) {
-			_aligned_free(_pObjectPool);
-		}
 		TlsFree(_tlsIdx);
 	}
 	DATA *Alloc(void) {
@@ -81,11 +75,11 @@ public:
 		InterlockedDecrement64(&_totalUseCount);
 	}
 
-	int		GetCapacity(void) { return _pObjectPool->GetCapacity() * MAX_CHUNK_SIZE; }
-	DWORD	GetSize(void) { return _totalUseCount;/*_pObjectPool->GetSize(); */ }
+	int		GetCapacity(void) { return _objectPool.GetCapacity() * MAX_CHUNK_SIZE; }
+	DWORD	GetSize(void) { return _totalUseCount;/*_objectPool->GetSize(); */ }
 private:
 	CHUNK *ChunkAlloc() {
-		CHUNK *pChunk = _pObjectPool->Alloc();
+		CHUNK *pChunk = _objectPool.Alloc();
 		if (pChunk == nullptr) {
 			return nullptr;
 		}
@@ -95,10 +89,10 @@ private:
 	}
 	void ChunkFree(CHUNK *pChunk) {
 		pChunk->Clear();
-		_pObjectPool->Free(pChunk);
+		_objectPool.Free(pChunk);
 	}
 private:
-	CLF_ObjectPool<CHUNK> *_pObjectPool;
+	CLF_ObjectPool<CHUNK> _objectPool;
 	//ObjectPool<CHUNK> *_pObjectPool;
 	DWORD			_tlsIdx;
 	bool			_bPlacementNew;

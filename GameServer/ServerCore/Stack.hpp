@@ -26,7 +26,7 @@ private:
 	NODE *_pTop;
 	long _size;
 
-	ObjectPool<NODE> _nodePool;
+	ObjectPool_TLS<NODE> _nodePool;
 
 	SRWLOCK _lock;
 };

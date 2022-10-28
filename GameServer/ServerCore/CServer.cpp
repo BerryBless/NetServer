@@ -1059,7 +1059,6 @@ bool CServer::ReleaseSession(SESSION *pSession) {
 	// Sendq에 있던거 풀에 다시넣기
 	//---------------------------
 	DWORD sendedPacketCnt = InterlockedExchange(&pSession->_sendPacketCnt, 0);
-
 	Packet *pPacket = nullptr;
 	for (int i = 0; i < sendedPacketCnt; ++i) {
 		pPacket = pSession->_pSendPacketBufs[i];
@@ -1067,7 +1066,6 @@ bool CServer::ReleaseSession(SESSION *pSession) {
 	}
 	while (pSession->_sendQueue.dequeue(pPacket))
 		pPacket->SubRef();
-	pSession->_recvQueue.ClearBuffer();
 
 	InterlockedExchange(&pSession->_IOFlag, FALSE);
 
@@ -1101,6 +1099,19 @@ SESSION *CServer::CreateSession(SOCKET sock, sockaddr_in clientaddr) {
 	//---------------------------
 	// 초기화
 	//---------------------------
+	if (pSession->_sendPacketCnt > 0) {
+		for (int i = 0; i < pSession->_sendPacketCnt; ++i) {
+			_LOG(dfLOG_LEVEL_ERROR, L"////// Session : %llu SendBufferCount is not Cleaned up size : %d]", id, pSession->_sendPacketCnt);
+			pSession->_pSendPacketBufs[i]->SubRef();
+		}
+	}
+	if (pSession->_sendQueue.GetSize() > 0) {
+		Packet *pPacket = nullptr;
+		_LOG(dfLOG_LEVEL_ERROR, L"////// Session : %llu SendBufferQueue is not Cleaned up size : %d]", id, pSession->_sendQueue.GetSize());
+		while (pSession->_sendQueue.dequeue(pPacket))
+			pPacket->SubRef();
+	}
+
 	SetSessionTimeoutTimer(pSession);
 	InitializeSRWLock(&pSession->_lock);
 	InterlockedExchange64((LONG64 *) &pSession->_ID, 0);

@@ -11,7 +11,7 @@
 }while(0)
 #endif // !CRASH
 
-ObjectPool_TLS<Packet> Packet::_packetPool(true);
+//ObjectPool_TLS<Packet> Packet::_packetPool(true);
 //ObjectPool<Packet> Packet::_packetPool(0,true);
 
 Packet::Packet() {
@@ -178,7 +178,7 @@ Packet *Packet::AllocAddRef() {
 	Packet *pPacket;
 
 
-#ifndef dfALLOCATOR
+#ifdef dfALLOCATOR
 	PRO_BEGIN(L"POOL_ALLOC");
 	pPacket = _packetPool.Alloc();
 	PRO_END(L"POOL_ALLOC");
@@ -219,7 +219,7 @@ void Packet::SubRef(int logic) {
 
 	if (InterlockedCompareExchange(&_refCount.counter, tempRef.counter, 0) == 0) {
 		Clear();
-#ifndef dfALLOCATOR
+#ifdef dfALLOCATOR
 		PRO_BEGIN(L"POOL_FREE");
 		_packetPool.Free(this);
 		PRO_END(L"POOL_FREE");

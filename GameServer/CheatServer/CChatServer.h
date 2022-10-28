@@ -107,7 +107,7 @@ private:
 	SECTOR **_sector;
 	unordered_map<SESSION_ID, Player *>		_playerMap;
 	SRWLOCK									_playerMapLock;
-	ObjectPool<Player>						_playerPool;
+	ObjectPool_TLS<Player>					_playerPool;
 
 private:
 	// server start timestemp

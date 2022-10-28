@@ -35,7 +35,7 @@ private:
 
 private:
 	unordered_map<SESSION_ID, ClientSession *> _clientMap;
-	ObjectPool<ClientSession> _clientPool;
+	ObjectPool_TLS<ClientSession> _clientPool;
 
 	CParser *_pConfigData;
 

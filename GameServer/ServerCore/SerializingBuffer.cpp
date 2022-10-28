@@ -189,29 +189,16 @@ Packet *Packet::AllocAddRef() {
 	PRO_END(L"New");
 #endif // dfPOOLALLOC
 	pPacket->ResetRef();
+	pPacket->Clear();
 	return pPacket;
 }
 
 void Packet::AddRef(int logic) {
-#ifdef df_LOGGING_PACKET_COUNTER_LOGIC
-	// LOGGING
-	int idx = InterlockedIncrement(&_addlogidx);
-	if (idx >= 99)
-		_addlogidx = 0;
-	_logAddLogic[idx] = logic;
-#endif // df_LOGGING_PACKET_COUNTER_LOGIC
 	InterlockedIncrement((long *) &_refCount.counter);
 }
 
 
 void Packet::SubRef(int logic) {
-#ifdef df_LOGGING_PACKET_COUNTER_LOGIC
-	// LOGGING
-	int idx = InterlockedIncrement(&_sublogidx);
-	if (idx >= 99)
-		_sublogidx = 0;
-	_logSubLogic[idx] = logic;
-#endif // df_LOGGING_PACKET_COUNTER_LOGIC
 	//Subref 
 	InterlockedDecrement((long *) &_refCount.counter);
 	RefCount tempRef;
