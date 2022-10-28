@@ -27,12 +27,15 @@
     <ClCompile Include="Profiler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SerializingBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CCrashDump.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CObjectPool.hpp">
+    <ClInclude Include="ObjectPool.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CLogger.h">
@@ -41,7 +44,10 @@
     <ClInclude Include="Profiler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CObjectPool_TLS.h">
+    <ClInclude Include="ObjectPool_TLS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializingBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

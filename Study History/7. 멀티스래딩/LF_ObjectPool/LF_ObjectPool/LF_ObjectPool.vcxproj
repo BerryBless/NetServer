@@ -145,13 +145,15 @@
     <ClCompile Include="CLogger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Profiler.cpp" />
+    <ClCompile Include="SerializingBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CCrashDump.h" />
     <ClInclude Include="CLogger.h" />
-    <ClInclude Include="CObjectPool.hpp" />
-    <ClInclude Include="CObjectPool_TLS.h" />
+    <ClInclude Include="ObjectPool.hpp" />
+    <ClInclude Include="ObjectPool_TLS.h" />
     <ClInclude Include="Profiler.h" />
+    <ClInclude Include="SerializingBuffer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -182,12 +182,12 @@ void CEchoServer::PrintFileMonitor() {
 	localtime_s(&t, &now);
 #ifdef dfPROFILER
 	// PROFILE
-	swprintf_s(FILENAME, 128, L"ServerLog/Profile/%02d%02d%02d_%02d%02d%02d_CHAT_PROFILE.log",
+	swprintf_s(FILENAME, 128, L"Log/Profile/%02d%02d%02d_%02d%02d%02d_CHAT_PROFILE.log",
 		t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
 		t.tm_hour, t.tm_min, t.tm_sec);
 	PRO_PRINT(FILENAME);
 #endif // dfPROFILER
-	swprintf_s(FILENAME, 128, L"ServerLog/MonitorLog/%02d%02d%02d_%02d%02d%02d_CHAT_SERVER_MONITOR.log",
+	swprintf_s(FILENAME, 128, L"Log/MonitorLog/%02d%02d%02d_%02d%02d%02d_CHAT_SERVER_MONITOR.log",
 		t.tm_mon + 1, t.tm_mday, (t.tm_year + 1900) % 100,
 		t.tm_hour, t.tm_min, t.tm_sec);
 	FILE *fp = stdout;
@@ -221,9 +221,7 @@ void CEchoServer::AverageMonitor(MoniteringInfo monitor) {
 }
 
 void CEchoServer::EchoProc(SESSION_ID sessionID, Packet *pPacket) {
-	PRO_BEGIN(L"Content_Send");
 	SendPacket(sessionID, pPacket);
-	PRO_END(L"Content_Send");
 }
 
 void CEchoServer::LockMap() {

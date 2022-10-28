@@ -86,6 +86,8 @@ void CChatServer::BeginServer(const WCHAR *szConfigFile) {
 	_pConfigData->SetNamespace(L"NetServerConfig");
 	_pConfigData->TryGetValue(L"MonitorServerIP", _monitorServerIP);
 	_pConfigData->TryGetValue(L"MonitorServerPort", _monitorServerPort);
+	
+	PRO_INIT(30);
 
 	// Connect Monitor Servoer
 	ASSERT_CRASH(_monitorServerConnection.ConnectMonitorServer(_monitorServerIP, _monitorServerPort, SERVER_TYPE::CHAT_SERVER));
@@ -433,7 +435,6 @@ void CChatServer::PacketProc(Packet *pPacket, SESSION_ID sessionID, WORD type) {
 
 // PACKET_CS_CHAT_REQ_LOGIN
 void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID sessionID) {
-	PRO_BEGIN(L"RequestLogin");
 	BYTE status = FALSE;
 	ACCOUNT_NO acno;
 
@@ -477,12 +478,10 @@ void CChatServer::PacketProcRequestLogin(Packet *pPacket, SESSION_ID sessionID) 
 	InterlockedIncrement(&_LoginCalc);
 	_LOG(dfLOG_LEVEL_DEBUG, L"Login OK ANO[%d]", acno); // TODO ERROR MSG
 	pResLoginPacket->SubRef();
-	PRO_END(L"RequestLogin");
 }
 
 // PACKET_CS_CHAT_REQ_SECTOR_MOVE
 void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID) {
-	PRO_BEGIN(L"MoveSector");
 	ACCOUNT_NO no;
 	WORD sx;
 	WORD sy;
@@ -581,12 +580,10 @@ void CChatServer::PacketProcMoveSector(Packet *pPacket, SESSION_ID sessionID) {
 	MakePacketResponseSectorMove(pResPacket, pPlayer->_accountNo, pPlayer->_SectorX, pPlayer->_SectorY);
 	SendPacket(pPlayer->_sessionID, pResPacket);
 	pResPacket->SubRef(7);
-	PRO_END(L"MoveSector");
 }
 
 // PACKET_CS_CHAT_REQ_MESSAGE
 void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID sessionID) {
-	PRO_BEGIN(L"ChatRequire");
 	ACCOUNT_NO no;
 	WORD msgLen;
 	WCHAR message[MASSAGE_MAX_SIZE];
@@ -634,7 +631,6 @@ void CChatServer::PacketProcChatRequire(Packet *pPacket, SESSION_ID sessionID) {
 	BroadcastSectorAround(pResPacket, pSender->_SectorX, pSender->_SectorY, nullptr);
 
 	pResPacket->SubRef(11);
-	PRO_END(L"ChatRequire");
 }
 void CChatServer::PacketProcHeartBeat(Packet *pPacket, SESSION_ID sessionID) {
 	Player *pPlayer = FindPlayer(sessionID);

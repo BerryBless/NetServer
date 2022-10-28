@@ -1,18 +1,16 @@
-#include "CObjectPool.hpp"
 #include <stdio.h>
 #include <Windows.h>
 #include <process.h>
 #include "Profiler.h"
 #include "CCrashDump.h"
-#include "CObjectPool_TLS.h"
+#include "ObjectPool.hpp"
+#include "ObjectPool_TLS.h"
 
 #include <time.h>
 #include <strsafe.h>
 #include <locale.h>
 
-#define dfTEST_THREAD 4
 #define dfTEST_THREAD_POOLING_CNT 10000
-#define dfTEST_MAX_POOLING_NODE (dfTEST_THREAD * dfTEST_THREAD_POOLING_CNT)
 #define dfTLSPOOL
 
 
@@ -29,50 +27,42 @@ public:
 
 #ifdef dfTLSPOOL
 ObjectPool_TLS<TEST_NODE> g_pool(true);
-LF_ObjectPool_TLS<TEST_NODE> g_lfpool(true);
 #else
 CObjectPool<TEST_NODE> g_pool;
-CLF_ObjectPool<TEST_NODE> g_lfpool;
 #endif // dfTLSPOOL
 
 unsigned int __stdcall PoolingTestThread(LPVOID arg);
-TEST_NODE* g_ltestnodes[dfTEST_MAX_POOLING_NODE] = { 0 };
-TEST_NODE* g_lftestnodes[dfTEST_MAX_POOLING_NODE] = { 0 };
 
 #define dfNEW_DELETE 0
-#define dfLOCKED_POOL 1
-#define dfLOCK_FREE_POOL 2
+#define dfPOOL 1
 
 int main() {
-	PRO_INIT(dfTEST_THREAD * 3);
+	int threadCnt;
+	printf_s("num of thread >> ");
+	scanf_s("%d", &threadCnt);
+	PRO_INIT(threadCnt * 2);
 	CLogger::Initialize();
 	CLogger::SetDirectory(L"LOG");
+	HANDLE *hThreads = new HANDLE[threadCnt * 2];
+	TEST_NODE **g_ltestnodes = new TEST_NODE * [dfTEST_THREAD_POOLING_CNT * threadCnt];
 
-	HANDLE hThreads[dfTEST_THREAD * 3];
-
-
-	for (int i = 0; i < dfTEST_MAX_POOLING_NODE; i++) {
+	for (int i = 0; i < dfTEST_THREAD_POOLING_CNT * threadCnt; i++) {
 		g_ltestnodes[i] = g_pool.Alloc();
-		g_lftestnodes[i] = g_lfpool.Alloc();
 	}
 
 
-	for (int i = 0; i < dfTEST_MAX_POOLING_NODE; i++) {
+	for (int i = 0; i < dfTEST_THREAD_POOLING_CNT * threadCnt; i++) {
 		g_pool.Free(g_ltestnodes[i]);
-		g_lfpool.Free(g_lftestnodes[i]);
 	}
 	//CLogger::_Log(dfLOG_LEVEL_NOTICE, L"Capacity[%d] UseCount[%d]\n", g_lfpool.GetCapacity(), g_lfpool.GetSize());
 
 
 
-	for (int i = 0; i < dfTEST_THREAD; i++) {
+	for (int i = 0; i < threadCnt; i++) {
 		hThreads[i] = (HANDLE)_beginthreadex(nullptr, 0, PoolingTestThread, dfNEW_DELETE, 0, nullptr);
 	}
-	for (int i = 0; i < dfTEST_THREAD; i++) {
-		hThreads[i + dfTEST_THREAD] = (HANDLE)_beginthreadex(nullptr, 0, PoolingTestThread, (LPVOID)dfLOCKED_POOL, 0, nullptr);
-	}
-	for (int i = 0; i < dfTEST_THREAD; i++) {
-		hThreads[i + (dfTEST_THREAD * 2)] = (HANDLE)_beginthreadex(nullptr, 0, PoolingTestThread, (LPVOID)dfLOCK_FREE_POOL, 0, nullptr);
+	for (int i = 0; i < threadCnt; i++) {
+		hThreads[i + threadCnt] = (HANDLE)_beginthreadex(nullptr, 0, PoolingTestThread, (LPVOID)dfPOOL, 0, nullptr);
 	}
 
 	WCHAR FILENAME[50] = L"";
@@ -83,7 +73,7 @@ int main() {
 	int printTick = 0;
 	while (true) {
 		Sleep(1000);
-		CLogger::_Log(dfLOG_LEVEL_NOTICE, L"\nL\t:\tCapacity[%d] UseCount[%d]\nLF\t:\tCapacity[%d] UseCount[%d]\n", g_pool.GetCapacity(), g_pool.GetSize(),g_lfpool.GetCapacity(), g_lfpool.GetSize());
+		CLogger::_Log(dfLOG_LEVEL_NOTICE, L"\nThreadCount [%d]\tCapacity[%d] UseCount[%d]", threadCnt,g_pool.GetCapacity(), g_pool.GetSize());
 
 		if (printTick >= 60) {
 			// timestemp
@@ -116,15 +106,10 @@ unsigned int __stdcall PoolingTestThread(LPVOID arg) {
 				testnodes[i] = new TEST_NODE;
 				PRO_END(L"NEW");
 				break;
-			case dfLOCKED_POOL:
+			case dfPOOL:
 				PRO_BEGIN(L"POOL_ALLOC");
 				testnodes[i] = g_pool.Alloc();
 				PRO_END(L"POOL_ALLOC");
-				break;
-			case dfLOCK_FREE_POOL:
-				PRO_BEGIN(L"LFPOOL_ALLOC");
-				testnodes[i] = g_lfpool.Alloc();
-				PRO_END(L"LFPOOL_ALLOC");
 				break;
 			default:
 				CRASH();
@@ -156,15 +141,10 @@ unsigned int __stdcall PoolingTestThread(LPVOID arg) {
 				delete testnodes[i];
 				PRO_END(L"DELETE");
 				break;
-			case dfLOCKED_POOL:
+			case dfPOOL:
 				PRO_BEGIN(L"POOL_FREE");
 				g_pool.Free(testnodes[i]);
 				PRO_END(L"POOL_FREE");
-				break;
-			case dfLOCK_FREE_POOL:
-				PRO_BEGIN(L"LFPOOL_FREE");
-				g_lfpool.Free(testnodes[i]);
-				PRO_END(L"LFPOOL_FREE");
 				break;
 			default:
 				CRASH();
@@ -175,12 +155,10 @@ unsigned int __stdcall PoolingTestThread(LPVOID arg) {
 
 		int spin = 0;
 		while (spin < 300) {
-			Sleep(0);
 			YieldProcessor();
 			++spin;
 		}
 		//if (g_lfpool.GetSize() == 0) {
-		//	//printf_s("/////////USE COUNT is 0\n");
 		//	if (g_lfpool.GetCapacity() != dfTEST_MAX_POOLING_NODE)
 		//		CRASH();
 		//}

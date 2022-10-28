@@ -1,10 +1,9 @@
-#include"pch.h"
 #include "SerializingBuffer.h"
 #include <malloc.h>
 #include <string.h>
 #include <Windows.h>
 #include "Profiler.h"
-#include "ObjectPool_TLS.hpp"
+#include "ObjectPool_TLS.h"
 #ifndef CRASH
 #define CRASH() do{\
 	_LOG(dfLOG_LEVEL_ERROR, L"///////CRASH : FILE[%s] Line[%d]",__FILEW__,__LINE__);\
@@ -12,7 +11,6 @@
 }while(0)
 #endif // !CRASH
 
-#define dfALLOCATOR
 ObjectPool_TLS<Packet> Packet::_packetPool(true);
 //ObjectPool<Packet> Packet::_packetPool(0,true);
 
@@ -155,6 +153,7 @@ inline Packet &Packet::operator=(Packet &clSrPacket) {
 	memcpy_s(this->_pBuffer, this->_iBufferSize, clSrPacket.GetBufferPtr(), this->_writePos);
 	return *this;
 }
+
 int Packet::GetData(char *chpDest, int iSize) {
 	if (iSize > GetDataSize()) {
 		// iSize만큼 못빼면 그냥 안빼기
@@ -179,7 +178,7 @@ Packet *Packet::AllocAddRef() {
 	Packet *pPacket;
 
 
-#ifdef dfALLOCATOR
+#ifndef dfALLOCATOR
 	PRO_BEGIN(L"POOL_ALLOC");
 	pPacket = _packetPool.Alloc();
 	PRO_END(L"POOL_ALLOC");
@@ -220,7 +219,7 @@ void Packet::SubRef(int logic) {
 
 	if (InterlockedCompareExchange(&_refCount.counter, tempRef.counter, 0) == 0) {
 		Clear();
-#ifdef dfALLOCATOR
+#ifndef dfALLOCATOR
 		PRO_BEGIN(L"POOL_FREE");
 		_packetPool.Free(this);
 		PRO_END(L"POOL_FREE");

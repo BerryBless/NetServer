@@ -114,9 +114,7 @@ void CLogger::Initialize() {
 	int _ = _wmkdir(L"Log");
 	_ = _wmkdir(L"Log\\LibraryLog");
 	_ = _wmkdir(L"Log\\MonitorLog");
-#ifdef dfPROFILER
 	_ = _wmkdir(L"Log\\Profile");
-#endif // dfPROFILER
 	//---------------------------
 	// 로거 초기화
 	//---------------------------

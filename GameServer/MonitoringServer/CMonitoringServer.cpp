@@ -3,6 +3,7 @@
 #include <conio.h>
 #include <time.h>
 #include <stdio.h>
+#include "Profiler.h"
 
 CMonitoringServer::CMonitoringServer() :CServer(false) {
 	_pMonitorToolServer = new CMonitorToolServer;
@@ -37,6 +38,9 @@ void CMonitoringServer::BeginServer(const WCHAR *szConfigFile) {
 	// Monitor Server Connect Config
 	_pConfigData->SetNamespace(L"MonitorToolServerLibConfig");
 	_pConfigData->TryGetValue(L"ServerPort", TSPort);
+
+	PRO_INIT(30);
+	
 
 	// DVConnect Config
 	WCHAR connectstring[512];

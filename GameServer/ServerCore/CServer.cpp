@@ -151,7 +151,6 @@ bool CServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 		ReturnSession(pSession);
 		return false;
 	}
-	PRO_BEGIN(L"SendPacket");
 	//---------------------------
 	// 페킷 포인터를 센드큐에
 	//---------------------------
@@ -168,7 +167,6 @@ bool CServer::SendPacket(SESSION_ID sessionID, Packet *pPacket) {
 	SendPost(pSession);
 #endif // !df_SENDTHREAD
 	ReturnSession(pSession);
-	PRO_END(L"SendPacket");
 	return true;
 }
 
